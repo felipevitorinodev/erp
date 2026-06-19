@@ -15,4 +15,28 @@ class EmpresaController extends Controller
     public function index(){
         return $this->empresaService->index();
     }
+
+    public function create(){
+        return false;
+    } 
+
+    public function store(){
+        return false;
+    }
+
+    public function show(){
+        return false;
+    }
+
+    public function edit(){
+        return false;
+    }
+
+    public function update(){
+        return false;
+    }
+
+    public function destroy(){
+        return false;
+    }
 }
