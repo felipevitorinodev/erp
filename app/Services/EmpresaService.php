@@ -12,6 +12,20 @@ class EmpresaService
     ){}
 
     public function index() {
-        return $this->empresaRepository->index();
+        $empresas = $this->empresaRepository->index();
+
+        return view('empresa.index' , ['empresas' => $empresas]);
     }
+
+    public function create() {
+        return view('empresa.create');
+    }
+
+    public function store($request)
+    {
+    $this->empresaRepository->store($request->validated());
+
+    return redirect()->route('empresa.index')
+        ->with('success', 'Empresa cadastrada com sucesso.');
+    }   
 }

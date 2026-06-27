@@ -12,7 +12,7 @@ class EmpresaRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,13 +23,17 @@ class EmpresaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'razao_social' => 'required|string|max:255',
-            'tipo_pessoa' => 'required|integer|in:1,2',
-            'cnpj' => 'cnpj',
-            'cpf' => 'cpf',
-            'email' => 'required|email|max:255',
-            'numero' => 'integer',
-            'uf' => 'string|max:2'
-        ];
+        'razao_social' => 'required|string|max:255',
+        'nome_fantasia' => 'nullable|string|max:255',
+        'cnpj'         => 'required|string|max:18',
+        'telefone'     => 'nullable|string|max:20',
+        'email'        => 'nullable|email|max:255',
+        'cep'          => 'nullable|string|max:9',
+        'cidade'       => 'nullable|string|max:100',
+        'logradouro'   => 'nullable|string|max:255',
+        'uf'           => 'nullable|string|max:2',
+        'ie'           => 'nullable|string|max:20',
+        'im'           => 'nullable|string|max:20',
+    ];
     }
 }

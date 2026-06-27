@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EmpresaRequest;
 use App\Services\EmpresaService;
 use Illuminate\Http\Request;
 
@@ -17,11 +18,11 @@ class EmpresaController extends Controller
     }
 
     public function create(){
-        return false;
+        return $this->empresaService->create();
     } 
 
-    public function store(){
-        return false;
+    public function store(EmpresaRequest $request){
+        return $this->empresaService->store($request);
     }
 
     public function show(){

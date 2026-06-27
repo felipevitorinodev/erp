@@ -18,4 +18,9 @@ class EmpresaRepository
     public function index(){
         return $this->empresa::all();
     }
+
+    public function store(array $request)
+    {
+        return Empresa::create($request);
+    }
 }

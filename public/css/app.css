@@ -13,11 +13,8 @@
     --color-border-mid: #B0B8C4;
 
     --color-primary: #1A3B5D;
-    /* azul corporativo escuro */
     --color-primary-lt: #254E7A;
-    /* hover do primário */
     --color-accent: #D64E12;
-    /* laranja ferrugem */
 
     --color-text: #1C2530;
     --color-text-mid: #4A5568;
@@ -97,26 +94,6 @@ a:hover {
     text-transform: uppercase;
 }
 
-.header__nav {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex: 1;
-}
-
-.header__nav-link {
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 13px;
-    padding: 0.35rem 0.75rem;
-    transition: background var(--transition), color var(--transition);
-}
-
-.header__nav-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
-    text-decoration: none;
-}
-
 .header__user {
     display: flex;
     align-items: center;
@@ -170,13 +147,37 @@ a:hover {
 .sidebar__nav {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem 0;
 }
 
+/* Divisão na categoria */
 .sidebar__group {
     display: flex;
     flex-direction: column;
-    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar__group:last-child {
+    border-bottom: none;
+    /* Remove a linha do último item */
+}
+
+/* O header do grupo agora é um botão clicável */
+.sidebar__group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+    border: none;
+    width: 100%;
+    padding: 0.75rem 1rem 0.5rem;
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+}
+
+.sidebar__group-header:hover .sidebar__group-label,
+.sidebar__group-header:hover .sidebar__group-toggle {
+    color: var(--color-primary);
 }
 
 .sidebar__group-label {
@@ -184,10 +185,41 @@ a:hover {
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--color-text-muted);
-    padding: 0.75rem 1rem 0.25rem;
     text-transform: uppercase;
+    transition: color var(--transition);
 }
 
+/* Ícone de seta */
+.sidebar__group-toggle {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    transition: transform 0.2s ease, color var(--transition);
+}
+
+/* Animação suave para encolher/expandir usando CSS Grid */
+.sidebar__group-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease-in-out;
+}
+
+.sidebar__group-inner {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.5rem;
+}
+
+/* Estados de Expandido */
+.sidebar__group.is-expanded .sidebar__group-content {
+    grid-template-rows: 1fr;
+}
+
+.sidebar__group.is-expanded .sidebar__group-toggle {
+    transform: rotate(180deg);
+}
+
+/* Links (Mantido o seu estilo original) */
 .sidebar__link {
     display: flex;
     align-items: center;
@@ -314,7 +346,7 @@ a:hover {
 }
 
 /* =========================================
-   CARDS (blocos de conteúdo)
+   CARDS
    ========================================= */
 .card {
     background: var(--color-surface);
@@ -352,7 +384,7 @@ a:hover {
 }
 
 /* =========================================
-   GRID DE STATS (ex: dashboard)
+   STATS GRID
    ========================================= */
 .stats-grid {
     display: grid;
@@ -445,17 +477,56 @@ a:hover {
 
 /* =========================================
    FORMULÁRIOS
+   =========================================
+
+   USO:
+   - .form-grid            → container do grid (padrão 1 coluna)
+   - .form-grid--col-2/3/4 → define quantas colunas a linha tem
+   - .form-group           → item do grid (ocupa 1 coluna por padrão)
+   - .form-group--span-2/3 → faz o item ocupar N colunas
+   - .form-group--full     → ocupa a linha inteira (sempre)
+
+   EXEMPLO — 4 colunas, campos variados:
+   <div class="form-grid form-grid--col-4">
+       <div class="form-group form-group--span-2">Razão Social</div>
+       <div class="form-group form-group--span-2">Nome Fantasia</div>
+       <div class="form-group">CNPJ</div>
+       <div class="form-group">Telefone</div>
+       <div class="form-group form-group--span-2">E-mail</div>
+       <div class="form-group form-group--full">Observações</div>
+   </div>
    ========================================= */
+
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(1, 1fr);
     gap: 1rem;
+}
+
+.form-grid--col-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.form-grid--col-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.form-grid--col-4 {
+    grid-template-columns: repeat(4, 1fr);
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+}
+
+.form-group--span-2 {
+    grid-column: span 2;
+}
+
+.form-group--span-3 {
+    grid-column: span 3;
 }
 
 .form-group--full {
@@ -486,7 +557,6 @@ a:hover {
     transition: border-color var(--transition);
     width: 100%;
     border-radius: 0;
-    /* quadrado */
     -webkit-appearance: none;
 }
 
@@ -533,7 +603,6 @@ select.form-control {
     text-decoration: none;
     white-space: nowrap;
     border-radius: 0;
-    /* quadrado */
 }
 
 .btn--primary {
