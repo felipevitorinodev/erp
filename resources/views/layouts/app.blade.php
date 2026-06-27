@@ -57,8 +57,8 @@
                             <span class="sidebar__icon">&#9632;</span> Empresas
                         </a>
 
-                        <a href="#"
-                            class="sidebar__link {{ request()->routeIs('clientes.*') ? 'sidebar__link--active' : '' }}">
+                        <a href="{{ route('cliente.index') }}"
+                            class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Clientes
                         </a>
 

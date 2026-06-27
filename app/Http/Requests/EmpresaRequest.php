@@ -34,6 +34,7 @@ class EmpresaRequest extends FormRequest
         'uf'           => 'nullable|string|max:2',
         'ie'           => 'nullable|string|max:20',
         'im'           => 'nullable|string|max:20',
+        'complemento'  => 'nullable|string|max:255'
     ];
     }
 }

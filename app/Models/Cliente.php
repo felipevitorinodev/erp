@@ -2,24 +2,24 @@
 
 namespace App\Models;
 
-use App\Enums\TipoPessoa;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Empresa extends Model
+class Cliente extends Model
 {
+    use HasFactory;
     use SoftDeletes;
-
-    protected $table = 'empresa';
+    protected $table = 'clientes';
 
     protected $fillable = [
-        'razao_social',
+        'empresa_id',
+        'nome',
         'nome_fantasia',
-        'tipo_pessoa',
-        'cnpj',
         'cpf',
-        'ie',
-        'im',
+        'cnpj',
+        'inscricao_estadual',
+        'inscricao_municipal',
         'email',
         'telefone',
         'celular',
@@ -29,17 +29,17 @@ class Empresa extends Model
         'complemento',
         'bairro',
         'cidade',
-        'uf',
+        'estado',
+        'observacoes',
         'ativo',
     ];
 
     protected $casts = [
-        'tipo_pessoa' => TipoPessoa::class,
-        'ativo'       => 'boolean',
+        'ativo' => 'boolean',
     ];
 
-    public function clientes()
+    public function empresa()
     {
-        return $this->hasMany(Cliente::class);
+        return $this->belongsTo(Empresa::class);
     }
 }
