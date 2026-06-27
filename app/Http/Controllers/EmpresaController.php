@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EmpresaRequest;
+use App\Models\Empresa;
 use App\Services\EmpresaService;
 use Illuminate\Http\Request;
 
@@ -29,15 +30,17 @@ class EmpresaController extends Controller
         return false;
     }
 
-    public function edit(){
-        return false;
+    public function edit(Empresa $empresa)
+    {
+        return $this->empresaService->edit($empresa);
     }
 
-    public function update(){
-        return false;
+    public function update(EmpresaRequest $request, Empresa $empresa)
+    {
+        return $this->empresaService->update($request, $empresa);
     }
 
-    public function destroy(){
-        return false;
+    public function destroy(Empresa $empresa){
+        return $this->empresaService->destroy($empresa->id);
     }
 }

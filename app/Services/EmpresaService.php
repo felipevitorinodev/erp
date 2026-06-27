@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Http\Requests\EmpresaRequest;
+use App\Models\Empresa;
 use App\Repositories\EmpresaRepository;
 
 class EmpresaService
@@ -28,4 +30,31 @@ class EmpresaService
     return redirect()->route('empresa.index')
         ->with('success', 'Empresa cadastrada com sucesso.');
     }   
+
+    public function edit(Empresa $empresa)
+    {
+        return view('empresa.edit', [
+            'empresa' => $empresa
+        ]);
+    }
+
+    public function update(EmpresaRequest $request, Empresa $empresa)
+    {
+        $this->empresaRepository->update(
+            $empresa,
+            $request->validated()
+        );
+
+        return redirect()
+            ->route('empresa.index')
+            ->with('success', 'Empresa editada com sucesso.');
+    }
+
+    public function destroy($id)
+    {
+        $this->empresaRepository->destroy($id);
+
+        return redirect()->route('empresa.index')
+            ->with('success', 'Empresa apagada com sucesso.');
+    }                       
 }

@@ -43,12 +43,14 @@
                                 <td>{{ $empresa->logradouro }}</td>
                                 <td>{{ $empresa->uf }}</td>
                                 <td class="text-right" style="white-space: nowrap;">
-                                    <a href="#" class="btn btn--ghost btn--sm">Editar</a>
-                                    <form method="POST" action="#" style="display:inline;">
+                                    <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                    <form method="POST" action="{{ route('empresa.destroy', $empresa) }}"
+                                        style="display:inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
-                                            onclick="return confirm('Excluir esta empresa?')">Excluir</button>
+                                        <button type="submit" class="btn btn--danger btn--sm">
+                                            Excluir
+                                        </button>
                                     </form>
                                 </td>
                             </tr>

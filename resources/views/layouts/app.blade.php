@@ -24,7 +24,6 @@
 
         <div class="header__user">
             <span class="header__user-name">Nome do usuário</span>
-
             <form method="POST" action="" style="display:inline;">
                 @csrf
                 <button type="submit" class="header__logout">Sair</button>
@@ -37,74 +36,62 @@
         <aside class="sidebar">
             <nav class="sidebar__nav">
 
-                <div class="sidebar__group">
-                    <a style="text-decoration: none;" href="/" class="sidebar__group-header">
-                        <span class="sidebar__group-label">INÍCIO</span>
-                    </a>
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <a style="text-decoration: none;" href="/">
+                            <span class="sidebar__group-label">INÍCIO</span>
+                        </a>
+                    </div>
                 </div>
 
-                <div class="sidebar__group is-expanded">
-                    <button type="button" class="sidebar__group-header" onclick="toggleSidebarGroup(this)">
+                <div class="sidebar__group" data-group>
+
+                    <div class="sidebar__group-toggle" data-toggle>
                         <span class="sidebar__group-label">CADASTROS</span>
-                        <span class="sidebar__group-toggle">&#9660;</span>
-                    </button>
-
-                    <div class="sidebar__group-content">
-                        <div class="sidebar__group-inner">
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Empresas
-                            </a>
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Clientes
-                            </a>
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('fornecedore.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Fornecedores
-                            </a>
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Funcionarios
-                            </a>
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Produtos
-                            </a>
-                        </div>
+                        <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
+
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('empresa.index') }}"
+                            class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Empresas
+                        </a>
+
+                        <a href="#"
+                            class="sidebar__link {{ request()->routeIs('clientes.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Clientes
+                        </a>
+
+                        <a href="#"
+                            class="sidebar__link {{ request()->routeIs('fornecedores.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Fornecedores
+                        </a>
+
+                        <a href="#"
+                            class="sidebar__link {{ request()->routeIs('funcionarios.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Funcionários
+                        </a>
+
+                        <a href="#"
+                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Produtos
+                        </a>
+                    </div>
+
                 </div>
 
-                <div class="sidebar__group">
-                    <button type="button" class="sidebar__group-header" onclick="toggleSidebarGroup(this)">
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
                         <span class="sidebar__group-label">FINANCEIRO</span>
-                        <span class="sidebar__group-toggle">&#9660;</span>
-                    </button>
-
-                    <div class="sidebar__group-content">
-                        <div class="sidebar__group-inner">
-                            <a href="#" class="sidebar__link">
-                                <span class="sidebar__icon">&#9632;</span> Contas a Pagar
-                            </a>
-                            <a href="#" class="sidebar__link">
-                                <span class="sidebar__icon">&#9632;</span> Contas a Receber
-                            </a>
-                        </div>
+                        <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
-                </div>
-
-                <div class="sidebar__group">
-                    <button type="button" class="sidebar__group-header" onclick="toggleSidebarGroup(this)">
-                        <span class="sidebar__group-label">FISCAL</span>
-                        <span class="sidebar__group-toggle">&#9660;</span>
-                    </button>
-
-                    <div class="sidebar__group-content">
-                        <div class="sidebar__group-inner">
-                            <a href="#" class="sidebar__link">
-                                <span class="sidebar__icon">&#9632;</span> NF-e
-                            </a>
-                        </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="#" class="sidebar__link">
+                            <span class="sidebar__icon">&#9632;</span> Contas a Receber
+                        </a>
+                        <a href="#" class="sidebar__link">
+                            <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                        </a>
                     </div>
                 </div>
 
@@ -112,9 +99,13 @@
         </aside>
 
         <main class="main">
+
             <div class="page-bar">
                 <div class="page-bar__title">
                     <h1 class="page-title">@yield('page_title')</h1>
+                    @hasSection('breadcrumb')
+                        <nav class="breadcrumb">@yield('breadcrumb')</nav>
+                    @endif
                 </div>
                 <div class="page-bar__actions">
                     @yield('page_actions')
@@ -157,15 +148,29 @@
     <script src="{{ asset('js/jquery.min.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
 
+    <script>
+        document.querySelectorAll('[data-group]').forEach(function (group) {
+            var toggle = group.querySelector('[data-toggle]');
+            var links = group.querySelector('[data-links]');
+            var arrow = group.querySelector('.sidebar__group-arrow');
+
+            if (!toggle || !links || !arrow) return;
+
+            var hasActive = group.querySelector('.sidebar__link--active');
+            if (!hasActive) {
+                links.classList.add('sidebar__group-links--collapsed');
+                arrow.classList.add('sidebar__group-arrow--collapsed');
+            }
+
+            toggle.addEventListener('click', function () {
+                var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
+                arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
+            });
+        });
+    </script>
+
     @stack('scripts')
 
 </body>
-<script>
-    function toggleSidebarGroup(button) {
-        const group = button.closest('.sidebar__group');
-
-        group.classList.toggle('is-expanded');
-    }
-</script>
 
 </html>

@@ -1,3 +1,8 @@
+/* =========================================
+   ERP — app.css
+   ========================================= */
+
+/* === RESET & BASE === */
 *,
 *::before,
 *::after {
@@ -147,37 +152,13 @@ a:hover {
 .sidebar__nav {
     display: flex;
     flex-direction: column;
+    padding: 0.5rem 0;
 }
 
-/* Divisão na categoria */
 .sidebar__group {
     display: flex;
     flex-direction: column;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.sidebar__group:last-child {
-    border-bottom: none;
-    /* Remove a linha do último item */
-}
-
-/* O header do grupo agora é um botão clicável */
-.sidebar__group-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: transparent;
-    border: none;
-    width: 100%;
-    padding: 0.75rem 1rem 0.5rem;
-    cursor: pointer;
-    text-align: left;
-    outline: none;
-}
-
-.sidebar__group-header:hover .sidebar__group-label,
-.sidebar__group-header:hover .sidebar__group-toggle {
-    color: var(--color-primary);
+    margin-bottom: 0.25rem;
 }
 
 .sidebar__group-label {
@@ -185,41 +166,10 @@ a:hover {
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--color-text-muted);
+    padding: 0.75rem 1rem 0.25rem;
     text-transform: uppercase;
-    transition: color var(--transition);
 }
 
-/* Ícone de seta */
-.sidebar__group-toggle {
-    font-size: 10px;
-    color: var(--color-text-muted);
-    transition: transform 0.2s ease, color var(--transition);
-}
-
-/* Animação suave para encolher/expandir usando CSS Grid */
-.sidebar__group-content {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.2s ease-in-out;
-}
-
-.sidebar__group-inner {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 0.5rem;
-}
-
-/* Estados de Expandido */
-.sidebar__group.is-expanded .sidebar__group-content {
-    grid-template-rows: 1fr;
-}
-
-.sidebar__group.is-expanded .sidebar__group-toggle {
-    transform: rotate(180deg);
-}
-
-/* Links (Mantido o seu estilo original) */
 .sidebar__link {
     display: flex;
     align-items: center;
@@ -779,4 +729,56 @@ select.form-control {
 
 .mb-2 {
     margin-bottom: 1rem;
+}
+
+/* =========================================
+   SIDEBAR COLAPSÁVEL
+   ========================================= */
+
+.sidebar__group-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem 0.25rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sidebar__group-toggle:hover .sidebar__group-label {
+    color: var(--color-primary);
+}
+
+.sidebar__group-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    transition: color var(--transition);
+}
+
+.sidebar__group-arrow {
+    font-size: 9px;
+    color: var(--color-text-muted);
+    transition: transform 0.2s ease, color var(--transition);
+    line-height: 1;
+}
+
+.sidebar__group-toggle:hover .sidebar__group-arrow {
+    color: var(--color-primary);
+}
+
+/* Links dentro do grupo */
+.sidebar__group-links {
+    overflow: hidden;
+    max-height: 500px;
+    transition: max-height 0.25s ease;
+}
+
+.sidebar__group-links--collapsed {
+    max-height: 0;
+}
+
+.sidebar__group-arrow--collapsed {
+    transform: rotate(-90deg);
 }
