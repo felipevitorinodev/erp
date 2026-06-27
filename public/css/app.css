@@ -134,7 +134,8 @@ a:hover {
     display: grid;
     grid-template-columns: var(--sidebar-w) 1fr;
     margin-top: var(--header-h);
-    min-height: calc(100vh - var(--header-h) - var(--footer-h));
+    height: calc(100vh - var(--header-h) - var(--footer-h));
+    padding-bottom: var(--footer-h);
 }
 
 /* =========================================
@@ -145,7 +146,7 @@ a:hover {
     border-right: 1px solid var(--color-border);
     position: sticky;
     top: var(--header-h);
-    height: calc(100vh - var(--header-h) - var(--footer-h));
+    height: 100vh;
     overflow-y: auto;
 }
 
@@ -664,6 +665,10 @@ select.form-control {
    FOOTER
    ========================================= */
 .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: var(--footer-h);
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
@@ -673,6 +678,7 @@ select.form-control {
     padding: 0 1rem;
     font-size: 11px;
     color: var(--color-text-muted);
+    z-index: 99;
 }
 
 /* =========================================

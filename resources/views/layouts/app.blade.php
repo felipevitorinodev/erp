@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'ERP') — {{ config('app.name') }}</title>
+    <title>@yield('title', 'ERP')</title>
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
@@ -23,8 +23,8 @@
         </div>
 
         <div class="header__user">
-            <span class="header__user-name">Nome do usuário</span>
-            <form method="POST" action="" style="display:inline;">
+            <span class="header__user-name">{{ Auth::user()->name }}</span>
+            <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf
                 <button type="submit" class="header__logout">Sair</button>
             </form>
