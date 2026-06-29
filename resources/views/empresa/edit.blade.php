@@ -43,7 +43,7 @@
 
                 </div>
 
-                <div class="form-grid form-grid--col-2">
+                <div class="form-grid form-grid--col-2" style="margin-top: 1rem;">
 
                     <div class="form-group">
                         <label class="form-label">Inscrição Estadual</label>

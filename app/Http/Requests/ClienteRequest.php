@@ -21,8 +21,8 @@ class ClienteRequest extends FormRequest
             'nome_fantasia'        => 'nullable|string|max:255',
 
             'tipo_pessoa' => 'required|in:PF,PJ',
-            'cpf'  => 'required_if:tipo_pessoa,PF|nullable|max:14',
-            'cnpj' => 'required_if:tipo_pessoa,PJ|nullable|max:18',
+            'cpf'  => 'required_if:tipo_pessoa,PF|nullable|max:14|cpf',
+            'cnpj' => 'required_if:tipo_pessoa,PJ|nullable|max:18|cnpj',
 
             'inscricao_estadual'   => 'nullable|string|max:20',
             'inscricao_municipal'  => 'nullable|string|max:20',
@@ -41,6 +41,12 @@ class ClienteRequest extends FormRequest
 
             'observacoes'          => 'nullable|string',
             'ativo'                => 'nullable|boolean',
+        ];
+    }
+    public function messages(): array{
+        return [
+            'required' => 'P campo é obrigatório.',
+            'max' => 'O campo precisa ter no máximo :max caracteres.',
         ];
     }
 }

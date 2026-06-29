@@ -37,11 +37,11 @@
             <nav class="sidebar__nav">
 
                 <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <a style="text-decoration: none;" href="/">
+                    <a style="text-decoration: none;" href="/">
+                        <div class="sidebar__group-toggle" data-toggle>
                             <span class="sidebar__group-label">INÍCIO</span>
-                        </a>
-                    </div>
+                        </div>
+                    </a>
                 </div>
 
                 <div class="sidebar__group" data-group>

@@ -25,7 +25,7 @@ class EmpresaRequest extends FormRequest
         return [
         'razao_social' => 'required|string|max:255',
         'nome_fantasia' => 'nullable|string|max:255',
-        'cnpj'         => 'required|string|max:18',
+        'cnpj'         => 'required|string|max:18|cnpj',
         'telefone'     => 'nullable|string|max:20',
         'email'        => 'nullable|email|max:255',
         'cep'          => 'nullable|string|max:9',
@@ -36,5 +36,12 @@ class EmpresaRequest extends FormRequest
         'im'           => 'nullable|string|max:20',
         'complemento'  => 'nullable|string|max:255'
     ];
+    }
+
+    public function messages(): array{
+        return [
+            'required' => 'Campo obrigatório.',
+            'max' => 'O campo precisa ter no máximo :max caracteres.',
+        ];
     }
 }
