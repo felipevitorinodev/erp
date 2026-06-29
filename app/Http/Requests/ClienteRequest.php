@@ -45,7 +45,7 @@ class ClienteRequest extends FormRequest
     }
     public function messages(): array{
         return [
-            'required' => 'P campo é obrigatório.',
+            'required' => 'O campo é obrigatório.',
             'max' => 'O campo precisa ter no máximo :max caracteres.',
         ];
     }
