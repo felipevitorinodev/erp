@@ -35,6 +35,10 @@
             border-top-color: var(--color-accent);
         }
 
+        .module-card--green {
+            border-top-color: #28a84e;
+        }
+
         .module-icon {
             width: 32px;
             height: 32px;
@@ -124,6 +128,34 @@
             </div>
             <div class="module-name">Produtos</div>
             <div class="module-desc">Catálogo de produtos</div>
+        </a>
+
+    </div>
+
+    <p class="stat-card__label" style="margin-bottom:.75rem;">Faturamento</p>
+    <div class="modules-grid" style="grid-template-columns: repeat(2, 160px);">
+
+        <a href="#" class="module-card module-card--green">
+            <div class="module-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+            </div>
+            <div class="module-name">Vendas</div>
+            <div class="module-desc">Controle as vendas da sua loja</div>
+        </a>
+
+        <a href="#" class="module-card module-card--green">
+            <div class="module-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    <line x1="4" y1="4" x2="20" y2="20" />
+                </svg>
+            </div>
+            <div class="module-name">Orçamentos</div>
+            <div class="module-desc">Registre orçamentos para futuras vendas</div>
         </a>
 
     </div>

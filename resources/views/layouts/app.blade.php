@@ -82,6 +82,21 @@
 
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
+                        <span class="sidebar__group-label">FATURAMENTO</span>
+                        <span class="sidebar__group-arrow">&#9660;</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="#" class="sidebar__link">
+                            <span class="sidebar__icon">&#9632;</span> Vendas
+                        </a>
+                        <a href="#" class="sidebar__link">
+                            <span class="sidebar__icon">&#9632;</span> Orçamento
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
                         <span class="sidebar__group-label">FINANCEIRO</span>
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
