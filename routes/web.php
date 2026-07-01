@@ -5,6 +5,7 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\FornecedorController;
 use App\Http\Controllers\FuncionarioController;
+use App\Http\Controllers\GrupoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -51,6 +52,15 @@ Route::middleware('auth')->group(function () {
         Route::get('{funcionario}/editar', [FuncionarioController::class, 'edit'])->name('funcionario.edit');
         Route::put('{funcionario}/editar/salvar', [FuncionarioController::class, 'update'])->name('funcionario.update');
         Route::delete('{funcionario}/excluir', [FuncionarioController::class, 'destroy'])->name('funcionario.destroy');
+    });
+
+    Route::prefix('grupo')->group(function () {
+        Route::get('/', [GrupoController::class, 'index'])->name('grupo.index');
+        Route::get('/novo', [GrupoController::class, 'create'])->name('grupo.create');
+        Route::post('/salvar', [GrupoController::class, 'store'])->name('grupo.store');
+        Route::get('{grupo}/editar', [GrupoController::class, 'edit'])->name('grupo.edit');
+        Route::put('{grupo}/editar/salvar', [GrupoController::class, 'update'])->name('grupo.update');
+        Route::delete('{grupo}/excluir', [GrupoController::class, 'destroy'])->name('grupo.destroy');
     });
 
 });
