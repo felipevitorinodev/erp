@@ -96,7 +96,7 @@
             <div class="module-desc">Consulte e edite clientes</div>
         </a>
 
-        <a href="#" class="module-card">
+        <a href="{{ route('fornecedor.index') }}" class="module-card">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -107,7 +107,7 @@
             <div class="module-desc">Gerencie seus fornecedores</div>
         </a>
 
-        <a href="#" class="module-card">
+        <a href="{{ route('funcionario.index') }}" class="module-card">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -139,7 +139,9 @@
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.64 16H19a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
             </div>
             <div class="module-name">Vendas</div>
@@ -150,8 +152,12 @@
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    <line x1="4" y1="4" x2="20" y2="20" />
+                    <path d="M9 2h6"></path>
+                    <path d="M9 22h6"></path>
+                    <path d="M5 7h14"></path>
+                    <path d="M5 17h14"></path>
+                    <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                    <path d="M9 12l2 2 4-4"></path>
                 </svg>
             </div>
             <div class="module-name">Orçamentos</div>

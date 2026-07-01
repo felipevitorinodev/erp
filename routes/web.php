@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\FornecedorController;
+use App\Http\Controllers\FuncionarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -31,6 +33,24 @@ Route::middleware('auth')->group(function () {
         Route::get('{cliente}/editar', [ClienteController::class, 'edit'])->name('cliente.edit');
         Route::put('{cliente}/editar/salvar', [ClienteController::class, 'update'])->name('cliente.update');
         Route::delete('{cliente}/excluir', [ClienteController::class, 'destroy'])->name('cliente.destroy');
+    });
+
+    Route::prefix('fornecedor')->group(function () {
+        Route::get('/', [FornecedorController::class, 'index'])->name('fornecedor.index');
+        Route::get('/novo', [FornecedorController::class, 'create'])->name('fornecedor.create');
+        Route::post('/salvar', [FornecedorController::class, 'store'])->name('fornecedor.store');
+        Route::get('{fornecedor}/editar', [FornecedorController::class, 'edit'])->name('fornecedor.edit');
+        Route::put('{fornecedor}/editar/salvar', [FornecedorController::class, 'update'])->name('fornecedor.update');
+        Route::delete('{fornecedor}/excluir', [FornecedorController::class, 'destroy'])->name('fornecedor.destroy');
+    });
+
+    Route::prefix('funcionario')->group(function () {
+        Route::get('/', [FuncionarioController::class, 'index'])->name('funcionario.index');
+        Route::get('/novo', [FuncionarioController::class, 'create'])->name('funcionario.create');
+        Route::post('/salvar', [FuncionarioController::class, 'store'])->name('funcionario.store');
+        Route::get('{funcionario}/editar', [FuncionarioController::class, 'edit'])->name('funcionario.edit');
+        Route::put('{funcionario}/editar/salvar', [FuncionarioController::class, 'update'])->name('funcionario.update');
+        Route::delete('{funcionario}/excluir', [FuncionarioController::class, 'destroy'])->name('funcionario.destroy');
     });
 
 });

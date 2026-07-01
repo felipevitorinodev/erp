@@ -62,12 +62,12 @@
                             <span class="sidebar__icon">&#9632;</span> Clientes
                         </a>
 
-                        <a href="#"
+                        <a href="{{ route('fornecedor.index') }}"
                             class="sidebar__link {{ request()->routeIs('fornecedores.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Fornecedores
                         </a>
 
-                        <a href="#"
+                        <a href="{{ route('funcionario.index') }}"
                             class="sidebar__link {{ request()->routeIs('funcionarios.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Funcionários
                         </a>
