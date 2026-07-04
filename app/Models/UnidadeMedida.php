@@ -6,18 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Grupo extends Model
+class UnidadeMedida extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'grupos';
+    protected $table = 'unidades_medida';
 
     protected $fillable = [
         'empresa_id',
-        'parent_id',
         'nome',
-        'descricao',
+        'sigla',
         'ativo',
     ];
 
@@ -28,17 +27,5 @@ class Grupo extends Model
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
-    }
-
-    // grupo pai (se for subgrupo)
-    public function parent()
-    {
-        return $this->belongsTo(Grupo::class, 'parent_id');
-    }
-
-    // subgrupos filhas
-    public function subgrupos()
-    {
-        return $this->hasMany(Grupo::class, 'parent_id');
     }
 }

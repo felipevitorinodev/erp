@@ -11,9 +11,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EmpresaSeeder::class,
             AuthSeeder::class,
-            ClienteSeeder::class,
-            FornecedorSeeder::class,
-            FuncionarioSeeder::class,
+            // ClienteSeeder::class,
+            // FornecedorSeeder::class,
+            // FuncionarioSeeder::class,
+            GrupoSeeder::class,
+            UnidadeMedidaSeeder::class
         ]);
     }
 }

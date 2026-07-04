@@ -119,7 +119,7 @@
             <div class="module-desc">Controle o quadro de pessoal</div>
         </a>
 
-        <a href="#" class="module-card">
+        <a href="{{ route('produto.index') }}" class="module-card">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -145,7 +145,7 @@
                 </svg>
             </div>
             <div class="module-name">Vendas</div>
-            <div class="module-desc">Controle as vendas da sua loja</div>
+            <div class="module-desc">Registre as vendas da sua loja</div>
         </a>
 
         <a href="#" class="module-card module-card--green">

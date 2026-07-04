@@ -19,6 +19,11 @@ class GrupoRepository
         return $this->grupo::all();
     }
 
+    public function principais()
+    {
+        return Grupo::whereNull('parent_id')->where('ativo', true)->orderBy('nome')->get();
+    }
+
     public function store(array $request)
     {
         return $this->grupo->create($request);

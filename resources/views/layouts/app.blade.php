@@ -45,13 +45,13 @@
                 </div>
 
                 <div class="sidebar__group" data-group>
-
                     <div class="sidebar__group-toggle" data-toggle>
                         <span class="sidebar__group-label">CADASTROS</span>
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
 
                     <div class="sidebar__group-links" data-links>
+
                         <a href="{{ route('empresa.index') }}"
                             class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Empresas
@@ -63,21 +63,41 @@
                         </a>
 
                         <a href="{{ route('fornecedor.index') }}"
-                            class="sidebar__link {{ request()->routeIs('fornecedores.*') ? 'sidebar__link--active' : '' }}">
+                            class="sidebar__link {{ request()->routeIs('fornecedor.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Fornecedores
                         </a>
 
                         <a href="{{ route('funcionario.index') }}"
-                            class="sidebar__link {{ request()->routeIs('funcionarios.*') ? 'sidebar__link--active' : '' }}">
+                            class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Funcionários
                         </a>
 
-                        <a href="#"
-                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Produtos
-                        </a>
-                    </div>
+                        {{-- Sub-grupo: Produtos --}}
+                        <div class="sidebar__subgroup" data-subgroup>
+                            <div class="sidebar__subgroup-toggle {{ request()->routeIs('produto.*', 'grupo.*', 'unidadeMedida.*') ? 'sidebar__subgroup-toggle--open' : '' }}"
+                                data-subtoggle>
+                                <span class="sidebar__subgroup-name">
+                                    <span class="sidebar__icon">&#9632;</span> Produtos
+                                </span>
+                                <span class="sidebar__subgroup-arrow">&#9660;</span>
+                            </div>
+                            <div class="sidebar__subgroup-links" data-sublinks>
+                                <a href="{{ route('produto.index') }}"
+                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
+                                    <span class="sidebar__icon">&#9632;</span> Todos os Produtos
+                                </a>
+                                <a href="{{ route('grupo.index') }}"
+                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
+                                    <span class="sidebar__icon">&#9632;</span> Grupos
+                                </a>
+                                <a href="{{ route('unidadeMedida.index') }}"
+                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
+                                    <span class="sidebar__icon">&#9632;</span> Unidades de Medida
+                                </a>
+                            </div>
+                        </div>
 
+                    </div>
                 </div>
 
                 <div class="sidebar__group" data-group>
@@ -90,7 +110,7 @@
                             <span class="sidebar__icon">&#9632;</span> Vendas
                         </a>
                         <a href="#" class="sidebar__link">
-                            <span class="sidebar__icon">&#9632;</span> Orçamento
+                            <span class="sidebar__icon">&#9632;</span> Orçamentos
                         </a>
                     </div>
                 </div>
@@ -180,6 +200,26 @@
             toggle.addEventListener('click', function () {
                 var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
                 arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
+            });
+        });
+
+        document.querySelectorAll('[data-subgroup]').forEach(function (subgroup) {
+            var subtoggle = subgroup.querySelector('[data-subtoggle]');
+            var sublinks = subgroup.querySelector('[data-sublinks]');
+            var subarrow = subgroup.querySelector('.sidebar__subgroup-arrow');
+
+            if (!subtoggle || !sublinks || !subarrow) return;
+
+            var hasActive = subgroup.querySelector('.sidebar__link--active');
+            if (!hasActive) {
+                sublinks.classList.add('sidebar__subgroup-links--collapsed');
+                subarrow.classList.add('sidebar__subgroup-arrow--collapsed');
+            }
+
+            subtoggle.addEventListener('click', function () {
+                var collapsed = sublinks.classList.toggle('sidebar__subgroup-links--collapsed');
+                subarrow.classList.toggle('sidebar__subgroup-arrow--collapsed', collapsed);
+                subtoggle.classList.toggle('sidebar__subgroup-toggle--open', !collapsed);
             });
         });
     </script>

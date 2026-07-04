@@ -17,7 +17,7 @@ class AuthSeeder extends Seeder
         $empresa = Empresa::first();
 
         User::firstOrCreate(
-            ['email' => 'admin@empresa.com'],
+            ['email' => 'admin@dev.com'],
             [
                 'empresa_id' => $empresa->id,
                 'name' => 'Administrador',

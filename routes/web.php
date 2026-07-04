@@ -6,6 +6,8 @@ use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\FornecedorController;
 use App\Http\Controllers\FuncionarioController;
 use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\ProdutoController;
+use App\Http\Controllers\UnidadeMedidaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -61,6 +63,24 @@ Route::middleware('auth')->group(function () {
         Route::get('{grupo}/editar', [GrupoController::class, 'edit'])->name('grupo.edit');
         Route::put('{grupo}/editar/salvar', [GrupoController::class, 'update'])->name('grupo.update');
         Route::delete('{grupo}/excluir', [GrupoController::class, 'destroy'])->name('grupo.destroy');
+    });
+
+    Route::prefix('unidadeMedida')->group(function () {
+        Route::get('/', [UnidadeMedidaController::class, 'index'])->name('unidadeMedida.index');
+        Route::get('/novo', [UnidadeMedidaController::class, 'create'])->name('unidadeMedida.create');
+        Route::post('/salvar', [UnidadeMedidaController::class, 'store'])->name('unidadeMedida.store');
+        Route::get('{unidadeMedida}/editar', [UnidadeMedidaController::class, 'edit'])->name('unidadeMedida.edit');
+        Route::put('{unidadeMedida}/editar/salvar', [UnidadeMedidaController::class, 'update'])->name('unidadeMedida.update');
+        Route::delete('{unidadeMedida}/excluir', [UnidadeMedidaController::class, 'destroy'])->name('unidadeMedida.destroy');
+    });
+
+    Route::prefix('produto')->group(function () {
+        Route::get('/', [ProdutoController::class, 'index'])->name('produto.index');
+        Route::get('/novo', [ProdutoController::class, 'create'])->name('produto.create');
+        Route::post('/salvar', [ProdutoController::class, 'store'])->name('produto.store');
+        Route::get('{produto}/editar', [ProdutoController::class, 'edit'])->name('produto.edit');
+        Route::put('{produto}/editar/salvar', [ProdutoController::class, 'update'])->name('produto.update');
+        Route::delete('{produto}/excluir', [ProdutoController::class, 'destroy'])->name('produto.destroy');
     });
 
 });

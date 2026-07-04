@@ -41,6 +41,6 @@ class GrupoController extends Controller
     }
 
     public function destroy(Grupo $grupo){
-        return $this->service->destroy($grupo->id);1
+        return $this->service->destroy($grupo->id);
     }
 }
