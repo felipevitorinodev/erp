@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Bem Vindo!')
+@section('title', 'GestãoFácil')
 
 @section('content')
 
     <style>
         .modules-grid {
             display: grid;
-            grid-template-columns: repeat(5, 160px);
-            gap: .85rem;
-            margin-bottom: 1.75rem;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
         }
 
         .module-card {
@@ -133,7 +133,7 @@
     </div>
 
     <p class="stat-card__label" style="margin-bottom:.75rem;">Faturamento</p>
-    <div class="modules-grid" style="grid-template-columns: repeat(2, 160px);">
+    <div class="modules-grid">
 
         <a href="#" class="module-card module-card--green">
             <div class="module-icon">
@@ -167,7 +167,7 @@
     </div>
 
     <p class="stat-card__label" style="margin-bottom:.75rem;">Financeiro</p>
-    <div class="modules-grid" style="grid-template-columns: repeat(2, 160px);">
+    <div class="modules-grid">
 
         <a href="#" class="module-card module-card--accent">
             <div class="module-icon">

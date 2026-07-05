@@ -132,7 +132,9 @@
             align-items: center;
             justify-content: center;
             padding: 2.5rem 2rem;
-            background: var(--color-bg);
+            background: linear-gradient(135deg,
+                    #eef3f8,
+                    #f7f9fc);
         }
 
         .login-box {
@@ -201,6 +203,73 @@
             font-size: .7rem;
             color: var(--color-text-muted);
         }
+
+        /* ==========================
+        RESPONSIVIDADE
+        ========================== */
+
+        @media (max-width: 900px) {
+
+            .login-left {
+                display: none;
+            }
+
+            .login-right {
+                padding: 1.5rem;
+            }
+
+            .login-box {
+                max-width: 420px;
+                width: 100%;
+                background: #fff;
+                padding: 2rem;
+                border: 1px solid var(--color-border);
+                border-radius: 8px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, .08);
+            }
+
+        }
+
+        @media (max-width: 480px) {
+
+            .login-right {
+                padding: 1rem;
+            }
+
+            .login-box {
+                padding: 1.5rem;
+            }
+
+            .login-title {
+                font-size: 1rem;
+            }
+
+        }
+
+        .form-control {
+
+            transition: .2s;
+        }
+
+        .form-control:focus {
+
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(26, 59, 93, .12);
+
+        }
+
+        .btn-login-full {
+
+            height: 46px;
+            transition: .2s;
+
+        }
+
+        .btn-login-full:hover {
+
+            transform: translateY(-1px);
+
+        }
     </style>
 </head>
 
@@ -219,8 +288,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="brand-name">Gestão Empresarial</div>
-                    <div class="brand-sub">Facilitando a gestão da sua empresa!</div>
+                    <div class="brand-name">GestãoFácil</div>
+                    <div class="brand-sub">Facilitando a gestão da sua empresa</div>
                 </div>
             </div>
 
