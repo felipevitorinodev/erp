@@ -54,7 +54,7 @@
     </div>
 
     <div class="form-group form-group--span-2">
-        <label class="form-label">Fornecedor</label>
+        <label class="form-label">Fornecedor Principal</label>
         <select name="fornecedor_id" class="form-control @error('fornecedor_id') is-invalid @enderror">
             <option value="">Selecione</option>
             @foreach($fornecedores as $fornecedor)
