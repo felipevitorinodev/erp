@@ -8,6 +8,7 @@ use App\Http\Controllers\FuncionarioController;
 use App\Http\Controllers\GrupoController;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\UnidadeMedidaController;
+use App\Http\Controllers\VendaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -81,6 +82,18 @@ Route::middleware('auth')->group(function () {
         Route::get('{produto}/editar', [ProdutoController::class, 'edit'])->name('produto.edit');
         Route::put('{produto}/editar/salvar', [ProdutoController::class, 'update'])->name('produto.update');
         Route::delete('{produto}/excluir', [ProdutoController::class, 'destroy'])->name('produto.destroy');
+    });
+
+    Route::prefix('venda')->group(function () {
+        Route::get('/', [VendaController::class, 'index'])->name('venda.index');
+        Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
+        Route::post('/salvar', [VendaController::class, 'store'])->name('venda.store');
+        Route::get('{venda}/ver', [VendaController::class, 'show'])->name('venda.show');
+        Route::get('{venda}/editar', [VendaController::class, 'edit'])->name('venda.edit');
+        Route::put('{venda}/editar/salvar', [VendaController::class, 'update'])->name('venda.update');
+        Route::post('{venda}/confirmar', [VendaController::class, 'confirmar'])->name('venda.confirmar');
+        Route::post('{venda}/cancelar', [VendaController::class, 'cancelar'])->name('venda.cancelar');
+        Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
     });
 
 });
