@@ -1,0 +1,287 @@
+{{-- Cabeçalho do Orçamento --}}
+@php $orcamento = $orcamento ?? null; @endphp
+<div class="form-grid form-grid--col-3">
+    <div class="form-group">
+        <label class="form-label">Cliente</label>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-cliente" class="form-control"
+                value="{{ old('cliente_nome', $orcamento && $orcamento->cliente ? $orcamento->cliente->nome : '') }}"
+                placeholder="Digite para buscar..." autocomplete="off">
+            <input type="hidden" name="cliente_id" id="hidden-cliente-id"
+                value="{{ old('cliente_id', $orcamento->cliente_id ?? '') }}">
+        </div>
+        @error('cliente_id')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
+
+    <div class="form-group">
+        <label class="form-label form-label--required">Data do Orçamento</label>
+        <input type="date" name="data_orcamento"
+            class="form-control @error('data_orcamento') is-invalid @enderror"
+            value="{{ old('data_orcamento', $orcamento ? $orcamento->data_orcamento?->format('Y-m-d') : date('Y-m-d')) }}">
+        @error('data_orcamento')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Forma de Pagamento</label>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-forma-pagamento" class="form-control"
+                value="{{ old('forma_pagamento', $orcamento->forma_pagamento ?? '') }}"
+                placeholder="Selecione a forma de pagamento..." autocomplete="off">
+            <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
+                value="{{ old('forma_pagamento', $orcamento->forma_pagamento ?? '') }}">
+        </div>
+        @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
+</div>
+
+{{-- Itens --}}
+<div class="itens-panel">
+    <div class="section-toolbar">
+        <span class="section-toolbar__title">Itens do Orçamento</span>
+        <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar Item</button>
+    </div>
+
+    @error('itens')<span class="form-error">{{ $message }}</span>@enderror
+
+    <div class="itens-list" id="itens-body">
+        @php
+            $itensExistentes = $orcamento ? $orcamento->itens : collect();
+        @endphp
+        @foreach($itensExistentes as $i => $item)
+            <div class="item-card item-row">
+                <div class="item-card__top">
+                    <span class="item-card__badge">Item <span class="item-card__num">{{ $i + 1 }}</span></span>
+                    <button type="button" class="btn btn--ghost btn--sm btn-remove-item" title="Remover item">Remover</button>
+                </div>
+
+                <div class="form-group item-card__produto">
+                    <label class="form-label form-label--required">Produto</label>
+                    <div class="autocomplete-wrap">
+                        <input type="text" class="form-control input-produto-nome"
+                            value="{{ $item->produto_nome }}"
+                            placeholder="Buscar produto..." autocomplete="off">
+                        <input type="hidden" name="itens[{{ $i }}][produto_id]"
+                            class="input-produto-id" value="{{ $item->produto_id }}">
+                    </div>
+                </div>
+
+                <div class="item-card__grid">
+                    <div class="form-group">
+                        <label class="form-label">Qtd.</label>
+                        <input type="text" name="itens[{{ $i }}][quantidade]"
+                            class="form-control text-right input-qtd"
+                            inputmode="decimal"
+                            value="{{ number_format($item->quantidade, 3, ',', '.') }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço Unit.</label>
+                        <input type="text" name="itens[{{ $i }}][preco_unitario]"
+                            class="form-control text-right input-preco"
+                            inputmode="decimal"
+                            value="{{ number_format($item->preco_unitario, 2, ',', '.') }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Desconto</label>
+                        <input type="text" name="itens[{{ $i }}][desconto]"
+                            class="form-control text-right input-desc-item"
+                            inputmode="decimal"
+                            value="{{ number_format($item->desconto, 2, ',', '.') }}">
+                    </div>
+                </div>
+
+                <div class="item-card__footer">
+                    <span class="item-card__footer-label">Total do item</span>
+                    <strong class="span-total-item">R$ {{ number_format($item->total, 2, ',', '.') }}</strong>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
+    <div class="itens-empty" id="itens-empty" @if($itensExistentes->count()) hidden @endif>
+        Nenhum item adicionado. Toque em <strong>+ Adicionar Item</strong> para começar.
+    </div>
+</div>
+
+{{-- Totais --}}
+<div class="totals-wrap">
+    <div class="totals-box totals-box--sale">
+        <div class="totals-box__row">
+            <span class="text-muted">Subtotal</span>
+            <span id="label-subtotal">R$ 0,00</span>
+            <input type="hidden" name="subtotal" id="input-subtotal" value="{{ old('subtotal', $orcamento->subtotal ?? '0') }}">
+        </div>
+        <div class="totals-box__row">
+            <span class="text-muted">Desconto (R$)</span>
+            <input type="text" name="desconto" id="input-desconto"
+                class="form-control text-right totals-box__input"
+                inputmode="decimal"
+                value="{{ old('desconto', number_format($orcamento->desconto ?? 0, 2, ',', '.')) }}">
+        </div>
+        <div class="totals-box__row">
+            <span class="text-muted">Acréscimo (R$)</span>
+            <input type="text" name="acrescimo" id="input-acrescimo"
+                class="form-control text-right totals-box__input"
+                inputmode="decimal"
+                value="{{ old('acrescimo', number_format($orcamento->acrescimo ?? 0, 2, ',', '.')) }}">
+        </div>
+        <div class="totals-box__row totals-box__row--total">
+            <span>Total do orçamento</span>
+            <span id="label-total">R$ 0,00</span>
+            <input type="hidden" name="total" id="input-total" value="{{ old('total', $orcamento->total ?? '0') }}">
+        </div>
+    </div>
+</div>
+
+<div class="form-grid form-grid--col-1" style="margin-top:1rem;">
+    <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea name="observacoes" class="form-control @error('observacoes') is-invalid @enderror"
+            rows="2" style="resize:none;" maxlength="1000">{{ old('observacoes', $orcamento->observacoes ?? '') }}</textarea>
+        @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
+</div>
+
+@push('scripts')
+<script>
+(function ($) {
+    var urlProdutos = '{{ route('api.produtos.busca') }}';
+    var indice = {{ $orcamento ? $orcamento->itens->count() : 0 }};
+
+    initAutocomplete('#input-cliente', '#hidden-cliente-id', '{{ route('api.clientes.busca') }}', function (item) {
+        var doc = item.cpf || item.cnpj || '';
+        return item.nome + (doc ? ' — ' + doc : '');
+    });
+
+    initAutocomplete('#input-forma-pagamento', '#hidden-forma-pagamento', '{{ route('api.formas-pagamento.busca') }}', function (item) {
+        return item.nome;
+    }, null, null, 'nome');
+
+    function parseBR(val) {
+        if (!val) return 0;
+        return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function formatBR(val) {
+        return 'R$ ' + val.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function formatInput(val) {
+        return val.toFixed(2).replace('.', ',');
+    }
+
+    function atualizarEmpty() {
+        var empty = document.getElementById('itens-empty');
+        var count = document.querySelectorAll('#itens-body .item-row').length;
+        if (empty) empty.hidden = count > 0;
+
+        document.querySelectorAll('#itens-body .item-row').forEach(function (row, i) {
+            var num = row.querySelector('.item-card__num');
+            if (num) num.textContent = String(i + 1);
+        });
+    }
+
+    function calcularLinha(row) {
+        var qtd   = parseBR(row.querySelector('.input-qtd').value);
+        var preco = parseBR(row.querySelector('.input-preco').value);
+        var desc  = parseBR(row.querySelector('.input-desc-item').value);
+        var total = Math.max(0, (qtd * preco) - desc);
+        row.querySelector('.span-total-item').textContent = formatBR(total);
+        return total;
+    }
+
+    function recalcularTotais() {
+        var subtotal = 0;
+        document.querySelectorAll('#itens-body .item-row').forEach(function (row) {
+            subtotal += calcularLinha(row);
+        });
+
+        var desconto  = parseBR(document.getElementById('input-desconto').value);
+        var acrescimo = parseBR(document.getElementById('input-acrescimo').value);
+        var total     = Math.max(0, subtotal - desconto + acrescimo);
+
+        document.getElementById('label-subtotal').textContent = formatBR(subtotal);
+        document.getElementById('label-total').textContent    = formatBR(total);
+        document.getElementById('input-subtotal').value       = subtotal.toFixed(2);
+        document.getElementById('input-total').value          = total.toFixed(2);
+    }
+
+    function criarLinha(idx) {
+        var card = document.createElement('div');
+        card.className = 'item-card item-row';
+        card.innerHTML =
+            '<div class="item-card__top">' +
+                '<span class="item-card__badge">Item <span class="item-card__num"></span></span>' +
+                '<button type="button" class="btn btn--ghost btn--sm btn-remove-item" title="Remover item">Remover</button>' +
+            '</div>' +
+            '<div class="form-group item-card__produto">' +
+                '<label class="form-label form-label--required">Produto</label>' +
+                '<div class="autocomplete-wrap">' +
+                    '<input type="text" class="form-control input-produto-nome" placeholder="Buscar produto..." autocomplete="off">' +
+                    '<input type="hidden" name="itens[' + idx + '][produto_id]" class="input-produto-id" value="">' +
+                '</div>' +
+            '</div>' +
+            '<div class="item-card__grid">' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Qtd.</label>' +
+                    '<input type="text" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd" inputmode="decimal" value="1,000">' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Preço Unit.</label>' +
+                    '<input type="text" name="itens[' + idx + '][preco_unitario]" class="form-control text-right input-preco" inputmode="decimal" value="0,00">' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Desconto</label>' +
+                    '<input type="text" name="itens[' + idx + '][desconto]" class="form-control text-right input-desc-item" inputmode="decimal" value="0,00">' +
+                '</div>' +
+            '</div>' +
+            '<div class="item-card__footer">' +
+                '<span class="item-card__footer-label">Total do item</span>' +
+                '<strong class="span-total-item">R$ 0,00</strong>' +
+            '</div>';
+
+        return card;
+    }
+
+    function bindLinha(row) {
+        initProdutoLinhaAutocomplete(row, urlProdutos, function (item, $row) {
+            var preco = parseFloat(item.preco_venda || item.preco || 0);
+            $row.find('.input-preco').val(formatInput(preco));
+            calcularLinha($row[0]);
+            recalcularTotais();
+        });
+
+        ['input-qtd', 'input-preco', 'input-desc-item'].forEach(function (cls) {
+            row.querySelector('.' + cls).addEventListener('input', function () {
+                calcularLinha(row);
+                recalcularTotais();
+            });
+        });
+
+        row.querySelector('.btn-remove-item').addEventListener('click', function () {
+            row.remove();
+            atualizarEmpty();
+            recalcularTotais();
+        });
+    }
+
+    document.querySelectorAll('#itens-body .item-row').forEach(bindLinha);
+
+    document.getElementById('btn-add-item').addEventListener('click', function () {
+        var row = criarLinha(indice++);
+        document.getElementById('itens-body').appendChild(row);
+        bindLinha(row);
+        atualizarEmpty();
+        recalcularTotais();
+        var produto = row.querySelector('.input-produto-nome');
+        if (produto) produto.focus();
+    });
+
+    ['input-desconto', 'input-acrescimo'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', recalcularTotais);
+    });
+
+    atualizarEmpty();
+    recalcularTotais();
+})(jQuery);
+</script>
+@endpush

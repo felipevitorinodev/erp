@@ -1,3 +1,4 @@
+@php $produto = $produto ?? null; @endphp
 <div class="form-grid form-grid--col-4">
     <div class="form-group form-group--span-1">
         <label class="form-label">Código</label>
@@ -30,37 +31,38 @@
 
 <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
     <div class="form-group">
-        <label class="form-label">grupo</label>
-        <select name="grupo_id" class="form-control @error('grupo_id') is-invalid @enderror">
-            <option value="">Selecione</option>
-            @foreach($grupos as $grupo)
-                <option value="{{ $grupo->id }}" {{ old('grupo_id', $produto->grupo_id ?? '') == $grupo->id ? 'selected' : '' }}>
-                    {{ $grupo->parent ? $grupo->parent->nome . ' / ' : '' }}{{ $grupo->nome }}
-                </option>
-            @endforeach
-        </select>
+        <label class="form-label">Grupo</label>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-grupo" class="form-control"
+                value="{{ old('grupo_nome', isset($produto) && $produto->grupos ? (($produto->grupos->parent ? $produto->grupos->parent->nome . ' / ' : '') . $produto->grupos->nome) : '') }}"
+                placeholder="Digite para buscar..." autocomplete="off">
+            <input type="hidden" name="grupo_id" id="hidden-grupo-id"
+                value="{{ old('grupo_id', $produto->grupo_id ?? '') }}">
+        </div>
         @error('grupo_id')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group">
         <label class="form-label">Unidade de Medida</label>
-        <select name="unidade_medida_id" class="form-control @error('unidade_medida_id') is-invalid @enderror">
-            <option value="">Selecione</option>
-            @foreach($unidades as $unidade)
-                <option value="{{ $unidade->id }}" {{ old('unidade_medida_id', $produto->unidade_medida_id ?? '') == $unidade->id ? 'selected' : '' }}>{{ $unidade->nome }} ({{ $unidade->sigla }})</option>
-            @endforeach
-        </select>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-unidade" class="form-control"
+                value="{{ old('unidade_nome', isset($produto) && $produto->unidadeMedida ? ($produto->unidadeMedida->nome . ' (' . $produto->unidadeMedida->sigla . ')') : '') }}"
+                placeholder="Digite para buscar..." autocomplete="off">
+            <input type="hidden" name="unidade_medida_id" id="hidden-unidade-id"
+                value="{{ old('unidade_medida_id', $produto->unidade_medida_id ?? '') }}">
+        </div>
         @error('unidade_medida_id')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group form-group--span-2">
         <label class="form-label">Fornecedor Principal</label>
-        <select name="fornecedor_id" class="form-control @error('fornecedor_id') is-invalid @enderror">
-            <option value="">Selecione</option>
-            @foreach($fornecedores as $fornecedor)
-                <option value="{{ $fornecedor->id }}" {{ old('fornecedor_id', $produto->fornecedor_id ?? '') == $fornecedor->id ? 'selected' : '' }}>{{ $fornecedor->nome }}</option>
-            @endforeach
-        </select>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-fornecedor" class="form-control"
+                value="{{ old('fornecedor_nome', isset($produto) && $produto->fornecedor ? $produto->fornecedor->nome : '') }}"
+                placeholder="Digite para buscar..." autocomplete="off">
+            <input type="hidden" name="fornecedor_id" id="hidden-fornecedor-id"
+                value="{{ old('fornecedor_id', $produto->fornecedor_id ?? '') }}">
+        </div>
         @error('fornecedor_id')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
@@ -175,3 +177,21 @@
         @error('descricao')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
+@push('scripts')
+<script>
+(function () {
+    initAutocomplete('#input-grupo', '#hidden-grupo-id', '{{ route('api.grupos.busca') }}', function (item) {
+        return (item.parent && item.parent.nome ? item.parent.nome + ' / ' : '') + item.nome;
+    });
+
+    initAutocomplete('#input-unidade', '#hidden-unidade-id', '{{ route('api.unidades-medida.busca') }}', function (item) {
+        return item.nome + (item.sigla ? ' (' + item.sigla + ')' : '');
+    });
+
+    initAutocomplete('#input-fornecedor', '#hidden-fornecedor-id', '{{ route('api.fornecedores.busca') }}', function (item) {
+        var doc = item.cpf || item.cnpj || '';
+        return item.nome + (doc ? ' — ' + doc : '');
+    });
+})();
+</script>
+@endpush

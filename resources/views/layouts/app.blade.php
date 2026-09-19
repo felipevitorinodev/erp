@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'ERP')</title>
+    <title>@yield('title', 'Visys') — Visys</title>
+    <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
@@ -15,10 +16,14 @@
 <body>
 
     <header class="header">
+        <button type="button" class="header__menu" id="btn-sidebar-toggle" aria-label="Abrir menu"
+            aria-expanded="false">
+            <span class="header__menu-icon" aria-hidden="true"></span>
+        </button>
+
         <div class="header__brand">
-            <span class="header__logo">&#9632;</span>
-            <a href="/">
-                <span class="header__name">Sistema de Gestão</span>
+            <a href="/" class="header__brand-link" title="Visys">
+                <img src="{{ asset('img/logo-sem-fundo.png') }}" alt="Visys" class="header__logo-img">
             </a>
         </div>
 
@@ -30,6 +35,8 @@
             </form>
         </div>
     </header>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
 
     <div class="layout">
 
@@ -106,10 +113,12 @@
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('venda.index') }}" class="sidebar__link">
+                        <a href="{{ route('venda.index') }}"
+                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Vendas
                         </a>
-                        <a href="#" class="sidebar__link">
+                        <a href="{{ route('orcamento.index') }}"
+                            class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Orçamentos
                         </a>
                     </div>
@@ -121,11 +130,26 @@
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="#" class="sidebar__link">
+                        <a href="{{ route('conta-receber.index') }}"
+                            class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Contas a Receber
                         </a>
-                        <a href="#" class="sidebar__link">
+                        <a href="{{ route('conta-pagar.index') }}"
+                            class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
                             <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <span class="sidebar__group-label">CONFIGURAÇÃO</span>
+                        <span class="sidebar__group-arrow">&#9660;</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('formaPagamento.index') }}"
+                            class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Formas de Pagamento
                         </a>
                     </div>
                 </div>
@@ -147,22 +171,22 @@
                 </div>
             </div>
 
-            @if(session('success'))
+            @if (session('success'))
                 <div class="alert alert--success">
                     {{ session('success') }}
                 </div>
             @endif
 
-            @if(session('error'))
+            @if (session('error'))
                 <div class="alert alert--error">
                     {{ session('error') }}
                 </div>
             @endif
 
-            @if($errors->any())
+            @if ($errors->any())
                 <div class="alert alert--error">
                     <ul style="margin:0; padding-left: 1rem;">
-                        @foreach($errors->all() as $error)
+                        @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
@@ -177,14 +201,34 @@
     </div>
 
     <footer class="footer">
-        <span>Felipe Vitorino &copy; {{ date('Y') }}</span>
+        <a href="/" class="footer__brand" title="Visys">
+            <img src="{{ asset('img/logo-v-sem-fundo.png') }}" alt="Visys" class="footer__logo-img">
+        </a>
+        <span>&copy; {{ date('Y') }} · Visys · Gestão empresarial</span>
     </footer>
 
+    <div class="modal-overlay" id="modal-confirm" hidden>
+        <div class="modal-box">
+            <div class="modal-box__header">
+                <span class="card__title" id="modal-confirm-title">Confirmar</span>
+                <button type="button" class="btn btn--ghost btn--sm" data-confirm-close>✕</button>
+            </div>
+            <div class="modal-box__body">
+                <p id="modal-confirm-message" style="margin:0; font-size:13px; color:var(--color-text);"></p>
+            </div>
+            <div class="modal-box__footer">
+                <button type="button" class="btn btn--ghost" data-confirm-close>Voltar</button>
+                <button type="button" class="btn btn--primary" id="modal-confirm-ok">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ asset('js/jquery.min.js') }}"></script>
+    <script src="{{ asset('js/autocomplete.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
 
     <script>
-        document.querySelectorAll('[data-group]').forEach(function (group) {
+        document.querySelectorAll('[data-group]').forEach(function(group) {
             var toggle = group.querySelector('[data-toggle]');
             var links = group.querySelector('[data-links]');
             var arrow = group.querySelector('.sidebar__group-arrow');
@@ -197,13 +241,13 @@
                 arrow.classList.add('sidebar__group-arrow--collapsed');
             }
 
-            toggle.addEventListener('click', function () {
+            toggle.addEventListener('click', function() {
                 var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
                 arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
             });
         });
 
-        document.querySelectorAll('[data-subgroup]').forEach(function (subgroup) {
+        document.querySelectorAll('[data-subgroup]').forEach(function(subgroup) {
             var subtoggle = subgroup.querySelector('[data-subtoggle]');
             var sublinks = subgroup.querySelector('[data-sublinks]');
             var subarrow = subgroup.querySelector('.sidebar__subgroup-arrow');
@@ -216,7 +260,7 @@
                 subarrow.classList.add('sidebar__subgroup-arrow--collapsed');
             }
 
-            subtoggle.addEventListener('click', function () {
+            subtoggle.addEventListener('click', function() {
                 var collapsed = sublinks.classList.toggle('sidebar__subgroup-links--collapsed');
                 subarrow.classList.toggle('sidebar__subgroup-arrow--collapsed', collapsed);
                 subtoggle.classList.toggle('sidebar__subgroup-toggle--open', !collapsed);

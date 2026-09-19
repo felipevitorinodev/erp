@@ -1,83 +1,30 @@
 @extends('layouts.app')
 
-@section('title', 'Bem Vindo!')
+@section('title', 'Início')
+@section('page_title', 'Início')
 
 @section('content')
 
-    <style>
-        .modules-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 160px);
-            gap: .85rem;
-            margin-bottom: 1.75rem;
-        }
+    <div class="home-hero">
+        <div>
+            <div class="home-hero__eyebrow">Visys · Gestão empresarial</div>
+            <div class="home-hero__title">Olá, <span>{{ Auth::user()->name }}</span></div>
+            <p class="home-hero__text">
+                Acesse cadastros, vendas, orçamentos e financeiro em um só lugar — interface direta, rápida e feita para o dia a dia.
+            </p>
+        </div>
+        <div class="home-hero__chip">Painel</div>
+    </div>
 
-        .module-card {
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-top: 3px solid var(--color-primary);
-            padding: 1.1rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: .6rem;
-            cursor: pointer;
-            transition: box-shadow .15s, border-color .15s;
-            text-decoration: none;
-        }
-
-        .module-card:hover {
-            box-shadow: 0 2px 8px rgba(26, 59, 93, .1);
-            border-color: var(--color-border-mid);
-            text-decoration: none;
-        }
-
-        .module-card--accent {
-            border-top-color: var(--color-accent);
-        }
-
-        .module-card--green {
-            border-top-color: #28a84e;
-        }
-
-        .module-icon {
-            width: 32px;
-            height: 32px;
-            background: #EBF0F7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-primary);
-        }
-
-        .module-card--accent .module-icon {
-            background: #FBF0EB;
-            color: var(--color-accent);
-        }
-
-        .module-name {
-            font-size: .8rem;
-            font-weight: 700;
-            color: var(--color-text);
-            text-transform: uppercase;
-            letter-spacing: .03em;
-        }
-
-        .module-desc {
-            font-size: .72rem;
-            color: var(--color-text-muted);
-            line-height: 1.4;
-        }
-    </style>
-
-    <p class="stat-card__label" style="margin-bottom:.75rem;">Cadastros</p>
+    <p class="home-section-label">Cadastros</p>
     <div class="modules-grid">
 
         <a href="{{ route('empresa.index') }}" class="module-card">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="7" width="20" height="14" rx="2" />
-                    <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z" />
+                    <rect x="2" y="7" width="20" height="14" rx="0" />
+                    <path d="M16 3H8v4h12V5a2 2 0 0 0-2-2z" />
                 </svg>
             </div>
             <div class="module-name">Empresas</div>
@@ -111,7 +58,7 @@
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <rect x="2" y="3" width="20" height="14" rx="0" />
                     <path d="M8 21h8M12 17v4" />
                 </svg>
             </div>
@@ -132,8 +79,8 @@
 
     </div>
 
-    <p class="stat-card__label" style="margin-bottom:.75rem;">Faturamento</p>
-    <div class="modules-grid" style="grid-template-columns: repeat(2, 160px);">
+    <p class="home-section-label">Faturamento</p>
+    <div class="modules-grid">
 
         <a href="{{ route('venda.index') }}" class="module-card module-card--green">
             <div class="module-icon">
@@ -148,7 +95,7 @@
             <div class="module-desc">Registre as vendas da sua loja</div>
         </a>
 
-        <a href="#" class="module-card module-card--green">
+        <a href="{{ route('orcamento.index') }}" class="module-card module-card--green">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -156,7 +103,7 @@
                     <path d="M9 22h6"></path>
                     <path d="M5 7h14"></path>
                     <path d="M5 17h14"></path>
-                    <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                    <rect x="5" y="2" width="14" height="20" rx="0"></rect>
                     <path d="M9 12l2 2 4-4"></path>
                 </svg>
             </div>
@@ -166,10 +113,10 @@
 
     </div>
 
-    <p class="stat-card__label" style="margin-bottom:.75rem;">Financeiro</p>
-    <div class="modules-grid" style="grid-template-columns: repeat(2, 160px);">
+    <p class="home-section-label">Financeiro</p>
+    <div class="modules-grid">
 
-        <a href="#" class="module-card module-card--accent">
+        <a href="{{ route('conta-receber.index') }}" class="module-card module-card--accent">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -180,7 +127,7 @@
             <div class="module-desc">Controle de recebimentos</div>
         </a>
 
-        <a href="#" class="module-card module-card--accent">
+        <a href="{{ route('conta-pagar.index') }}" class="module-card module-card--accent">
             <div class="module-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">

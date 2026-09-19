@@ -28,16 +28,16 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">grupo Pai</label>
-                        <select name="parent_id" class="form-control @error('parent_id') is-invalid @enderror">
-                            <option value="">Nenhuma (grupo principal)</option>
-                            @foreach($gruposPrincipais as $cat)
-                                <option value="{{ $cat->id }}" {{ old('parent_id') == $cat->id ? 'selected' : '' }}>
-                                    {{ $cat->nome }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label">Grupo Pai</label>
+                        <div class="autocomplete-wrap">
+                            <input type="text" id="input-grupo-pai" class="form-control"
+                                value="{{ old('parent_nome') }}"
+                                placeholder="Digite para buscar..." autocomplete="off">
+                            <input type="hidden" name="parent_id" id="hidden-grupo-pai-id"
+                                value="{{ old('parent_id') }}">
+                        </div>
                         @error('parent_id')<span class="form-error">{{ $message }}</span>@enderror
-                        <small class="text-muted">Selecione se esta for uma subgrupo.</small>
+                        <small class="text-muted">Deixe em branco se for um grupo principal.</small>
                     </div>
                 </div>
 
@@ -61,3 +61,13 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    initAutocomplete('#input-grupo-pai', '#hidden-grupo-pai-id', '{{ route('api.grupos.busca') }}', function (item) {
+        return item.nome;
+    }, null, { apenas_principais: 1 });
+})();
+</script>
+@endpush

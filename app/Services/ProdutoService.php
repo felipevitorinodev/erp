@@ -2,11 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Grupo;
 use App\Models\Produto;
 use App\Repositories\ProdutoRepository;
-use App\Models\UnidadeMedida;
-use App\Models\Fornecedor;
 
 class ProdutoService
 {
@@ -23,7 +20,7 @@ class ProdutoService
 
     public function create()
     {
-        return view('produto.create', $this->dadosParaForm());
+        return view('produto.create');
     }
 
     public function store($request)
@@ -36,10 +33,9 @@ class ProdutoService
 
     public function edit(Produto $produto)
     {
-        return view('produto.edit', array_merge(
-            ['produto' => $produto],
-            $this->dadosParaForm()
-        ));
+        $produto->load(['grupos.parent', 'unidadeMedida', 'fornecedor']);
+
+        return view('produto.edit', ['produto' => $produto]);
     }
 
     public function update($request, Produto $produto)
@@ -57,14 +53,5 @@ class ProdutoService
 
         return redirect()->route('produto.index')
             ->with('success', 'Produto apagado com sucesso.');
-    }
-
-    protected function dadosParaForm(): array
-    {
-        return [
-            'grupos'   => Grupo::where('ativo', true)->orderBy('nome')->get(),
-            'unidades'     => UnidadeMedida::where('ativo', true)->orderBy('nome')->get(),
-            'fornecedores' => Fornecedor::orderBy('nome')->get(),
-        ];
     }
 }

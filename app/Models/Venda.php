@@ -57,4 +57,9 @@ class Venda extends Model
     {
         return $this->hasMany(VendaItem::class);
     }
+
+    public function contasReceber()
+    {
+        return $this->hasMany(ContaReceber::class);
+    }
 }

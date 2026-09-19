@@ -20,8 +20,8 @@ class AuthSeeder extends Seeder
             ['email' => 'admin@dev.com'],
             [
                 'empresa_id' => $empresa->id,
-                'name' => 'Administrador',
-                'password' => Hash::make('123456'),
+                'name' => 'Desenvolvedor',
+                'password' => Hash::make('dev@123'),
             ]
         );
     }

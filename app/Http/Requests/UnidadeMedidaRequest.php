@@ -24,8 +24,11 @@ class UnidadeMedidaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => 'O campo é obrigatório.',
-            'max' => 'O campo precisa ter no máximo :max caracteres.',
+            'required' => 'O campo :attribute é obrigatório.',
+            'date'     => 'O campo :attribute deve ser uma data válida.',
+            'numeric'  => 'O campo :attribute deve ser numérico.',
+            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }
 }

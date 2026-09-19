@@ -15,7 +15,7 @@
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
-                <table class="table">
+                <table class="table table--cards">
                     <thead>
                         <tr>
                             <th>Código</th>
@@ -48,7 +48,8 @@
                                         style="display:inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm">
+                                        <button type="submit" class="btn btn--danger btn--sm"
+                                            data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
                                             Excluir
                                         </button>
                                     </form>

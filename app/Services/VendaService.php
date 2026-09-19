@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Cliente;
+use App\Models\ContaReceber;
+use App\Models\FormaPagamento;
 use App\Models\Produto;
 use App\Models\Venda;
 use App\Repositories\VendaRepository;
@@ -23,13 +24,26 @@ class VendaService
 
     public function create()
     {
-        return view('venda.create', $this->dadosParaForm());
+        return view('venda.create');
     }
 
     public function store(Request $request)
     {
+        $itens = $this->processarItens($request->itens ?? []);
+
+        if (empty($itens)) {
+            return back()
+                ->withErrors(['itens' => 'Adicione pelo menos um item.'])
+                ->withInput();
+        }
+
         $empresaId = auth()->user()->empresa_id;
-        $situacao  = $request->situacao ?? 'orcamento';
+        $situacao  = $request->situacao ?? 'em_andamento';
+
+        // Forma à vista = pagamento do valor completo → confirma automaticamente
+        if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
+            $situacao = 'confirmada';
+        }
 
         $dados = [
             'empresa_id'      => $empresaId,
@@ -44,20 +58,22 @@ class VendaService
             'total'           => $this->parseMoeda($request->total),
             'forma_pagamento' => $request->forma_pagamento,
             'observacoes'     => $request->observacoes,
-            'situacao'        => $situacao,
+            'situacao'        => $situacao === 'confirmada' ? 'em_andamento' : $situacao,
         ];
 
-        $itens = $this->processarItens($request->itens ?? []);
+        $venda = $this->repository->store($dados, $itens);
 
-        // Salva como orçamento primeiro para poder aplicar estoque depois
-        $dadosStore           = $dados;
-        $dadosStore['situacao'] = 'orcamento';
-
-        $venda = $this->repository->store($dadosStore, $itens);
-
-        // Se veio como confirmada, confirma agora (aplica estoque)
         if ($situacao === 'confirmada') {
             $this->repository->confirmar($venda->load('itens'));
+
+            $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';
+            if (ContaReceber::where('venda_id', $venda->id)->exists()) {
+                $mensagem .= ' Conta a receber gerada automaticamente (venda a prazo).';
+            } elseif (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
+                $mensagem .= ' Pagamento integral (à vista).';
+            }
+
+            return redirect()->route('venda.show', $venda)->with('success', $mensagem);
         }
 
         return redirect()->route('venda.show', $venda)
@@ -78,12 +94,9 @@ class VendaService
                 ->with('error', 'Venda cancelada não pode ser editada.');
         }
 
-        $venda->load('itens.produto');
+        $venda->load(['itens.produto', 'cliente']);
 
-        return view('venda.edit', array_merge(
-            ['venda' => $venda],
-            $this->dadosParaForm()
-        ));
+        return view('venda.edit', ['venda' => $venda]);
     }
 
     public function update(Request $request, Venda $venda)
@@ -92,6 +105,26 @@ class VendaService
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda cancelada não pode ser editada.');
         }
+
+        $itens = $this->processarItens($request->itens ?? []);
+
+        if (empty($itens)) {
+            return back()
+                ->withErrors(['itens' => 'Adicione pelo menos um item.'])
+                ->withInput();
+        }
+
+        $empresaId = (int) $venda->empresa_id;
+        $situacao  = $request->situacao ?? $venda->situacao;
+        $pagamentoIntegral = FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId);
+
+        // Forma à vista = pagamento do valor completo → confirma automaticamente
+        if ($pagamentoIntegral) {
+            $situacao = 'confirmada';
+        }
+
+        $jaConfirmada = $venda->situacao === 'confirmada';
+        $deveConfirmar = $situacao === 'confirmada' && !$jaConfirmada;
 
         $dados = [
             'cliente_id'      => $request->cliente_id ?: null,
@@ -103,28 +136,44 @@ class VendaService
             'total'           => $this->parseMoeda($request->total),
             'forma_pagamento' => $request->forma_pagamento,
             'observacoes'     => $request->observacoes,
-            'situacao'        => $request->situacao ?? $venda->situacao,
+            'situacao'        => $deveConfirmar ? $venda->situacao : $situacao,
         ];
-
-        $itens = $this->processarItens($request->itens ?? []);
 
         $this->repository->update($venda, $dados, $itens);
 
+        if ($deveConfirmar) {
+            $this->repository->confirmar($venda->fresh('itens'));
+        }
+
+        $mensagem = 'Venda #' . $venda->numero . ' atualizada com sucesso.';
+        if ($deveConfirmar && $pagamentoIntegral) {
+            $mensagem .= ' Confirmada automaticamente (pagamento integral).';
+        } elseif ($deveConfirmar && ContaReceber::where('venda_id', $venda->id)->exists()) {
+            $mensagem .= ' Conta a receber gerada automaticamente (venda a prazo).';
+        }
+
         return redirect()->route('venda.show', $venda)
-            ->with('success', 'Venda #' . $venda->numero . ' atualizada com sucesso.');
+            ->with('success', $mensagem);
     }
 
     public function confirmar(Venda $venda)
     {
-        if ($venda->situacao !== 'orcamento') {
+        if ($venda->situacao !== 'em_andamento') {
             return redirect()->route('venda.show', $venda)
-                ->with('error', 'Somente orçamentos podem ser confirmados.');
+                ->with('error', 'Somente vendas em andamento podem ser confirmadas.');
         }
 
         $this->repository->confirmar($venda->load('itens'));
 
+        $contaGerada = ContaReceber::where('venda_id', $venda->id)->exists();
+        $mensagem = 'Venda #' . $venda->numero . ' confirmada com sucesso.';
+
+        if ($contaGerada) {
+            $mensagem .= ' Conta a receber gerada automaticamente (venda a prazo).';
+        }
+
         return redirect()->route('venda.show', $venda)
-            ->with('success', 'Venda #' . $venda->numero . ' confirmada com sucesso.');
+            ->with('success', $mensagem);
     }
 
     public function cancelar(Venda $venda)
@@ -148,18 +197,6 @@ class VendaService
 
         return redirect()->route('venda.index')
             ->with('success', 'Venda #' . $numero . ' excluída com sucesso.');
-    }
-
-    // -------------------------------------------------------------------------
-
-    protected function dadosParaForm(): array
-    {
-        return [
-            'clientes' => Cliente::where('ativo', true)->orderBy('nome')->get(),
-            'produtos' => Produto::where('ativo', true)->orderBy('nome')
-                ->with('unidadeMedida')
-                ->get(),
-        ];
     }
 
     protected function processarItens(array $itens): array
@@ -202,10 +239,15 @@ class VendaService
             return 0.0;
         }
 
-        // Suporta "1.234,56" (pt-BR) e "1234.56" (padrão)
-        $str = str_replace('.', '', (string) $valor);
-        $str = str_replace(',', '.', $str);
+        $str = trim((string) $valor);
 
-        return (float) $str;
+        if (str_contains($str, ',') && str_contains($str, '.')) {
+            $str = str_replace('.', '', $str); 
+            $str = str_replace(',', '.', $str); 
+        }
+        elseif (str_contains($str, ',')) {
+            $str = str_replace(',', '.', $str);
+        }
+        return round((float) $str, 2);
     }
 }

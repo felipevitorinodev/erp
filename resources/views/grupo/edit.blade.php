@@ -30,26 +30,23 @@
 
                     <div class="form-group">
                         <label class="form-label">Grupo Pai</label>
-                        <select name="parent_id" class="form-control @error('parent_id') is-invalid @enderror">
-                            <option value="">Nenhuma (Grupo principal)</option>
-                            @foreach($gruposPrincipais as $cat)
-                                @if($cat->id !== $grupo->id)
-                                    <option value="{{ $cat->id }}" {{ old('parent_id', $grupo->parent_id) == $cat->id ? 'selected' : '' }}>{{ $cat->nome }}</option>
-                                @endif
-                            @endforeach
-                        </select>
+                        <div class="autocomplete-wrap">
+                            <input type="text" id="input-grupo-pai" class="form-control"
+                                value="{{ old('parent_nome', $grupo->parent->nome ?? '') }}"
+                                placeholder="Digite para buscar..." autocomplete="off">
+                            <input type="hidden" name="parent_id" id="hidden-grupo-pai-id"
+                                value="{{ old('parent_id', $grupo->parent_id) }}">
+                        </div>
                         @error('parent_id')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Ativo</label>
-                            <select name="ativo" class="form-control @error('ativo') is-invalid @enderror">
-                                <option value="1" {{ old('ativo', $grupo->ativo) == '1' ? 'selected' : '' }}>Sim</option>
-                                <option value="0" {{ old('ativo', $grupo->ativo) == '0' ? 'selected' : '' }}>Não</option>
-                            </select>
-                            @error('ativo')<span class="form-error">{{ $message }}</span>@enderror
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Ativo</label>
+                        <select name="ativo" class="form-control @error('ativo') is-invalid @enderror">
+                            <option value="1" {{ old('ativo', $grupo->ativo) == '1' || old('ativo', $grupo->ativo) === true || old('ativo', $grupo->ativo) === 1 ? 'selected' : '' }}>Sim</option>
+                            <option value="0" {{ old('ativo', $grupo->ativo) == '0' || old('ativo', $grupo->ativo) === false || old('ativo', $grupo->ativo) === 0 ? 'selected' : '' }}>Não</option>
+                        </select>
+                        @error('ativo')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
                 </div>
 
@@ -73,3 +70,13 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    initAutocomplete('#input-grupo-pai', '#hidden-grupo-pai-id', '{{ route('api.grupos.busca') }}', function (item) {
+        return item.nome;
+    }, null, { apenas_principais: 1, exclude: {{ $grupo->id }} });
+})();
+</script>
+@endpush

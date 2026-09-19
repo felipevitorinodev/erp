@@ -2,15 +2,21 @@
 
 namespace App\Repositories;
 
+use App\Models\ContaReceber;
+use App\Models\Produto;
 use App\Models\Venda;
 use App\Models\VendaItem;
-use App\Models\Produto;
 
 class VendaRepository
 {
+    public function __construct(
+        protected ContaReceberRepository $contaReceberRepository
+    ) {}
+
     public function index()
     {
         return Venda::with(['cliente'])
+            ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id')
             ->get();
     }
@@ -42,7 +48,6 @@ class VendaRepository
 
     public function update(Venda $venda, array $dados, array $itens): Venda
     {
-        // Estorna estoque se estava confirmada antes
         if ($venda->situacao === 'confirmada') {
             $this->estornarEstoque($venda);
         }
@@ -52,7 +57,6 @@ class VendaRepository
         $venda->itens()->delete();
         $this->salvarItens($venda, $itens);
 
-        // Aplica estoque se a nova situação é confirmada
         if ($venda->situacao === 'confirmada') {
             $this->aplicarEstoque($venda->fresh('itens'));
         }
@@ -65,16 +69,23 @@ class VendaRepository
         $venda->update(['situacao' => 'confirmada']);
         $this->aplicarEstoque($venda->load('itens'));
 
+        // Vendas a prazo (duplicata, boleto, etc.) geram Conta a Receber
+        $this->contaReceberRepository->gerarDaVendaConfirmada($venda);
+
         return $venda;
     }
 
-    public function cancelar(Venda $venda): Venda
+    public function cancelar(Venda $venda, string $situacao = 'cancelada'): Venda
     {
         if ($venda->situacao === 'confirmada') {
             $this->estornarEstoque($venda);
+
+            ContaReceber::where('venda_id', $venda->id)
+                ->whereIn('situacao', ['aberta', 'parcial'])
+                ->update(['situacao' => 'cancelada']);
         }
 
-        $venda->update(['situacao' => 'cancelada']);
+        $venda->update(['situacao' => $situacao]);
 
         return $venda;
     }
@@ -89,8 +100,6 @@ class VendaRepository
 
         return (bool) $venda->delete();
     }
-
-    // -------------------------------------------------------------------------
 
     private function salvarItens(Venda $venda, array $itens): void
     {

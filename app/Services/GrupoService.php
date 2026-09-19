@@ -20,10 +20,7 @@ class GrupoService
 
     public function create()
     {
-
-        $gruposPrincipais = $this->repository->principais();
-
-        return view('grupo.create',  ['gruposPrincipais' => $gruposPrincipais]);
+        return view('grupo.create');
     }
 
     public function store($request)
@@ -36,13 +33,9 @@ class GrupoService
 
     public function edit(Grupo $grupo)
     {
+        $grupo->load('parent');
 
-    $gruposPrincipais = $this->repository->principais();
-
-        return view('grupo.edit', [
-            'grupo' => $grupo,
-            'gruposPrincipais' => $gruposPrincipais
-        ]);
+        return view('grupo.edit', ['grupo' => $grupo]);
     }
 
     public function update($request, Grupo $grupo)

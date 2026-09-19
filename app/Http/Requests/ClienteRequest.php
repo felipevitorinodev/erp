@@ -21,7 +21,7 @@ class ClienteRequest extends FormRequest
             'nome_fantasia'        => 'nullable|string|max:255',
 
             'tipo_pessoa' => 'required|in:PF,PJ',
-            'cpf'  => 'required_if:tipo_pessoa,PF|nullable|max:14|cpf',
+            'cpf'  => 'nullable|max:14|cpf',
             'cnpj' => 'required_if:tipo_pessoa,PJ|nullable|max:18|cnpj',
 
             'inscricao_estadual'   => 'nullable|string|max:20',
@@ -45,8 +45,12 @@ class ClienteRequest extends FormRequest
     }
     public function messages(): array{
         return [
-            'required' => 'O campo é obrigatório.',
-            'max' => 'O campo precisa ter no máximo :max caracteres.',
+            'required' => 'O campo :attribute é obrigatório.',
+            'date'     => 'O campo :attribute deve ser uma data válida.',
+            'numeric'  => 'O campo :attribute deve ser numérico.',
+            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'required_if' => 'O campo :attribute é obrigatório.',
+            'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }
 }

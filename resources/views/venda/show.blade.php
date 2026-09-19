@@ -12,7 +12,9 @@
         <form method="POST" action="{{ route('venda.confirmar', $venda) }}" style="display:inline;">
             @csrf
             <button type="submit" class="btn btn--primary btn--sm"
-                onclick="return confirm('Confirmar a venda #{{ $venda->numero }}? O estoque será atualizado.')">
+                data-confirm="Confirmar a venda #{{ $venda->numero }}? O estoque será atualizado."
+                data-confirm-title="Confirmar venda"
+                data-confirm-ok="Confirmar venda">
                 ✔ Confirmar Venda
             </button>
         </form>
@@ -25,18 +27,24 @@
         <form method="POST" action="{{ route('venda.cancelar', $venda) }}" style="display:inline;">
             @csrf
             <button type="submit" class="btn btn--danger btn--sm"
-                onclick="return confirm('Cancelar a venda #{{ $venda->numero }}?')">
+                data-confirm="Cancelar a venda #{{ $venda->numero }}?"
+                data-confirm-title="Cancelar venda"
+                data-confirm-ok="Cancelar venda"
+                data-confirm-variant="danger">
                 Cancelar Venda
             </button>
         </form>
     @endif
 
-    @if($venda->situacao === 'cancelada' || $venda->situacao === 'em_andamento')
+    @if(in_array($venda->situacao, ['cancelada', 'em_andamento'], true))
         <form method="POST" action="{{ route('venda.destroy', $venda) }}" style="display:inline;">
             @csrf
             @method('DELETE')
             <button type="submit" class="btn btn--danger btn--sm"
-                onclick="return confirm('Excluir definitivamente a venda #{{ $venda->numero }}?')">
+                data-confirm="Confirmar exclusão?"
+                data-confirm-title="Excluir"
+                data-confirm-ok="Excluir"
+                data-confirm-variant="danger">
                 Excluir
             </button>
         </form>
@@ -104,7 +112,7 @@
         </div>
         <div class="card__body" style="padding:0;">
             <div class="table-wrap">
-                <table class="table">
+                <table class="table table--cards">
                     <thead>
                         <tr>
                             <th>Produto</th>
@@ -123,7 +131,7 @@
                                         <span class="text-muted" style="font-size:11px;">({{ $item->produto_codigo }})</span>
                                     @endif
                                 </td>
-                                <td class="text-right">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
+                                <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
                                 <td class="text-right">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
                                 <td class="text-right">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
                                 <td class="text-right text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
@@ -141,22 +149,22 @@
         </div>
 
         {{-- Totais --}}
-        <div class="card__footer" style="justify-content:flex-end;">
-            <div style="width:260px; font-size:12.5px;">
-                <div style="display:flex; justify-content:space-between; padding:0.25rem 0;">
+        <div class="card__footer">
+            <div class="totals-box" style="font-size:12.5px;">
+                <div class="totals-box__row" style="border-bottom:none; padding:0.25rem 0;">
                     <span class="text-muted">Subtotal</span>
                     <span>R$ {{ number_format($venda->subtotal, 2, ',', '.') }}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; padding:0.25rem 0;">
+                <div class="totals-box__row" style="border-bottom:none; padding:0.25rem 0;">
                     <span class="text-muted">Desconto</span>
                     <span>- R$ {{ number_format($venda->desconto, 2, ',', '.') }}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; padding:0.25rem 0;">
+                <div class="totals-box__row" style="border-bottom:none; padding:0.25rem 0;">
                     <span class="text-muted">Acréscimo</span>
                     <span>+ R$ {{ number_format($venda->acrescimo, 2, ',', '.') }}</span>
                 </div>
-                <div
-                    style="display:flex; justify-content:space-between; padding:0.4rem 0; border-top:2px solid var(--color-border); font-weight:700; font-size:14px; margin-top:0.25rem;">
+                <div class="totals-box__row totals-box__row--total"
+                    style="border-top:2px solid var(--color-border); font-size:14px; margin-top:0.25rem;">
                     <span>Total</span>
                     <span>R$ {{ number_format($venda->total, 2, ',', '.') }}</span>
                 </div>
