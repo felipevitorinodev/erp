@@ -10,18 +10,22 @@ class UnidadeMedidaSeeder extends Seeder
     public function run(): void
     {
         $unidades = [
-            ['nome' => 'Unidade',    'sigla' => 'UN'],
-            ['nome' => 'Caixa',      'sigla' => 'CX'],
+            ['nome' => 'Unidade', 'sigla' => 'UN'],
+            ['nome' => 'Caixa', 'sigla' => 'CX'],
             ['nome' => 'Quilograma', 'sigla' => 'KG'],
         ];
 
         foreach ($unidades as $unidade) {
-            UnidadeMedida::create([
-                'empresa_id' => 1,
-                'nome'       => $unidade['nome'],
-                'sigla'      => $unidade['sigla'],
-                'ativo'      => true,
-            ]);
+            UnidadeMedida::firstOrCreate(
+                [
+                    'empresa_id' => 1,
+                    'sigla' => $unidade['sigla'],
+                ],
+                [
+                    'nome' => $unidade['nome'],
+                    'ativo' => true,
+                ]
+            );
         }
     }
 }

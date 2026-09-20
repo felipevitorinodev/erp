@@ -9,12 +9,16 @@ class GrupoSeeder extends Seeder
 {
     public function run(): void
     {
-        Grupo::create([
-            'empresa_id' => 1,
-            'parent_id'  => null,
-            'nome'       => 'SELECIONE',
-            'descricao'  => '',
-            'ativo'      => true,
-        ]);
+        Grupo::firstOrCreate(
+            [
+                'empresa_id' => 1,
+                'nome' => 'SELECIONE',
+            ],
+            [
+                'parent_id' => null,
+                'descricao' => '',
+                'ativo' => true,
+            ]
+        );
     }
 }
