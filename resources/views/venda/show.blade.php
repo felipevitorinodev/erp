@@ -8,49 +8,54 @@
 @endsection
 
 @section('page_actions')
-    @if($venda->situacao === 'em_andamento')
-        <form method="POST" action="{{ route('venda.confirmar', $venda) }}" style="display:inline;">
-            @csrf
-            <button type="submit" class="btn btn--primary btn--sm"
-                data-confirm="Confirmar a venda #{{ $venda->numero }}? O estoque será atualizado."
-                data-confirm-title="Confirmar venda"
-                data-confirm-ok="Confirmar venda">
-                ✔ Confirmar Venda
-            </button>
-        </form>
-    @endif
-    <a href="{{ route('venda.pdf', $venda) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
-    @if($venda->situacao === 'em_andamento')
-        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
-    @endif
-    <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+    <div class="page-actions page-actions-center">
+        @if($venda->situacao === 'em_andamento')
+            <form method="POST" action="{{ route('venda.confirmar', $venda) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--primary btn--sm"
+                    data-confirm="Confirmar a venda #{{ $venda->numero }}? O estoque será atualizado."
+                    data-confirm-title="Confirmar venda"
+                    data-confirm-ok="Confirmar venda">
+                    ✔ Confirmar Venda
+                </button>
+            </form>
+        @endif
 
-    @if($venda->situacao !== 'cancelada')
-        <form method="POST" action="{{ route('venda.cancelar', $venda) }}" style="display:inline;">
-            @csrf
-            <button type="submit" class="btn btn--danger btn--sm"
-                data-confirm="Cancelar a venda #{{ $venda->numero }}?"
-                data-confirm-title="Cancelar venda"
-                data-confirm-ok="Cancelar venda"
-                data-confirm-variant="danger">
-                Cancelar Venda
-            </button>
-        </form>
-    @endif
+        <a href="{{ route('venda.pdf', $venda) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
 
-    @if(in_array($venda->situacao, ['cancelada', 'em_andamento'], true))
-        <form method="POST" action="{{ route('venda.destroy', $venda) }}" style="display:inline;">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn--danger btn--sm"
-                data-confirm="Confirmar exclusão?"
-                data-confirm-title="Excluir"
-                data-confirm-ok="Excluir"
-                data-confirm-variant="danger">
-                Excluir
-            </button>
-        </form>
-    @endif
+        @if($venda->situacao === 'em_andamento')
+            <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
+        @endif
+
+        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+
+        @if($venda->situacao !== 'cancelada')
+            <form method="POST" action="{{ route('venda.cancelar', $venda) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--danger btn--sm"
+                    data-confirm="Cancelar a venda #{{ $venda->numero }}?"
+                    data-confirm-title="Cancelar venda"
+                    data-confirm-ok="Cancelar venda"
+                    data-confirm-variant="danger">
+                    Cancelar Venda
+                </button>
+            </form>
+        @endif
+
+        @if(in_array($venda->situacao, ['cancelada', 'em_andamento'], true))
+            <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn--danger btn--sm"
+                    data-confirm="Confirmar exclusão?"
+                    data-confirm-title="Excluir"
+                    data-confirm-ok="Excluir"
+                    data-confirm-variant="danger">
+                    Excluir
+                </button>
+            </form>
+        @endif
+    </div>
 @endsection
 
 @section('content')

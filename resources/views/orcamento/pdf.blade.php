@@ -1,238 +1,466 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
+
 <head>
     <meta charset="utf-8">
-    <title>Orçamento #{{ $orcamento->numero }}</title>
+    <title>Orçamento #{{ $orcamento->numero }} - Visys</title>
     <style>
-        /* Tipografia e cores (mapeadas ao tema do sistema) */
         @font-face {
             font-family: 'DejaVuSans';
             src: local('DejaVu Sans'), local('DejaVuSans');
         }
-        :root {
-            --color-primary: #163A5F;
-            --color-accent: #E35A12;
-            --color-surface: #FFFFFF;
-            --color-bg: #EEF2F6;
-            --color-border: #D5DCE5;
-            --color-text: #152232;
-            --color-muted: #7A8B9E;
-            --primary-soft: #E8EEF5;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        html, body { font-family: DejaVuSans, Arial, sans-serif; font-size: 12px; color: var(--color-text); background: #fff; }
-        .pdf-header {
-            border-bottom: 6px solid var(--color-accent);
-            padding: 12px 18px 10px 18px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+
+        html,
+        body {
+            font-family: 'DejaVuSans', Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            color: #1E293B;
+            background: #ffffff;
+            -webkit-print-color-adjust: exact;
         }
-        .pdf-header .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+
+        .page {
+            padding: 28px 32px 24px;
         }
+
+        /* ── CABEÇALHO ── */
+        .header {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 22px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid #1C2B42;
+        }
+
+        .header td {
+            vertical-align: middle;
+        }
+
         .logo {
-            height: 46px;
+            height: 44px;
+            width: auto;
         }
-        .doc-title {
-            margin-left: auto;
+
+        .brand-sub {
+            font-size: 9px;
+            color: #64748B;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        .doc-badge {
             text-align: right;
         }
-        .doc-title h1 {
-            margin: 0;
-            font-size: 16px;
-            color: var(--color-primary);
-            letter-spacing: 0.02em;
+
+        .doc-badge .label {
+            display: inline-block;
+            background: #163A5F;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 5px 14px;
+            border-radius: 3px;
         }
-        .doc-meta {
+
+        .doc-badge .numero {
+            display: block;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1C2B42;
+            margin-top: 5px;
+        }
+
+        .doc-badge .data {
+            font-size: 10px;
+            color: #64748B;
+            margin-top: 2px;
+        }
+
+        /* ── FAIXA DE VALIDADE ── */
+        .status-strip {
+            width: 100%;
+            background: #FFF8F0;
+            border: 1px solid #FDDCB5;
+            border-radius: 4px;
+            padding: 7px 14px;
+            margin-bottom: 20px;
+            font-size: 10px;
+            color: #92400E;
+        }
+
+        .status-strip strong {
             font-size: 11px;
-            color: var(--color-muted);
         }
-        .section {
-            padding: 14px 18px;
+
+        /* ── INFO BOXES ── */
+        .info-section {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 22px;
         }
-        .info {
-            display: flex;
-            gap: 12px;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .info .col {
+
+        .info-box {
             width: 48%;
-            font-size: 12px;
-            color: var(--color-text);
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            padding: 12px 14px;
+            vertical-align: top;
+            background: #F8FAFC;
         }
+
+        .info-box-gap {
+            width: 4%;
+        }
+
+        .info-box-title {
+            font-size: 9px;
+            font-weight: bold;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding-bottom: 7px;
+            margin-bottom: 7px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .info-line {
+            margin-bottom: 5px;
+            line-height: 1.45;
+            color: #334155;
+        }
+
+        .info-line strong {
+            color: #1E293B;
+        }
+
+        /* ── SECTION HEADING ── */
+        .section-heading {
+            font-size: 9px;
+            font-weight: bold;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 6px;
+            padding-left: 2px;
+        }
+
+        /* ── ITENS ── */
         table.items {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
-            font-size: 12px;
+            margin-bottom: 4px;
         }
+
         table.items thead th {
-            background: var(--primary-soft);
-            color: var(--color-primary);
-            text-align: left;
-            padding: 8px 10px;
-            border: 1px solid var(--color-border);
-            font-weight: 700;
-            font-size: 11px;
+            background: #1C2B42;
+            color: #ffffff;
+            padding: 9px 10px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+
+        table.items thead th:first-child {
+            border-radius: 3px 0 0 0;
+        }
+
+        table.items thead th:last-child {
+            border-radius: 0 3px 0 0;
+        }
+
         table.items tbody td {
-            padding: 8px 10px;
-            border: 1px solid var(--color-border);
+            padding: 9px 10px;
+            border-bottom: 1px solid #E2E8F0;
             vertical-align: middle;
+            color: #334155;
         }
-        table.items tbody tr:nth-child(even) {
-            background: #FBFCFD;
+
+        table.items tbody tr:last-child td {
+            border-bottom: none;
         }
-        .text-right { text-align: right; }
-        .totals {
-            width: 320px;
+
+        table.items tbody tr:nth-child(even) td {
+            background: #F8FAFC;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .item-nome {
+            font-weight: bold;
+            color: #1E293B;
+        }
+
+        /* ── TOTAIS ── */
+        .totals-wrap {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        .totals-box {
+            width: 280px;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            background: #F8FAFC;
+            padding: 14px 16px;
             margin-left: auto;
-            margin-top: 12px;
-            border: 1px solid var(--color-border);
-            padding: 10px;
-            background: #F7F9FC;
-            font-size: 12px;
         }
-        .totals .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--color-border); }
-        .totals .row.total { font-weight:800; border-bottom: none; color: var(--color-primary); font-size: 14px; padding-top:10px; }
-        .footer {
-            position: absolute;
-            bottom: 18px;
-            left: 18px;
-            right: 18px;
+
+        .totals-inner {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .totals-inner td {
+            padding: 4px 0;
             font-size: 11px;
-            color: var(--color-muted);
+            color: #475569;
+        }
+
+        .totals-inner tr.divider td {
+            border-top: 1px solid #CBD5E1;
+            padding-top: 8px;
+        }
+
+        .totals-inner tr.grand-total td {
+            font-size: 15px;
+            font-weight: bold;
+            color: #1C2B42;
+            padding-top: 8px;
+        }
+
+        .accent {
+            color: #E35A12;
+        }
+
+        /* ── CONDIÇÕES / OBSERVAÇÕES ── */
+        .obs-box {
+            margin-top: 22px;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            padding: 10px 14px;
+            background: #FFFBF7;
+            font-size: 10px;
+            color: #64748B;
+            line-height: 1.6;
+        }
+
+        .obs-title {
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #94A3B8;
+            margin-bottom: 5px;
+        }
+
+        /* ── ASSINATURAS ── */
+        .signatures {
+            margin-top: 52px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .signatures td {
+            width: 40%;
+            text-align: center;
+            vertical-align: bottom;
+        }
+
+        .signatures .gap {
+            width: 20%;
+        }
+
+        .sig-line {
+            border-top: 1px solid #94A3B8;
+            padding-top: 7px;
+            font-size: 10px;
+            color: #64748B;
+        }
+
+        .sig-line strong {
+            display: block;
+            color: #1E293B;
+            font-size: 10px;
+        }
+
+        /* ── RODAPÉ ── */
+        .footer {
+            margin-top: 36px;
+            padding-top: 10px;
+            border-top: 1px solid #E2E8F0;
+            font-size: 9px;
+            color: #94A3B8;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .footer .dot {
+            margin: 0 4px;
         }
     </style>
 </head>
+
 <body>
-    <div class="pdf-header" role="banner">
-        <div class="brand">
-            <img src="{{ public_path('img/logo-sem-fundo.png') }}" alt="Visys" class="logo">
-            <div>
-                <div style="font-weight:800; color:var(--color-primary);">Visys · Gestão empresarial</div>
-                <div style="font-size:11px; color:var(--color-muted);">Orçamento comercial</div>
-            </div>
+    <div class="page">
+
+        <!-- ── CABEÇALHO ── -->
+        <table class="header">
+            <tr>
+                <td style="width: 55%;">
+                    <img src="{{ public_path('img/logo-v-sem-fundo.png') }}" alt="Visys" class="logo">
+                    <div class="brand-sub">Sistemas &amp; Gestão Empresarial</div>
+                </td>
+                <td class="doc-badge" style="width: 45%;">
+                    <span class="label">Orçamento</span>
+                    <span class="numero">#{{ $orcamento->numero }}</span>
+                    <div class="data">{{ $orcamento->data_orcamento->format('d/m/Y') }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ── FAIXA DE VALIDADE ── -->
+        <div class="status-strip">
+            <strong>Orçamento em aberto</strong>
+            &nbsp;·&nbsp; Válido até: <strong>{{ $orcamento->validade ?? '—' }}</strong>
+            &nbsp;·&nbsp; Vendedor: <strong>{{ $orcamento->usuario->name ?? '—' }}</strong>
         </div>
 
-        <div class="doc-title" role="doc-title">
-            <h1>Orçamento #{{ $orcamento->numero }}</h1>
-            <div class="doc-meta">{{ $orcamento->data_orcamento->format('d/m/Y') }}</div>
-        </div>
-    </div>
+        <!-- ── DADOS ── -->
+        <table class="info-section">
+            <tr>
+                <td class="info-box">
+                    <div class="info-box-title">Dados do Cliente</div>
+                    <div class="info-line"><strong>Nome:</strong> {{ $orcamento->cliente->nome ?? '—' }}</div>
+                    <div class="info-line"><strong>CPF/CNPJ:</strong>
+                        {{ $orcamento->cliente->cpf ?: $orcamento->cliente->cnpj ?? '—' }}</div>
+                </td>
+                <td class="info-box-gap"></td>
+                <td class="info-box">
+                    <div class="info-box-title">Detalhes do Orçamento</div>
+                    <div class="info-line"><strong>Vendedor:</strong> {{ $orcamento->usuario->name ?? '—' }}</div>
+                    <div class="info-line"><strong>Emissão:</strong> {{ $orcamento->data_orcamento->format('d/m/Y') }}
+                    </div>
+                    <div class="info-line"><strong>Validade:</strong> {{ $orcamento->validade ?? '—' }}</div>
+                    <div class="info-line"><strong>Status:</strong> Em aberto</div>
+                </td>
+            </tr>
+        </table>
 
-    <div class="section">
-        <div class="info" role="details">
-            <div class="col">
-                <strong>Cliente</strong><br>
-                {{ $orcamento->cliente->nome ?? '—' }}<br>
-                {{ $orcamento->cliente->documento ?? '' }}<br>
-                {{ $orcamento->cliente->endereco ?? '' }}
-            </div>
-            <div class="col">
-                <strong>Vendedor</strong><br>
-                {{ $orcamento->usuario->name ?? '—' }}<br>
-                <br>
-                <strong>Validade:</strong> {{ $orcamento->validade ?? '—' }}
-            </div>
-        </div>
-
-        <table class="items" role="table">
+        <!-- ── ITENS ── -->
+        <div class="section-heading">Itens do Orçamento</div>
+        <table class="items">
             <thead>
                 <tr>
-                    <th>Produto</th>
-                    <th class="text-right">Qtd.</th>
-                    <th class="text-right">Preço Unit.</th>
-                    <th class="text-right">Desconto</th>
-                    <th class="text-right">Total</th>
+                    <th style="width: 42%; text-align: left;">Produto / Serviço</th>
+                    <th class="text-right" style="width: 10%;">Qtd.</th>
+                    <th class="text-right" style="width: 16%;">Preço Unit.</th>
+                    <th class="text-right" style="width: 14%;">Desconto</th>
+                    <th class="text-right" style="width: 18%;">Total</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($orcamento->itens as $item)
-                <tr>
-                    <td>{{ $item->produto_nome }}</td>
-                    <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
-                    <td class="text-right">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
-                    <td class="text-right">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
-                    <td class="text-right">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
-                </tr>
+                @foreach ($orcamento->itens as $item)
+                    <tr>
+                        <td><span class="item-nome">{{ $item->produto_nome }}</span></td>
+                        <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
+                        <td class="text-right">R$&nbsp;{{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                        <td class="text-right">
+                            @if ($item->desconto > 0)
+                                <span class="accent">R$&nbsp;{{ number_format($item->desconto, 2, ',', '.') }}</span>
+                            @else
+                                <span style="color: #E66A35;">R$&nbsp;0,00</span>
+                            @endif
+                        </td>
+                        <td class="text-right"><strong>R$&nbsp;{{ number_format($item->total, 2, ',', '.') }}</strong>
+                        </td>
+                    </tr>
                 @endforeach
             </tbody>
         </table>
 
-        <div class="totals" role="complementary" aria-label="Totais">
-            <div class="row"><div>Subtotal</div><div>R$ {{ number_format($orcamento->subtotal,2,',','.') }}</div></div>
-            <div class="row"><div>Desconto</div><div>R$ {{ number_format($orcamento->desconto,2,',','.') }}</div></div>
-            <div class="row"><div>Acréscimo</div><div>R$ {{ number_format($orcamento->acrescimo,2,',','.') }}</div></div>
-            <div class="row total"><div>Total</div><div>R$ {{ number_format($orcamento->total,2,',','.') }}</div></div>
-        </div>
-    </div>
-
-    <div class="footer">
-        <div>Visys · {{ date('Y') }} · {{ config('app.name', '') }}</div>
-    </div>
-</body>
-</html>
-<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Orçamento #{{ $orcamento->numero }}</title>
-    <style>
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #222; }
-        .header { text-align: center; margin-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        th, td { border: 1px solid #ddd; padding: 6px; }
-        th { background: #f7f7f7; text-align: left; }
-        .text-right { text-align: right; }
-        .totals { margin-top: 12px; width: 100%; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h2>Orçamento #{{ $orcamento->numero }}</h2>
-        <div>{{ $orcamento->data_orcamento->format('d/m/Y') }}</div>
-    </div>
-
-    <div>
-        <strong>Cliente:</strong> {{ $orcamento->cliente->nome ?? '—' }}<br/>
-        <strong>Vendedor:</strong> {{ $orcamento->usuario->name ?? '—' }}
-    </div>
-
-    <table>
-        <thead>
+        <!-- ── TOTAIS ── -->
+        <table class="totals-wrap">
             <tr>
-                <th>Produto</th>
-                <th class="text-right">Qtd.</th>
-                <th class="text-right">Preço Unit.</th>
-                <th class="text-right">Desconto</th>
-                <th class="text-right">Total</th>
+                <td style="width: 50%;"></td>
+                <td style="width: 50%;">
+                    <div class="totals-box">
+                        <table class="totals-inner">
+                            <tr>
+                                <td>Subtotal</td>
+                                <td class="text-right">R$&nbsp;{{ number_format($orcamento->subtotal, 2, ',', '.') }}
+                                </td>
+                            </tr>
+                            @if ($orcamento->desconto > 0)
+                                <tr>
+                                    <td class="accent">Desconto</td>
+                                    <td class="text-right accent">−
+                                        R$&nbsp;{{ number_format($orcamento->desconto, 2, ',', '.') }}</td>
+                                </tr>
+                            @endif
+                            @if ($orcamento->acrescimo > 0)
+                                <tr>
+                                    <td>Acréscimo</td>
+                                    <td class="text-right">+
+                                        R$&nbsp;{{ number_format($orcamento->acrescimo, 2, ',', '.') }}</td>
+                                </tr>
+                            @endif
+                            <tr class="divider grand-total">
+                                <td>Total</td>
+                                <td class="text-right">R$&nbsp;{{ number_format($orcamento->total, 2, ',', '.') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach($orcamento->itens as $item)
-            <tr>
-                <td>{{ $item->produto_nome }}</td>
-                <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
-                <td class="text-right">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
-                <td class="text-right">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
-                <td class="text-right">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    <div class="totals">
-        <table>
-            <tr><td>Subtotal</td><td class="text-right">R$ {{ number_format($orcamento->subtotal,2,',','.') }}</td></tr>
-            <tr><td>Desconto</td><td class="text-right">R$ {{ number_format($orcamento->desconto,2,',','.') }}</td></tr>
-            <tr><td>Acréscimo</td><td class="text-right">R$ {{ number_format($orcamento->acrescimo,2,',','.') }}</td></tr>
-            <tr><th>Total</th><th class="text-right">R$ {{ number_format($orcamento->total,2,',','.') }}</th></tr>
         </table>
+
+        <!-- ── OBSERVAÇÕES (opcional — remova o bloco se não usar) ── -->
+        @if (!empty($orcamento->observacoes))
+            <div class="obs-box">
+                <div class="obs-title">Observações</div>
+                {{ $orcamento->observacoes }}
+            </div>
+        @endif
+
+        <!-- ── ASSINATURAS ── -->
+        <table class="signatures">
+            <tr>
+                <td>
+                    <div class="sig-line">
+                        <strong>{{ $orcamento->cliente->nome ?? 'Cliente' }}</strong>
+                        Aprovação do orçamento
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ── RODAPÉ ── -->
+        <div class="footer">
+            Visys Sistemas
+            <span class="dot">·</span>
+            Documento gerado em {{ date('d/m/Y \à\s H:i:s') }}
+            <span class="dot">·</span>
+            Visys Gestão
+        </div>
+
     </div>
 </body>
-</html>
 
+</html>

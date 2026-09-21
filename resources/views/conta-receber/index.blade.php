@@ -88,7 +88,7 @@
                                     @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
                                         <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm">Editar</a>
                                     @endif
-                                    <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

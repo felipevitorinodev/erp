@@ -34,7 +34,7 @@
                                     <a href="{{ route('unidadeMedida.edit', $unidade) }}"
                                         class="btn btn--ghost btn--sm">Editar</a>
                                     <form method="POST" action="{{ route('unidadeMedida.destroy', $unidade) }}"
-                                        style="display:inline;">
+                                        class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

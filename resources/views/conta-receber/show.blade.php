@@ -8,32 +8,31 @@
 @endsection
 
 @section('page_actions')
-    @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
-        <button type="button" class="btn btn--success btn--sm" id="btn-abrir-receber">Registrar Recebimento</button>
-        <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm">Editar</a>
-        <form method="POST" action="{{ route('conta-receber.cancelar', $conta) }}" style="display:inline;">
+    <div class="page-actions page-actions-center">
+        <a href="{{ route('conta-receber.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
+        @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
+            <button type="button" class="btn btn--success btn--sm" id="btn-abrir-receber">Registrar Recebimento</button>
+            <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm">Editar</a>
+            <form method="POST" action="{{ route('conta-receber.cancelar', $conta) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Cancelar esta conta?"
+                    data-confirm-title="Cancelar conta" data-confirm-ok="Cancelar conta" data-confirm-variant="danger">
+                    Cancelar
+                </button>
+            </form>
+        @endif
+
+
+
+        <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
             @csrf
-            <button type="submit" class="btn btn--danger btn--sm"
-                data-confirm="Cancelar esta conta?"
-                data-confirm-title="Cancelar conta"
-                data-confirm-ok="Cancelar conta"
-                data-confirm-variant="danger">
-                Cancelar
+            @method('DELETE')
+            <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
+                data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                Excluir
             </button>
         </form>
-    @endif
-    <a href="{{ route('conta-receber.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
-    <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" style="display:inline;">
-        @csrf
-        @method('DELETE')
-        <button type="submit" class="btn btn--danger btn--sm"
-            data-confirm="Confirmar exclusão?"
-            data-confirm-title="Excluir"
-            data-confirm-ok="Excluir"
-            data-confirm-variant="danger">
-            Excluir
-        </button>
-    </form>
+    </div>
 @endsection
 
 @section('content')
@@ -42,7 +41,7 @@
         <div class="card__header">
             <span class="card__title">Dados da Conta</span>
             <div>
-                @if($conta->situacao === 'paga')
+                @if ($conta->situacao === 'paga')
                     <span class="badge badge--success">Paga</span>
                 @elseif($conta->situacao === 'parcial')
                     <span class="badge badge--info">Parcial</span>
@@ -66,7 +65,7 @@
                 <div class="form-group">
                     <label class="form-label">Venda</label>
                     <span>
-                        @if($conta->venda)
+                        @if ($conta->venda)
                             <a href="{{ route('venda.show', $conta->venda) }}">#{{ $conta->venda->numero }}</a>
                         @else
                             —
@@ -102,7 +101,7 @@
                     <span>{{ $conta->forma_pagamento ?? '—' }}</span>
                 </div>
             </div>
-            @if($conta->observacoes)
+            @if ($conta->observacoes)
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Observações</label>
                     <span>{{ $conta->observacoes }}</span>
@@ -111,7 +110,7 @@
         </div>
     </div>
 
-    @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
+    @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
         <div class="modal-overlay" id="modal-receber" hidden>
             <div class="modal-box">
                 <div class="modal-box__header">
@@ -125,18 +124,24 @@
                             <label class="form-label form-label--required">Valor Pago</label>
                             @include('components.input-numeric', [
                                 'name' => 'valor_pago',
-                                'value' => old('valor_pago', number_format($conta->valor - $conta->valor_pago, 2, ',', '.')),
+                                'value' => old(
+                                    'valor_pago',
+                                    number_format($conta->valor - $conta->valor_pago, 2, ',', '.')),
                                 'class' => 'input-moeda',
                                 'decimals' => 2,
-                                'required' => true
+                                'required' => true,
                             ])
-                            @error('valor_pago')<span class="form-error">{{ $message }}</span>@enderror
+                            @error('valor_pago')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
                         </div>
                         <div class="form-group" style="margin-top:0.75rem;">
                             <label class="form-label form-label--required">Data Pagamento</label>
                             <input type="date" name="data_pagamento" class="form-control"
                                 value="{{ old('data_pagamento', date('Y-m-d')) }}" required>
-                            @error('data_pagamento')<span class="form-error">{{ $message }}</span>@enderror
+                            @error('data_pagamento')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
                         </div>
                         <div class="form-group" style="margin-top:0.75rem;">
                             <label class="form-label">Forma de Pagamento</label>
@@ -156,29 +161,34 @@
 @endsection
 
 @push('scripts')
-<script>
-(function () {
-    var modal = document.getElementById('modal-receber');
-    if (!modal) return;
+    <script>
+        (function() {
+            var modal = document.getElementById('modal-receber');
+            if (!modal) return;
 
-    function abrir() { modal.hidden = false; }
-    function fechar() { modal.hidden = true; }
+            function abrir() {
+                modal.hidden = false;
+            }
 
-    var btnAbrir = document.getElementById('btn-abrir-receber');
-    if (btnAbrir) btnAbrir.addEventListener('click', abrir);
+            function fechar() {
+                modal.hidden = true;
+            }
 
-    ['btn-fechar-receber', 'btn-cancelar-receber'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('click', fechar);
-    });
+            var btnAbrir = document.getElementById('btn-abrir-receber');
+            if (btnAbrir) btnAbrir.addEventListener('click', abrir);
 
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal) fechar();
-    });
+            ['btn-fechar-receber', 'btn-cancelar-receber'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', fechar);
+            });
 
-    @if($errors->has('valor_pago') || $errors->has('data_pagamento'))
-        abrir();
-    @endif
-})();
-</script>
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) fechar();
+            });
+
+            @if ($errors->has('valor_pago') || $errors->has('data_pagamento'))
+                abrir();
+            @endif
+        })();
+    </script>
 @endpush

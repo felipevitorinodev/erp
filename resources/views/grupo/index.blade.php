@@ -32,7 +32,7 @@
                                 <td>{{ $grupo->ativo ? 'Ativa' : 'Inativa' }}</td>
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ route('grupo.edit', $grupo) }}" class="btn btn--ghost btn--sm">Editar</a>
-                                    <form method="POST" action="{{ route('grupo.destroy', $grupo) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('grupo.destroy', $grupo) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

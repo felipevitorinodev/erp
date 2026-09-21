@@ -29,7 +29,7 @@
 
         <div class="header__user">
             <span class="header__user-name">{{ Auth::user()->name }}</span>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+            <form method="POST" action="{{ route('logout') }}" class="d-inline">
                 @csrf
                 <button type="submit" class="header__logout">Sair</button>
             </form>

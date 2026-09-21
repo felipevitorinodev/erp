@@ -56,7 +56,7 @@
                                     <a href="{{ route('formaPagamento.edit', $forma) }}"
                                         class="btn btn--ghost btn--sm">Editar</a>
                                     <form method="POST" action="{{ route('formaPagamento.destroy', $forma) }}"
-                                        style="display:inline;">
+                                        class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

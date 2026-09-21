@@ -8,48 +8,50 @@
 @endsection
 
 @section('page_actions')
-    @if($orcamento->situacao === 'pendente')
-        <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}" style="display:inline;">
-            @csrf
-            <button type="submit" class="btn btn--success btn--sm"
-                data-confirm="Aprovar o orçamento #{{ $orcamento->numero }} e gerar uma venda?"
-                data-confirm-title="Aprovar orçamento"
-                data-confirm-ok="Aprovar e gerar venda"
-                data-confirm-variant="success">
-                {{-- fallback: se a funcionalidade de confirmação via JS não estiver carregada, submete o form --}}
-                <span onclick="if(!window.modalConfirmAttached){ var f=this.closest('button').form || this.closest('form'); if(f){ f.submit(); } return false; }"></span>
-                ✔ Aprovar
-            </button>
-                </form>
-        <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
-        <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
-        <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}" style="display:inline;">
-            @csrf
-            <button type="submit" class="btn btn--danger btn--sm"
-                data-confirm="Cancelar o orçamento #{{ $orcamento->numero }}?"
-                data-confirm-title="Cancelar orçamento"
-                data-confirm-ok="Cancelar orçamento"
-                data-confirm-variant="danger">
-                Cancelar
-            </button>
-        </form>
-    @endif
+    <div class="page-actions">
+        <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
 
-    <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+        @if ($orcamento->situacao === 'pendente')
+            <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--success btn--sm"
+                    data-confirm="Aprovar o orçamento #{{ $orcamento->numero }} e gerar uma venda?"
+                    data-confirm-title="Aprovar orçamento" data-confirm-ok="Aprovar e gerar venda"
+                    data-confirm-variant="success">
+                    {{-- fallback: se a funcionalidade de confirmação via JS não estiver carregada, submete o form --}}
+                    <span
+                        onclick="if(!window.modalConfirmAttached){ var f=this.closest('button').form || this.closest('form'); if(f){ f.submit(); } return false; }"></span>
+                    ✔ Aprovar
+                </button>
+            </form>
 
-    @if(in_array($orcamento->situacao, ['pendente', 'cancelado', 'recusado'], true))
-        <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" style="display:inline;">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn--danger btn--sm"
-                data-confirm="Confirmar exclusão?"
-                data-confirm-title="Excluir"
-                data-confirm-ok="Excluir"
-                data-confirm-variant="danger">
-                Excluir
-            </button>
-        </form>
-    @endif
+            <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank"
+                title="Gerar PDF">Imprimir</a>
+
+            <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
+
+            <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--danger btn--sm"
+                    data-confirm="Cancelar o orçamento #{{ $orcamento->numero }}?" data-confirm-title="Cancelar orçamento"
+                    data-confirm-ok="Cancelar orçamento" data-confirm-variant="danger">
+                    Cancelar
+                </button>
+            </form>
+        @endif
+
+        @if (in_array($orcamento->situacao, ['pendente', 'cancelado', 'recusado'], true))
+            <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
+                    data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger" title="Excluir"
+                    aria-label="Excluir">
+                    Excluir
+                </button>
+            </form>
+        @endif
+    </div>
 @endsection
 
 @section('content')
@@ -58,7 +60,7 @@
         <div class="card__header">
             <span class="card__title">Dados Gerais</span>
             <div>
-                @if($orcamento->situacao === 'aprovado')
+                @if ($orcamento->situacao === 'aprovado')
                     <span class="badge badge--success">Aprovado</span>
                 @elseif($orcamento->situacao === 'recusado')
                     <span class="badge badge--error">Recusado</span>
@@ -98,7 +100,7 @@
                     <span>{{ $orcamento->usuario->name ?? '—' }}</span>
                 </div>
             </div>
-            @if($orcamento->venda_id && $orcamento->venda)
+            @if ($orcamento->venda_id && $orcamento->venda)
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Venda gerada</label>
                     <span>
@@ -106,7 +108,7 @@
                     </span>
                 </div>
             @endif
-            @if($orcamento->observacoes)
+            @if ($orcamento->observacoes)
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Observações</label>
                     <span>{{ $orcamento->observacoes }}</span>
@@ -136,8 +138,9 @@
                             <tr>
                                 <td>
                                     {{ $item->produto_nome }}
-                                    @if($item->produto_codigo)
-                                        <span class="text-muted" style="font-size:11px;">({{ $item->produto_codigo }})</span>
+                                    @if ($item->produto_codigo)
+                                        <span class="text-muted"
+                                            style="font-size:11px;">({{ $item->produto_codigo }})</span>
                                     @endif
                                 </td>
                                 <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>

@@ -42,7 +42,7 @@
                                     <a href="{{ route('funcionario.edit', $funcionario) }}"
                                         class="btn btn--ghost btn--sm">Editar</a>
                                     <form method="POST" action="{{ route('funcionario.destroy', $funcionario) }}"
-                                        style="display:inline;">
+                                        class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

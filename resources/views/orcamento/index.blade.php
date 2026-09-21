@@ -51,7 +51,7 @@
                                     @if($orcamento->situacao === 'pendente')
                                         <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm">Editar</a>
                                     @endif
-                                    <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

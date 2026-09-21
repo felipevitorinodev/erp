@@ -49,7 +49,7 @@
                                     @if($venda->situacao !== 'cancelada')
                                         <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm">Editar</a>
                                     @endif
-                                    <form method="POST" action="{{ route('venda.destroy', $venda) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"

@@ -279,6 +279,38 @@ a:hover {
     gap: 0.5rem;
     flex-wrap: wrap;
 }
+/* Ensure page action buttons across the system follow the same sizing/alignment */
+.page-bar__actions .btn,
+.page-bar__actions form {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.page-bar__actions .btn {
+    height: 34px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.9rem;
+}
+.page-bar__actions .btn--sm {
+    height: 34px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+}
+.page-bar__actions .btn--icon {
+    padding: 0.25rem;
+    width: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.page-bar__actions .btn img,
+.page-bar__actions .icon,
+.page-bar__actions .icon--sm {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
 
 /* =========================================
    ALERTAS
@@ -1581,22 +1613,24 @@ select.form-control {
     min-width: 110px;
 }
 
-    /* Mobile: empilhar ações principais (confirm/approve) em cima e largura total */
+    /* Mobile: ações ficam empilháveis mas não forçam largura total — mantemos botões compactos e com wrap */
     .page-bar__actions {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 0.5rem;
-        align-items: stretch;
+        align-items: center;
+        flex-wrap: wrap;
     }
 
     .page-bar__actions > * {
-        width: 100%;
+        width: auto;
     }
 
     .page-bar__actions .btn,
     .page-bar__actions form {
-        width: 100%;
-        display: block;
+        width: auto;
+        display: inline-flex;
+        flex: 0 0 auto;
     }
 
     /* Forçar destaque das ações primárias para o topo */
@@ -1970,4 +2004,92 @@ select.form-control {
 }
 .numeric-keypad .nk-back {
     font-size: 1.1rem;
+}
+/* Page actions (buttons on the top of show pages) */
+.page-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.page-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.9rem;
+}
+.page-actions .btn--sm {
+    height: 34px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+}
+.page-actions .btn--icon {
+    padding: 0.25rem;
+    width: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.page-actions .btn .icon,
+.page-actions .btn img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+.page-actions .icon--sm {
+    width: 18px;
+    height: 18px;
+}
+/* Centered action column: stack one button per line */
+.page-actions.page-actions-center {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+    width: 100%;
+}
+.page-actions.page-actions-center > * {
+    width: 100%;
+}
+.page-actions.page-actions-center form {
+    width: 100%;
+}
+.page-actions.page-actions-center .btn {
+    width: 100%;
+    display: inline-flex;
+    justify-content: center;
+}
+/* Responsive: stack title + actions on small screens to avoid overlap */
+@media (max-width: 600px) {
+    .page-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .page-bar__actions {
+        width: 100%;
+        margin-top: 0;
+        gap: 0.4rem;
+    }
+    .page-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .page-actions .btn {
+        flex: 0 0 auto;
+        height: 36px;
+        padding: 0.35rem 0.6rem;
+        white-space: nowrap;
+    }
+    .page-actions .btn--icon {
+        width: 36px;
+        min-width: 36px;
+    }
+}
+
+/* Utility */
+.d-inline {
+    display: inline;
 }

@@ -40,7 +40,7 @@
                                 <td class="text-right" style="white-space:nowrap;">
                                     <a href="{{ route('produto.edit', $produto) }}" class="btn btn--ghost btn--sm">Editar</a>
                                     <form method="POST" action="{{ route('produto.destroy', $produto) }}"
-                                        style="display:inline;">
+                                        class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn--danger btn--sm"
