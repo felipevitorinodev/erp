@@ -8,7 +8,9 @@
 @endsection
 
 @section('page_actions')
-    <div class="page-actions page-actions-center">
+    <div class="page-actions">
+        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+
         @if($venda->situacao === 'em_andamento')
             <form method="POST" action="{{ route('venda.confirmar', $venda) }}" class="d-inline">
                 @csrf
@@ -26,8 +28,6 @@
         @if($venda->situacao === 'em_andamento')
             <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
         @endif
-
-        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
 
         @if($venda->situacao !== 'cancelada')
             <form method="POST" action="{{ route('venda.cancelar', $venda) }}" class="d-inline">

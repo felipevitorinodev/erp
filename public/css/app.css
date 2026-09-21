@@ -56,6 +56,9 @@ body {
     color: var(--color-text);
     background: var(--color-bg);
     -webkit-font-smoothing: antialiased;
+    /* Prevent automatic text-size adjustments / zoom on mobile */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
 }
 
 a {
@@ -976,6 +979,17 @@ select.form-control {
     padding: 0.5rem 0.75rem;
     font-size: 12px;
     color: var(--color-text-muted);
+}
+
+/* Mobile: ensure autocomplete list is visible above fixed header/overlays and not clipped
+   Keep positioning (top/left/width) controlled by autocomplete.js so the dropdown stays attached to the input. */
+@media (max-width: 900px) {
+    .autocomplete-list {
+        max-height: calc(100vh - var(--header-h) - 120px);
+        overflow-y: auto;
+        z-index: 20000;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    }
 }
 
 .form-control.is-loading {
@@ -2042,25 +2056,7 @@ select.form-control {
     width: 18px;
     height: 18px;
 }
-/* Centered action column: stack one button per line */
-.page-actions.page-actions-center {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: stretch;
-    width: 100%;
-}
-.page-actions.page-actions-center > * {
-    width: 100%;
-}
-.page-actions.page-actions-center form {
-    width: 100%;
-}
-.page-actions.page-actions-center .btn {
-    width: 100%;
-    display: inline-flex;
-    justify-content: center;
-}
+/* Centered action column: apply only on small screens (mobile) — keep desktop inline */
 /* Responsive: stack title + actions on small screens to avoid overlap */
 @media (max-width: 600px) {
     .page-bar {
@@ -2086,6 +2082,25 @@ select.form-control {
     .page-actions .btn--icon {
         width: 36px;
         min-width: 36px;
+    }
+    /* Centered action column: stack one button per line on mobile when using the helper class */
+    .page-actions.page-actions-center {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+        width: 100%;
+    }
+    .page-actions.page-actions-center > * {
+        width: 100%;
+    }
+    .page-actions.page-actions-center form {
+        width: 100%;
+    }
+    .page-actions.page-actions-center .btn {
+        width: 100%;
+        display: inline-flex;
+        justify-content: center;
     }
 }
 

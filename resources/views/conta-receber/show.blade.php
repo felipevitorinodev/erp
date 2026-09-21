@@ -8,7 +8,7 @@
 @endsection
 
 @section('page_actions')
-    <div class="page-actions page-actions-center">
+    <div class="page-actions">
         <a href="{{ route('conta-receber.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
         @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
             <button type="button" class="btn btn--success btn--sm" id="btn-abrir-receber">Registrar Recebimento</button>

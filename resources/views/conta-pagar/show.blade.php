@@ -8,7 +8,7 @@
 @endsection
 
 @section('page_actions')
-    <div class="page-actions page-actions-center">
+    <div class="page-actions">
 
         <a href="{{ route('conta-pagar.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
         

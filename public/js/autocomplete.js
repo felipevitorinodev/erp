@@ -41,12 +41,15 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
         if (!el) return;
 
         var rect = el.getBoundingClientRect();
+        // Use absolute positioning based on page offsets so the dropdown stays attached
+        // to the input when the page is scrolled on mobile (fixed can behave inconsistently
+        // with mobile keyboards/viewport changes).
         $list.css({
-            position: 'fixed',
-            top: (rect.bottom + 2) + 'px',
-            left: rect.left + 'px',
+            position: 'absolute',
+            top: (rect.bottom + window.pageYOffset + 2) + 'px',
+            left: (rect.left + window.pageXOffset) + 'px',
             width: Math.max(rect.width, 240) + 'px',
-            zIndex: 10000
+            zIndex: 20000
         });
     }
 
@@ -133,7 +136,8 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
         }
     });
 
-    $(window).on('scroll.' + ns + ' resize.' + ns, function () {
+    // Reposition on relevant events (include touchmove/orientationchange for mobile)
+    $(window).on('scroll.' + ns + ' resize.' + ns + ' orientationchange.' + ns + ' touchmove.' + ns, function () {
         if ($list.is(':visible')) {
             posicionar();
         }
