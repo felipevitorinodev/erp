@@ -37,10 +37,14 @@
 
     <div class="form-group">
         <label class="form-label form-label--required">Valor</label>
-        <input type="text" name="valor"
-            class="form-control input-moeda @error('valor') is-invalid @enderror"
-            value="{{ old('valor', isset($conta) && $conta ? number_format($conta->valor, 2, ',', '.') : '') }}"
-            placeholder="0,00" required>
+        @include('components.input-numeric', [
+            'name' => 'valor',
+            'value' => old('valor', isset($conta) && $conta ? number_format($conta->valor, 2, ',', '.') : ''),
+            'class' => 'input-moeda ' . ($errors->has('valor') ? 'is-invalid' : ''),
+            'decimals' => 2,
+            'placeholder' => '0,00',
+            'required' => true
+        ])
         @error('valor')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 

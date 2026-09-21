@@ -33,6 +33,10 @@ class GrupoService
 
     public function edit(Grupo $grupo)
     {
+        if ((int) $grupo->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $grupo->load('parent');
 
         return view('grupo.edit', ['grupo' => $grupo]);
@@ -40,6 +44,10 @@ class GrupoService
 
     public function update($request, Grupo $grupo)
     {
+        if ((int) $grupo->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update(
             $grupo,
             $request->validated()

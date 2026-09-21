@@ -38,9 +38,12 @@
 
                     <div class="form-group" id="grupo-dias">
                         <label class="form-label">Dias para vencimento</label>
-                        <input type="number" name="dias_vencimento" min="0" max="3650"
-                            class="form-control @error('dias_vencimento') is-invalid @enderror"
-                            value="{{ old('dias_vencimento', 30) }}">
+                        @include('components.input-numeric', [
+                            'name' => 'dias_vencimento',
+                            'value' => old('dias_vencimento', 30),
+                            'class' => $errors->has('dias_vencimento') ? 'is-invalid' : '',
+                            'decimals' => 0
+                        ])
                         @error('dias_vencimento')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
                 </div>

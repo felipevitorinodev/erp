@@ -33,11 +33,19 @@ class UnidadeMedidaService
 
     public function edit(UnidadeMedida $unidadeMedida)
     {
+        if ((int) $unidadeMedida->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         return view('unidadeMedida.edit', ['unidadeMedida' => $unidadeMedida]);
     }
 
     public function update($request, UnidadeMedida $unidadeMedida)
     {
+        if ((int) $unidadeMedida->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update($unidadeMedida, $request->validated());
 
         return redirect()

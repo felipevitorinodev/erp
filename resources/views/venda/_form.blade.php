@@ -79,23 +79,26 @@
                 <div class="item-card__grid">
                     <div class="form-group">
                         <label class="form-label">Qtd.</label>
-                        <input type="text" name="itens[{{ $i }}][quantidade]"
-                            class="form-control text-right input-qtd"
-                            inputmode="decimal"
-                            value="{{ number_format($item->quantidade, 3, ',', '.') }}">
+                        @include('components.input-quantity', [
+                            'name' => 'itens[' . $i . '][quantidade]',
+                            'value' => old('itens.' . $i . '.quantidade', number_format($item->quantidade, 2, ',', '.')),
+                            'class' => 'text-right input-qtd'
+                        ])
                     </div>
                     <div class="form-group">
                         <label class="form-label">Preço Unit.</label>
-                        <input type="text" name="itens[{{ $i }}][preco_unitario]"
-                            class="form-control text-right input-preco"
-                            inputmode="decimal"
+                        <input type="tel" name="itens[{{ $i }}][preco_unitario]"
+                            class="form-control text-right input-preco input-numeric"
+                            inputmode="numeric"
+                            data-decimals="2"
                             value="{{ number_format($item->preco_unitario, 2, ',', '.') }}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Desconto</label>
-                        <input type="text" name="itens[{{ $i }}][desconto]"
-                            class="form-control text-right input-desc-item"
-                            inputmode="decimal"
+                        <input type="tel" name="itens[{{ $i }}][desconto]"
+                            class="form-control text-right input-desc-item input-numeric"
+                            inputmode="numeric"
+                            data-decimals="2"
                             value="{{ number_format($item->desconto, 2, ',', '.') }}">
                     </div>
                 </div>
@@ -124,15 +127,17 @@
         <div class="totals-box__row">
             <span class="text-muted">Desconto (R$)</span>
             <input type="text" name="desconto" id="input-desconto"
-                class="form-control text-right totals-box__input"
-                inputmode="decimal"
+                class="form-control text-right totals-box__input input-numeric"
+                data-decimals="2"
+                inputmode="numeric"
                 value="{{ old('desconto', number_format($venda->desconto ?? 0, 2, ',', '.')) }}">
         </div>
         <div class="totals-box__row">
             <span class="text-muted">Acréscimo (R$)</span>
             <input type="text" name="acrescimo" id="input-acrescimo"
-                class="form-control text-right totals-box__input"
-                inputmode="decimal"
+                class="form-control text-right totals-box__input input-numeric"
+                data-decimals="2"
+                inputmode="numeric"
                 value="{{ old('acrescimo', number_format($venda->acrescimo ?? 0, 2, ',', '.')) }}">
         </div>
         <div class="totals-box__row totals-box__row--total">
@@ -168,8 +173,16 @@
     }, null, null, 'nome');
 
     function parseBR(val) {
-        if (!val) return 0;
-        return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+        if (typeof window.parseBR === 'function') return window.parseBR(val);
+        // fallback
+        if (val === null || typeof val === 'undefined' || val === '') return 0;
+        var str = String(val).trim();
+        if (str.indexOf(',') !== -1 && str.indexOf('.') !== -1) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else if (str.indexOf(',') !== -1) {
+            str = str.replace(',', '.');
+        }
+        return parseFloat(str) || 0;
     }
 
     function formatBR(val) {
@@ -234,15 +247,15 @@
             '<div class="item-card__grid">' +
                 '<div class="form-group">' +
                     '<label class="form-label">Qtd.</label>' +
-                    '<input type="text" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd" inputmode="decimal" value="1,000">' +
+                    '<input type="tel" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd input-quantity input-numeric" inputmode="numeric" data-decimals=\"2\" value=\"1,00\">' +
                 '</div>' +
                 '<div class="form-group">' +
                     '<label class="form-label">Preço Unit.</label>' +
-                    '<input type="text" name="itens[' + idx + '][preco_unitario]" class="form-control text-right input-preco" inputmode="decimal" value="0,00">' +
+                    '<input type="tel" name="itens[' + idx + '][preco_unitario]" class="form-control text-right input-preco input-numeric" inputmode="numeric" data-decimals=\"2\" value="0,00">' +
                 '</div>' +
                 '<div class="form-group">' +
                     '<label class="form-label">Desconto</label>' +
-                    '<input type="text" name="itens[' + idx + '][desconto]" class="form-control text-right input-desc-item" inputmode="decimal" value="0,00">' +
+                    '<input type="tel" name="itens[' + idx + '][desconto]" class="form-control text-right input-desc-item input-numeric" inputmode="numeric" data-decimals=\"2\" value="0,00">' +
                 '</div>' +
             '</div>' +
             '<div class="item-card__footer">' +

@@ -8,11 +8,14 @@ class UnidadeMedidaRepository
 {
     public function index()
     {
-        return UnidadeMedida::orderBy('nome')->get();
+        return UnidadeMedida::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome')
+            ->get();
     }
 
     public function store(array $data)
     {
+        $data['empresa_id'] = auth()->user()->empresa_id;
         return UnidadeMedida::create($data);
     }
 
@@ -25,7 +28,7 @@ class UnidadeMedidaRepository
 
     public function destroy($id)
     {
-        $unidadeMedida = UnidadeMedida::findOrFail($id);
+        $unidadeMedida = UnidadeMedida::where('empresa_id', auth()->user()->empresa_id)->findOrFail($id);
         $unidadeMedida->delete();
 
         return $unidadeMedida;

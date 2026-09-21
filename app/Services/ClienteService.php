@@ -34,6 +34,10 @@ class ClienteService
 
     public function edit(Cliente $cliente)
     {
+        if ((int) $cliente->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         return view('cliente.edit', [
             'cliente' => $cliente
         ]);
@@ -41,6 +45,10 @@ class ClienteService
 
     public function update(ClienteRequest $request, Cliente $cliente)
     {
+        if ((int) $cliente->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update(
             $cliente,
             $request->validated()

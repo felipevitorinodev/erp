@@ -33,6 +33,10 @@ class FuncionarioService
 
     public function edit(Funcionario $funcionario)
     {
+        if ((int) $funcionario->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         return view('funcionario.edit', [
             'funcionario' => $funcionario
         ]);
@@ -40,6 +44,10 @@ class FuncionarioService
 
     public function update($request, Funcionario $funcionario)
     {
+        if ((int) $funcionario->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update(
             $funcionario,
             $request->validated()

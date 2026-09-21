@@ -34,6 +34,10 @@ class FornecedorService
 
     public function edit(Fornecedor $fornecedor)
     {
+        if ((int) $fornecedor->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         return view('fornecedor.edit', [
             'fornecedor' => $fornecedor
         ]);
@@ -41,6 +45,10 @@ class FornecedorService
 
     public function update(FornecedorRequest $request, Fornecedor $fornecedor)
     {
+        if ((int) $fornecedor->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update(
             $fornecedor,
             $request->validated()

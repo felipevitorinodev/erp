@@ -33,6 +33,10 @@ class ProdutoService
 
     public function edit(Produto $produto)
     {
+        if ((int) $produto->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $produto->load(['grupos.parent', 'unidadeMedida', 'fornecedor']);
 
         return view('produto.edit', ['produto' => $produto]);
@@ -40,6 +44,10 @@ class ProdutoService
 
     public function update($request, Produto $produto)
     {
+        if ((int) $produto->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $this->repository->update($produto, $request->validated());
 
         return redirect()

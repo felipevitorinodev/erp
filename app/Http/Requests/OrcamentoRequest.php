@@ -18,6 +18,9 @@ class OrcamentoRequest extends FormRequest
             'data_orcamento' => 'required|date',
             'itens'      => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable',
+            'itens.*.quantidade' => 'required|numeric|min:0.01',
+            'itens.*.preco_unitario' => 'required|numeric|min:0',
+            'itens.*.desconto' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -40,5 +43,33 @@ class OrcamentoRequest extends FormRequest
             'data_orcamento' => 'data do orçamento',
             'itens'          => 'itens',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $items = $this->input('itens', []);
+        if (!is_array($items)) return;
+
+        foreach ($items as $k => $it) {
+            foreach (['quantidade', 'preco_unitario', 'desconto'] as $field) {
+                if (!isset($it[$field])) continue;
+                $val = (string) $it[$field];
+                $val = trim($val);
+                $val = str_replace(' ', '', $val);
+
+                if (strpos($val, ',') !== false && strpos($val, '.') !== false) {
+                    $val = str_replace('.', '', $val);
+                    $val = str_replace(',', '.', $val);
+                } elseif (strpos($val, ',') !== false) {
+                    $val = str_replace(',', '.', $val);
+                } else {
+                    // keep dots as decimal separator if present
+                }
+
+                $items[$k][$field] = $val;
+            }
+        }
+
+        $this->merge(['itens' => $items]);
     }
 }

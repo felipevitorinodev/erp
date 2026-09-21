@@ -64,6 +64,26 @@ class ContaPagarRequest extends FormRequest
         ];
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('valor')) {
+            $v = (string) $this->input('valor');
+            $v = trim($v);
+            $v = str_replace(' ', '', $v);
+
+            if (strpos($v, ',') !== false && strpos($v, '.') !== false) {
+                $v = str_replace('.', '', $v);
+                $v = str_replace(',', '.', $v);
+            } elseif (strpos($v, ',') !== false) {
+                $v = str_replace(',', '.', $v);
+            } else {
+                // keep dot as decimal if present
+            }
+
+            $this->merge(['valor' => $v]);
+        }
+    }
+
     protected function parseMoeda(mixed $valor): float
     {
         if (is_null($valor) || $valor === '') {

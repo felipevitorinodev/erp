@@ -16,6 +16,8 @@
                 data-confirm-title="Aprovar orçamento"
                 data-confirm-ok="Aprovar e gerar venda"
                 data-confirm-variant="success">
+                {{-- fallback: se a funcionalidade de confirmação via JS não estiver carregada, submete o form --}}
+                <span onclick="if(!window.modalConfirmAttached){ var f=this.closest('button').form || this.closest('form'); if(f){ f.submit(); } return false; }"></span>
                 ✔ Aprovar
             </button>
         </form>

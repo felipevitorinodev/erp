@@ -37,12 +37,37 @@ class VendaService
                 ->withInput();
         }
 
+        // validar quantidades (devem ser > 0)
+        if (is_array($request->itens)) {
+            foreach ($request->itens as $idx => $it) {
+                $q = $this->parseMoeda($it['quantidade'] ?? 0);
+                if ($q <= 0) {
+                    return back()
+                        ->withErrors(['itens.' . $idx . '.quantidade' => 'A quantidade deve ser maior que zero.'])
+                        ->withInput();
+                }
+            }
+        }
+
         $empresaId = auth()->user()->empresa_id;
         $situacao  = $request->situacao ?? 'em_andamento';
 
         // Forma à vista = pagamento do valor completo → confirma automaticamente
         if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
             $situacao = 'confirmada';
+        }
+
+        // se for confirmar imediatamente, validar estoque proibindo zerar saldo
+        if ($situacao === 'confirmada') {
+            $insuf = $this->verificarEstoqueParaConfirmacao($itens);
+            if (!empty($insuf)) {
+                // montar mensagens por item
+                $errors = [];
+                foreach ($insuf as $i => $p) {
+                    $errors['itens.' . $i . '.quantidade'] = "Produto \"{$p['nome']}\" possui estoque {$p['disponivel']} — venda que zeraria/ultrapassaria não permitida.";
+                }
+                return back()->withErrors($errors)->withInput();
+            }
         }
 
         $dados = [
@@ -64,9 +89,14 @@ class VendaService
         $venda = $this->repository->store($dados, $itens);
 
         if ($situacao === 'confirmada') {
-            $this->repository->confirmar($venda->load('itens'));
-
-            $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';
+            try {
+                $this->repository->confirmar($venda->load('itens'));
+                $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';
+            } catch (\Exception $ex) {
+                // confirmação falhou por falta de estoque — redireciona mostrando erro
+                return redirect()->route('venda.show', $venda)
+                    ->with('error', $ex->getMessage());
+            }
             if (ContaReceber::where('venda_id', $venda->id)->exists()) {
                 $mensagem .= ' Conta a receber gerada automaticamente (venda a prazo).';
             } elseif (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
@@ -82,6 +112,10 @@ class VendaService
 
     public function show(Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $venda->load(['cliente', 'itens.produto', 'usuario']);
 
         return view('venda.show', ['venda' => $venda]);
@@ -89,6 +123,10 @@ class VendaService
 
     public function edit(Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         if ($venda->situacao === 'cancelada') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda cancelada não pode ser editada.');
@@ -101,6 +139,10 @@ class VendaService
 
     public function update(Request $request, Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         if ($venda->situacao === 'cancelada') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda cancelada não pode ser editada.');
@@ -112,6 +154,17 @@ class VendaService
             return back()
                 ->withErrors(['itens' => 'Adicione pelo menos um item.'])
                 ->withInput();
+        }
+        // validar quantidades (devem ser > 0)
+        if (is_array($request->itens)) {
+            foreach ($request->itens as $idx => $it) {
+                $q = $this->parseMoeda($it['quantidade'] ?? 0);
+                if ($q <= 0) {
+                    return back()
+                        ->withErrors(['itens.' . $idx . '.quantidade' => 'A quantidade deve ser maior que zero.'])
+                        ->withInput();
+                }
+            }
         }
 
         $empresaId = (int) $venda->empresa_id;
@@ -142,7 +195,22 @@ class VendaService
         $this->repository->update($venda, $dados, $itens);
 
         if ($deveConfirmar) {
-            $this->repository->confirmar($venda->fresh('itens'));
+            // validar estoque proibindo zerar saldo antes de confirmar
+            $insuf = $this->verificarEstoqueParaConfirmacao($itens);
+            if (!empty($insuf)) {
+                $errors = [];
+                foreach ($insuf as $i => $p) {
+                    $errors['itens.' . $i . '.quantidade'] = "Produto \"{$p['nome']}\" possui estoque {$p['disponivel']} — venda que zeraria/ultrapassaria não permitida.";
+                }
+                return back()->withErrors($errors)->withInput();
+            }
+
+            try {
+                $this->repository->confirmar($venda->fresh('itens'));
+            } catch (\Exception $ex) {
+                return redirect()->route('venda.show', $venda)
+                    ->with('error', $ex->getMessage());
+            }
         }
 
         $mensagem = 'Venda #' . $venda->numero . ' atualizada com sucesso.';
@@ -158,12 +226,21 @@ class VendaService
 
     public function confirmar(Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         if ($venda->situacao !== 'em_andamento') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Somente vendas em andamento podem ser confirmadas.');
         }
 
-        $this->repository->confirmar($venda->load('itens'));
+        try {
+            $this->repository->confirmar($venda->load('itens'));
+        } catch (\Exception $ex) {
+            return redirect()->route('venda.show', $venda)
+                ->with('error', $ex->getMessage());
+        }
 
         $contaGerada = ContaReceber::where('venda_id', $venda->id)->exists();
         $mensagem = 'Venda #' . $venda->numero . ' confirmada com sucesso.';
@@ -178,6 +255,10 @@ class VendaService
 
     public function cancelar(Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         if ($venda->situacao === 'cancelada') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda já está cancelada.');
@@ -191,12 +272,43 @@ class VendaService
 
     public function destroy(Venda $venda)
     {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
         $numero = $venda->numero;
         $venda->load('itens');
         $this->repository->destroy($venda->id);
 
         return redirect()->route('venda.index')
             ->with('success', 'Venda #' . $numero . ' excluída com sucesso.');
+    }
+
+    /**
+     * Verifica se os itens excedem o estoque ou zerariam o estoque quando controlado.
+     * Retorna array de itens insuficientes no formato [idx => ['nome'=>..., 'disponivel'=>...], ...]
+     */
+    protected function verificarEstoqueParaConfirmacao(array $itens): array
+    {
+        $insuficientes = [];
+        foreach ($itens as $idx => $item) {
+            if (empty($item['produto_id'])) continue;
+            $produto = Produto::find($item['produto_id']);
+            if (!$produto) continue;
+            if (!$produto->controla_estoque) continue;
+
+            $disponivel = (float) $produto->estoque_atual;
+            $quantidade = (float) $item['quantidade'];
+
+            // bloquear se a confirmação zeraria ou excederia o estoque
+            if ($quantidade >= $disponivel) {
+                $insuficientes[$idx] = [
+                    'nome' => $produto->nome,
+                    'disponivel' => $disponivel
+                ];
+            }
+        }
+        return $insuficientes;
     }
 
     protected function processarItens(array $itens): array
@@ -213,8 +325,16 @@ class VendaService
             if (!$produto) {
                 continue;
             }
+            // garantir que o produto pertence à mesma empresa do usuário
+            if ((int) $produto->empresa_id !== (int) auth()->user()->empresa_id) {
+                continue;
+            }
 
-            $quantidade = (float) str_replace(',', '.', $item['quantidade'] ?? 1);
+            $quantidade = $this->parseMoeda($item['quantidade'] ?? 0);
+            if ($quantidade <= 0) {
+                // ignorar itens com quantidade inválida (serão validados antes)
+                continue;
+            }
             $precoUnit  = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
             $total      = max(0, ($quantidade * $precoUnit) - $descItem);

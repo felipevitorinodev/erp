@@ -8,11 +8,14 @@ class FornecedorRepository
 {
     public function index()
     {
-        return Fornecedor::orderBy('nome')->get();
+        return Fornecedor::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome')
+            ->get();
     }
 
     public function store(array $data)
     {
+        $data['empresa_id'] = auth()->user()->empresa_id;
         return Fornecedor::create($data);
     }
 
@@ -25,7 +28,7 @@ class FornecedorRepository
 
     public function destroy($id)
     {
-        $fornecedor = Fornecedor::findOrFail($id);
+        $fornecedor = Fornecedor::where('empresa_id', auth()->user()->empresa_id)->findOrFail($id);
         $fornecedor->delete();
 
         return $fornecedor;

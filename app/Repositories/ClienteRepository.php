@@ -16,17 +16,20 @@ class ClienteRepository
     {}
 
     public function index(){
-        return $this->cliente::all();
+        return $this->cliente::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome')
+            ->get();
     }
 
     public function store(array $request)
     {
+        $request['empresa_id'] = auth()->user()->empresa_id;
         return $this->cliente->create($request);
     }
 
     public function edit(Cliente $cliente)
     {
-        $cliente = $this->cliente->findOrFail($cliente->id);
+        $cliente = $this->cliente->where('empresa_id', auth()->user()->empresa_id)->findOrFail($cliente->id);
 
         return $cliente;
     }
@@ -40,8 +43,7 @@ class ClienteRepository
 
     public function destroy($id)
     {
-        $cliente = $this->cliente->findOrFail($id);
-
+        $cliente = $this->cliente->where('empresa_id', auth()->user()->empresa_id)->findOrFail($id);
         return $cliente->delete();
     }
 }

@@ -67,4 +67,34 @@ class ProdutoRequest extends FormRequest
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $fields = [
+            'preco_custo','preco_venda','preco_minimo','margem_lucro',
+            'estoque_minimo','estoque_maximo','estoque_atual',
+            'peso','altura','largura','profundidade',
+            'aliquota_icms','aliquota_pis','aliquota_cofins'
+        ];
+
+        foreach ($fields as $f) {
+            if ($this->filled($f)) {
+                $v = (string) $this->input($f);
+                $v = trim($v);
+                $v = str_replace(' ', '', $v);
+                // Se contém ponto e vírgula -> assume ponto = milhares, vírgula = decimal
+                if (strpos($v, ',') !== false && strpos($v, '.') !== false) {
+                    $v = str_replace('.', '', $v);
+                    $v = str_replace(',', '.', $v);
+                } elseif (strpos($v, ',') !== false) {
+                    // apenas vírgula -> decimal
+                    $v = str_replace(',', '.', $v);
+                } else {
+                    // apenas ponto ou nenhum separador -> manter ponto como decimal (não remover)
+                    // nada a fazer
+                }
+                $this->merge([$f => $v]);
+            }
+        }
+    }
 }

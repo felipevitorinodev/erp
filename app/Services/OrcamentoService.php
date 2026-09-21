@@ -128,7 +128,8 @@ class OrcamentoService
 
         $orcamento->load('itens');
 
-        $venda = DB::transaction(function () use ($orcamento) {
+        try {
+            $venda = DB::transaction(function () use ($orcamento) {
             $itens = [];
             foreach ($orcamento->itens as $item) {
                 $itens[] = [
@@ -169,7 +170,12 @@ class OrcamentoService
             ]);
 
             return $venda;
-        });
+            });
+        } catch (\Exception $ex) {
+            // tratar exceções de confirmação/estoque e retornar ao orçamento com erro amigável
+            return redirect()->route('orcamento.show', $orcamento)
+                ->with('error', $ex->getMessage());
+        }
 
         return redirect()->route('venda.show', $venda)
             ->with('success', 'Orçamento #' . $orcamento->numero . ' aprovado. Venda #' . $venda->numero . ' gerada.');
@@ -227,8 +233,15 @@ class OrcamentoService
             if (!$produto) {
                 continue;
             }
+            // garantir que o produto pertence à mesma empresa do usuário
+            if ((int) $produto->empresa_id !== (int) auth()->user()->empresa_id) {
+                continue;
+            }
 
-            $quantidade = (float) str_replace(',', '.', $item['quantidade'] ?? 1);
+            $quantidade = $this->parseMoeda($item['quantidade'] ?? 0);
+            if ($quantidade <= 0) {
+                continue;
+            }
             $precoUnit  = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
             $total      = max(0, ($quantidade * $precoUnit) - $descItem);

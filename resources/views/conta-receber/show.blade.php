@@ -123,9 +123,13 @@
                     <div class="modal-box__body">
                         <div class="form-group">
                             <label class="form-label form-label--required">Valor Pago</label>
-                            <input type="text" name="valor_pago" class="form-control input-moeda"
-                                value="{{ old('valor_pago', number_format($conta->valor - $conta->valor_pago, 2, ',', '.')) }}"
-                                required>
+                            @include('components.input-numeric', [
+                                'name' => 'valor_pago',
+                                'value' => old('valor_pago', number_format($conta->valor - $conta->valor_pago, 2, ',', '.')),
+                                'class' => 'input-moeda',
+                                'decimals' => 2,
+                                'required' => true
+                            ])
                             @error('valor_pago')<span class="form-error">{{ $message }}</span>@enderror
                         </div>
                         <div class="form-group" style="margin-top:0.75rem;">

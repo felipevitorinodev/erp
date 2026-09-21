@@ -16,22 +16,29 @@ class GrupoRepository
     {}
 
     public function index(){
-        return $this->grupo::all();
+        return $this->grupo::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome')
+            ->get();
     }
 
     public function principais()
     {
-        return Grupo::whereNull('parent_id')->where('ativo', true)->orderBy('nome')->get();
+        return Grupo::where('empresa_id', auth()->user()->empresa_id)
+            ->whereNull('parent_id')
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
     }
 
     public function store(array $request)
     {
+        $request['empresa_id'] = auth()->user()->empresa_id;
         return $this->grupo->create($request);
     }
 
     public function edit(Grupo $grupo)
     {
-        $grupo = $this->grupo->findOrFail($grupo->id);
+        $grupo = $this->grupo->where('empresa_id', auth()->user()->empresa_id)->findOrFail($grupo->id);
 
         return $grupo;
     }
@@ -45,7 +52,7 @@ class GrupoRepository
 
     public function destroy($id)
     {
-        $grupo = $this->grupo->findOrFail($id);
+        $grupo = $this->grupo->where('empresa_id', auth()->user()->empresa_id)->findOrFail($id);
 
         return $grupo->delete();
     }

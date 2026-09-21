@@ -107,9 +107,12 @@
 
                 <div class="form-group">
                     <label class="form-label">Salário</label>
-                    <input type="number" step="0.01" name="salario"
-                        class="form-control @error('salario') is-invalid @enderror"
-                        value="{{ old('salario', $funcionario->salario) }}">
+                    @include('components.input-numeric', [
+                        'name' => 'salario',
+                        'value' => old('salario', $funcionario->salario),
+                        'class' => $errors->has('salario') ? 'is-invalid' : '',
+                        'decimals' => 2
+                    ])
                     @error('salario')<span class="form-error">{{ $message }}</span>@enderror
                 </div>
 

@@ -79,25 +79,34 @@
 
     <div class="form-group">
         <label class="form-label">Preço de Custo</label>
-        <input type="number" step="0.0001" name="preco_custo"
-            class="form-control @error('preco_custo') is-invalid @enderror"
-            value="{{ old('preco_custo', $produto->preco_custo ?? '0.0000') }}">
+        @include('components.input-numeric', [
+            'name' => 'preco_custo',
+            'value' => old('preco_custo', isset($produto) ? number_format($produto->preco_custo ?? 0, 2, ',', '.') : '0,00'),
+            'class' => $errors->has('preco_custo') ? 'is-invalid' : '',
+            'decimals' => 2
+        ])
         @error('preco_custo')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group">
         <label class="form-label">Preço de Venda</label>
-        <input type="number" step="0.0001" name="preco_venda"
-            class="form-control @error('preco_venda') is-invalid @enderror"
-            value="{{ old('preco_venda', $produto->preco_venda ?? '0.0000') }}">
+        @include('components.input-numeric', [
+            'name' => 'preco_venda',
+            'value' => old('preco_venda', isset($produto) ? number_format($produto->preco_venda ?? 0, 2, ',', '.') : '0,00'),
+            'class' => $errors->has('preco_venda') ? 'is-invalid' : '',
+            'decimals' => 2
+        ])
         @error('preco_venda')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group">
         <label class="form-label">Preço Mínimo</label>
-        <input type="number" step="0.0001" name="preco_minimo"
-            class="form-control @error('preco_minimo') is-invalid @enderror"
-            value="{{ old('preco_minimo', $produto->preco_minimo ?? '0.0000') }}">
+        @include('components.input-numeric', [
+            'name' => 'preco_minimo',
+            'value' => old('preco_minimo', isset($produto) ? number_format($produto->preco_minimo ?? 0, 2, ',', '.') : '0,00'),
+            'class' => $errors->has('preco_minimo') ? 'is-invalid' : '',
+            'decimals' => 2
+        ])
         @error('preco_minimo')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
@@ -105,25 +114,34 @@
 <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
     <div class="form-group">
         <label class="form-label">Estoque Mínimo</label>
-        <input type="number" step="0.001" name="estoque_minimo"
-            class="form-control @error('estoque_minimo') is-invalid @enderror"
-            value="{{ old('estoque_minimo', $produto->estoque_minimo ?? '0.000') }}">
+        @include('components.input-quantity', [
+            'name' => 'estoque_minimo',
+            'value' => old('estoque_minimo', isset($produto) ? number_format($produto->estoque_minimo ?? 0, 2, ',', '.') : '0,00'),
+            'class' => ($errors->has('estoque_minimo') ? 'is-invalid' : '') . ' text-right input-qtd',
+            'decimals' => 2
+        ])
         @error('estoque_minimo')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group">
         <label class="form-label">Estoque Máximo</label>
-        <input type="number" step="0.001" name="estoque_maximo"
-            class="form-control @error('estoque_maximo') is-invalid @enderror"
-            value="{{ old('estoque_maximo', $produto->estoque_maximo ?? '') }}">
+        @include('components.input-quantity', [
+            'name' => 'estoque_maximo',
+            'value' => old('estoque_maximo', isset($produto) && $produto->estoque_maximo !== null ? number_format($produto->estoque_maximo ?? 0, 2, ',', '.') : ''),
+            'class' => ($errors->has('estoque_maximo') ? 'is-invalid' : '') . ' text-right input-qtd',
+            'decimals' => 2
+        ])
         @error('estoque_maximo')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 
     <div class="form-group">
         <label class="form-label">Estoque Atual</label>
-        <input type="number" step="0.001" name="estoque_atual"
-            class="form-control @error('estoque_atual') is-invalid @enderror"
-            value="{{ old('estoque_atual', $produto->estoque_atual ?? '0.000') }}">
+        @include('components.input-quantity', [
+            'name' => 'estoque_atual',
+            'value' => old('estoque_atual', isset($produto) ? number_format($produto->estoque_atual ?? 0, 2, ',', '.') : '0,00'),
+            'class' => ($errors->has('estoque_atual') ? 'is-invalid' : '') . ' text-right input-qtd',
+            'decimals' => 2
+        ])
         @error('estoque_atual')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 

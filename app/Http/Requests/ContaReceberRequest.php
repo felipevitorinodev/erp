@@ -83,4 +83,24 @@ class ContaReceberRequest extends FormRequest
 
         return round((float) $str, 2);
     }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('valor')) {
+            $v = (string) $this->input('valor');
+            $v = trim($v);
+            $v = str_replace(' ', '', $v);
+
+            if (strpos($v, ',') !== false && strpos($v, '.') !== false) {
+                $v = str_replace('.', '', $v);
+                $v = str_replace(',', '.', $v);
+            } elseif (strpos($v, ',') !== false) {
+                $v = str_replace(',', '.', $v);
+            } else {
+                // keep dot as decimal if present
+            }
+
+            $this->merge(['valor' => $v]);
+        }
+    }
 }
