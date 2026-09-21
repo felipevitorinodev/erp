@@ -18,10 +18,12 @@
                 ✔ Confirmar Venda
             </button>
         </form>
-        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm">Editar</a>
     @endif
-
-    <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
+    <a href="{{ route('venda.pdf', $venda) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
+    @if($venda->situacao === 'em_andamento')
+        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
+    @endif
+    <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
 
     @if($venda->situacao !== 'cancelada')
         <form method="POST" action="{{ route('venda.cancelar', $venda) }}" style="display:inline;">
@@ -104,6 +106,8 @@
             @endif
         </div>
     </div>
+
+    
 
     {{-- Itens --}}
     <div class="card" style="margin-top:1rem;">

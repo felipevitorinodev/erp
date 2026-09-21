@@ -56,4 +56,14 @@ class OrcamentoController extends Controller
     {
         return $this->service->destroy($orcamento);
     }
+
+    public function pdf(Orcamento $orcamento)
+    {
+        if ((int) $orcamento->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+        $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
+        return $pdf->stream('orcamento_' . $orcamento->numero . '.pdf');
+    }
 }

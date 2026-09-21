@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Venda;
 use App\Services\VendaService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class VendaController extends Controller
 {
@@ -55,5 +56,10 @@ class VendaController extends Controller
     public function destroy(Venda $venda)
     {
         return $this->service->destroy($venda);
+    }
+
+    public function pdf(Venda $venda)
+    {
+        return $this->service->pdf($venda);
     }
 }

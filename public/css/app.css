@@ -578,6 +578,7 @@ select.form-control {
     text-decoration: none;
     white-space: nowrap;
     border-radius: 0;
+    justify-content: center;
 }
 
 .btn--primary {
@@ -1564,6 +1565,93 @@ select.form-control {
 
     .page-bar__actions .btn {
         justify-content: center;
+    }
+
+/* central action row for pages (center volta/pdf/edit) */
+.page-actions-center {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    margin: 0.75rem 0;
+    flex-wrap: wrap;
+}
+
+.page-actions-center .btn {
+    min-width: 110px;
+}
+
+    /* Mobile: empilhar ações principais (confirm/approve) em cima e largura total */
+    .page-bar__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+
+    .page-bar__actions > * {
+        width: 100%;
+    }
+
+    .page-bar__actions .btn,
+    .page-bar__actions form {
+        width: 100%;
+        display: block;
+    }
+
+    /* Forçar destaque das ações primárias para o topo */
+    .page-bar__actions .btn--primary,
+    .page-bar__actions .btn--success {
+        order: -1;
+    }
+    .page-bar__actions .btn--danger {
+        order: 1;
+    }
+
+    /* Compact button styling (mobile-first) */
+    .btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 12px;
+        gap: 0.35rem;
+        min-height: 36px;
+    }
+
+    .btn--sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 11px;
+        min-height: 32px;
+    }
+
+    /* Reduce spacing between buttons in action bars */
+    .page-bar__actions {
+        gap: 0.4rem;
+    }
+
+    .card__footer {
+        gap: 0.4rem;
+    }
+
+    /* Icon spacing (if buttons include icons as first child) */
+    .btn > .icon,
+    .btn > svg {
+        width: 14px;
+        height: 14px;
+        margin-right: 0.35rem;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    /* Make primary/confirm buttons more compact but visually strong */
+    .btn--primary,
+    .btn--success {
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        font-weight: 700;
+    }
+
+    /* Danger buttons slightly separated to avoid accidental taps */
+    .btn--danger {
+        margin-top: 0.15rem;
     }
 
     .form-grid--col-2,

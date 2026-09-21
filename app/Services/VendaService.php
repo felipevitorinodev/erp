@@ -121,6 +121,17 @@ class VendaService
         return view('venda.show', ['venda' => $venda]);
     }
 
+    public function pdf(Venda $venda)
+    {
+        if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+
+        $venda->load(['cliente', 'itens.produto', 'usuario']);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('venda.pdf', ['venda' => $venda])->setPaper('a4', 'portrait');
+        return $pdf->stream('venda_' . $venda->numero . '.pdf');
+    }
+
     public function edit(Venda $venda)
     {
         if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {

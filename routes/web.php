@@ -109,6 +109,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [VendaController::class, 'index'])->name('venda.index');
         Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
         Route::post('/salvar', [VendaController::class, 'store'])->name('venda.store');
+        Route::get('{venda}/pdf', [VendaController::class, 'pdf'])->name('venda.pdf');
         Route::get('{venda}/ver', [VendaController::class, 'show'])->name('venda.show');
         Route::get('{venda}/editar', [VendaController::class, 'edit'])->name('venda.edit');
         Route::put('{venda}/editar/salvar', [VendaController::class, 'update'])->name('venda.update');
@@ -121,6 +122,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [OrcamentoController::class, 'index'])->name('orcamento.index');
         Route::get('/novo', [OrcamentoController::class, 'create'])->name('orcamento.create');
         Route::post('/salvar', [OrcamentoController::class, 'store'])->name('orcamento.store');
+        Route::get('{orcamento}/pdf', [OrcamentoController::class, 'pdf'])->name('orcamento.pdf');
         Route::get('{orcamento}/ver', [OrcamentoController::class, 'show'])->name('orcamento.show');
         Route::get('{orcamento}/editar', [OrcamentoController::class, 'edit'])->name('orcamento.edit');
         Route::put('{orcamento}/editar/salvar', [OrcamentoController::class, 'update'])->name('orcamento.update');

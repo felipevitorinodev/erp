@@ -20,8 +20,9 @@
                 <span onclick="if(!window.modalConfirmAttached){ var f=this.closest('button').form || this.closest('form'); if(f){ f.submit(); } return false; }"></span>
                 ✔ Aprovar
             </button>
-        </form>
-        <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm">Editar</a>
+                </form>
+        <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
+        <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
         <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}" style="display:inline;">
             @csrf
             <button type="submit" class="btn btn--danger btn--sm"
@@ -34,7 +35,7 @@
         </form>
     @endif
 
-    <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
+    <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
 
     @if(in_array($orcamento->situacao, ['pendente', 'cancelado', 'recusado'], true))
         <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" style="display:inline;">
