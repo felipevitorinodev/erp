@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Cliente;
-use App\Models\Empresa;
+use App\Models\Clientes\Cliente;
+use App\Models\Empresas\Empresa;
 use Illuminate\Database\Seeder;
 
 class ClienteConsumidorSeeder extends Seeder

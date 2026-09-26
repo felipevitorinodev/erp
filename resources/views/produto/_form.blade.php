@@ -39,7 +39,10 @@
 
 <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
     <div class="form-group">
-        <label class="form-label">Grupo</label>
+        <label class="form-label">
+            Grupo
+            <button type="button" class="btn-add-inline" id="btn-add-grupo" title="Criar novo grupo">+</button>
+        </label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-grupo" class="form-control"
                 value="{{ old('grupo_nome', isset($produto) && $produto->grupos ? ($produto->grupos->parent ? $produto->grupos->parent->nome . ' / ' : '') . $produto->grupos->nome : '') }}"
@@ -53,7 +56,10 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label">Unidade de Medida</label>
+        <label class="form-label">
+            Unidade de Medida
+            <button type="button" class="btn-add-inline" id="btn-add-unidade" title="Criar nova unidade">+</button>
+        </label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-unidade" class="form-control"
                 value="{{ old('unidade_nome', isset($produto) && $produto->unidadeMedida ? $produto->unidadeMedida->nome . ' (' . $produto->unidadeMedida->sigla . ')' : '') }}"
@@ -67,7 +73,10 @@
     </div>
 
     <div class="form-group form-group--span-2">
-        <label class="form-label">Fornecedor Principal</label>
+        <label class="form-label">
+            Fornecedor Principal
+            <button type="button" class="btn-add-inline" id="btn-add-fornecedor" title="Criar novo fornecedor">+</button>
+        </label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-fornecedor" class="form-control"
                 value="{{ old('fornecedor_nome', isset($produto) && $produto->fornecedor ? $produto->fornecedor->nome : '') }}"
@@ -246,23 +255,139 @@
         @enderror
     </div>
 </div>
+{{-- Modais de Cadastro Rápido (colocados fora do form principal via @push) --}}
+@push('modals')
+@include('components.modal-cadastro-rapido', [
+    'id' => 'modal-novo-grupo',
+    'titulo' => 'Novo Grupo',
+    'rota' => route('api.grupos.store'),
+    'campos' => [
+        ['name' => 'nome', 'label' => 'Nome do Grupo', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: Bebidas'],
+    ],
+])
+
+@include('components.modal-cadastro-rapido', [
+    'id' => 'modal-nova-unidade',
+    'titulo' => 'Nova Unidade de Medida',
+    'rota' => route('api.unidades-medida.store'),
+    'campos' => [
+        ['name' => 'nome', 'label' => 'Nome', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: Unidade'],
+        ['name' => 'sigla', 'label' => 'Sigla', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: UN', 'maxlength' => 10],
+    ],
+])
+
+@include('components.modal-cadastro-rapido', [
+    'id' => 'modal-novo-fornecedor',
+    'titulo' => 'Novo Fornecedor',
+    'rota' => route('api.fornecedores.store'),
+    'campos' => [
+        ['name' => 'nome', 'label' => 'Nome / Razão Social', 'type' => 'text', 'required' => true],
+        ['name' => 'cnpj', 'label' => 'CNPJ', 'type' => 'text', 'placeholder' => '00.000.000/0000-00'],
+        ['name' => 'telefone', 'label' => 'Telefone', 'type' => 'text', 'placeholder' => '(00) 00000-0000'],
+    ],
+])
+@endpush
+
+@push('styles')
+<style>
+.btn-add-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 0.35rem;
+    padding: 0;
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    background: var(--color-primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    vertical-align: middle;
+}
+.btn-add-inline:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    transform: scale(1.1);
+}
+</style>
+@endpush
+
 @push('scripts')
-    <script>
-        (function() {
-            initAutocomplete('#input-grupo', '#hidden-grupo-id', '{{ route('api.grupos.busca') }}', function(item) {
-                return (item.parent && item.parent.nome ? item.parent.nome + ' / ' : '') + item.nome;
-            });
+<script>
+(function() {
+    initAutocomplete('#input-grupo', '#hidden-grupo-id', '{{ route('api.grupos.busca') }}', function(item) {
+        return (item.parent && item.parent.nome ? item.parent.nome + ' / ' : '') + item.nome;
+    });
 
-            initAutocomplete('#input-unidade', '#hidden-unidade-id', '{{ route('api.unidades-medida.busca') }}',
-                function(item) {
-                    return item.nome + (item.sigla ? ' (' + item.sigla + ')' : '');
-                });
+    initAutocomplete('#input-unidade', '#hidden-unidade-id', '{{ route('api.unidades-medida.busca') }}',
+        function(item) {
+            return item.nome + (item.sigla ? ' (' + item.sigla + ')' : '');
+        });
 
-            initAutocomplete('#input-fornecedor', '#hidden-fornecedor-id', '{{ route('api.fornecedores.busca') }}',
-                function(item) {
-                    var doc = item.cpf || item.cnpj || '';
-                    return item.nome + (doc ? ' — ' + doc : '');
-                });
-        })();
-    </script>
+    initAutocomplete('#input-fornecedor', '#hidden-fornecedor-id', '{{ route('api.fornecedores.busca') }}',
+        function(item) {
+            var doc = item.cpf || item.cnpj || '';
+            return item.nome + (doc ? ' — ' + doc : '');
+        });
+
+    // Callbacks dos modais de cadastro rápido
+    document.addEventListener('modal-novo-grupo:success', function(e) {
+        document.getElementById('hidden-grupo-id').value = e.detail.id;
+        document.getElementById('input-grupo').value = e.detail.nome;
+    });
+
+    document.addEventListener('modal-nova-unidade:success', function(e) {
+        document.getElementById('hidden-unidade-id').value = e.detail.id;
+        document.getElementById('input-unidade').value = e.detail.nome + ' (' + e.detail.sigla + ')';
+    });
+
+    document.addEventListener('modal-novo-fornecedor:success', function(e) {
+        document.getElementById('hidden-fornecedor-id').value = e.detail.id;
+        document.getElementById('input-fornecedor').value = e.detail.nome;
+    });
+
+    // Botões de adicionar rápido
+    var btnAddGrupo = document.getElementById('btn-add-grupo');
+    var btnAddUnidade = document.getElementById('btn-add-unidade');
+    var btnAddFornecedor = document.getElementById('btn-add-fornecedor');
+
+    if (btnAddGrupo) {
+        btnAddGrupo.addEventListener('click', function() {
+            if (typeof window.abrir_modal_novo_grupo === 'function') {
+                window.abrir_modal_novo_grupo();
+            } else {
+                var modal = document.getElementById('modal-novo-grupo');
+                if (modal) { modal.hidden = false; }
+            }
+        });
+    }
+
+    if (btnAddUnidade) {
+        btnAddUnidade.addEventListener('click', function() {
+            if (typeof window.abrir_modal_nova_unidade === 'function') {
+                window.abrir_modal_nova_unidade();
+            } else {
+                var modal = document.getElementById('modal-nova-unidade');
+                if (modal) { modal.hidden = false; }
+            }
+        });
+    }
+
+    if (btnAddFornecedor) {
+        btnAddFornecedor.addEventListener('click', function() {
+            if (typeof window.abrir_modal_novo_fornecedor === 'function') {
+                window.abrir_modal_novo_fornecedor();
+            } else {
+                var modal = document.getElementById('modal-novo-fornecedor');
+                if (modal) { modal.hidden = false; }
+            }
+        });
+    }
+})();
+</script>
 @endpush

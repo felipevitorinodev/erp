@@ -100,6 +100,30 @@
                     <span>{{ $entrada->observacoes }}</span>
                 </div>
             @endif
+
+            @if($entrada->chave_acesso)
+                <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+                    <span class="text-muted text-bold" style="font-size:0.85rem;display:block;margin-bottom:0.5rem;">
+                        Nota Fiscal de Origem
+                    </span>
+                    <dl style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:0.75rem;margin:0;">
+                        <div>
+                            <dt class="text-muted" style="font-size:0.8rem;">NF-e Número/Série</dt>
+                            <dd style="margin:0;font-weight:500;">{{ $entrada->numero_nfe }} / {{ $entrada->serie_nfe }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-muted" style="font-size:0.8rem;">Data de Emissão</dt>
+                            <dd style="margin:0;">{{ $entrada->data_emissao_nfe?->format('d/m/Y') }}</dd>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <dt class="text-muted" style="font-size:0.8rem;">Chave de Acesso</dt>
+                            <dd style="margin:0;font-family:monospace;font-size:12px;word-break:break-all;">
+                                {{ $entrada->chave_acesso }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            @endif
         </div>
     </div>
 

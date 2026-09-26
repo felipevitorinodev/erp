@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\TipoPessoa;
-use App\Models\Empresa;
+use App\Models\Empresas\Empresa;
 use Illuminate\Database\Seeder;
 
 class EmpresaSeeder extends Seeder

@@ -6,7 +6,7 @@
 @section('page_actions')
     <div class="page-actions">
         <a href="{{ route('relatorio.produtos-mais-vendidos.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <button type="button" class="btn btn--ghost btn--sm" onclick="window.print()">Imprimir</button>
+        <a href="{{ route('relatorio.produtos-mais-vendidos.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
     </div>
 @endsection
 
@@ -35,7 +35,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Resultados (top 50)</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding:0;">
             <div class="table-wrap">

@@ -10,6 +10,8 @@
 @section('page_actions')
     <div class="page-actions">
         <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+        <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank"
+            title="Gerar PDF">PDF</a>
 
         @if ($orcamento->situacao === 'pendente')
             <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}" class="d-inline">
@@ -24,9 +26,6 @@
                     ✔ Aprovar
                 </button>
             </form>
-
-            <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank"
-                title="Gerar PDF">Imprimir</a>
 
             <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
 

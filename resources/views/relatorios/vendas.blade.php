@@ -6,7 +6,7 @@
 @section('page_actions')
     <div class="page-actions">
         <a href="{{ route('relatorio.vendas.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <button type="button" class="btn btn--ghost btn--sm" onclick="window.print()">Imprimir</button>
+        <a href="{{ route('relatorio.vendas.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
     </div>
 @endsection
 

@@ -100,7 +100,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Vendedor</label>
-                    <span>{{ $venda->usuario->name ?? '—' }}</span>
+                    <span>{{ $venda->funcionario->nome ?? ($venda->usuario->name ?? '—') }}</span>
                 </div>
             </div>
             @if($venda->observacoes)

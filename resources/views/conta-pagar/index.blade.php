@@ -33,7 +33,7 @@
                     <input type="date" name="data_vencimento" class="form-control"
                         value="{{ $filtros['data_vencimento'] ?? '' }}">
                 </div>
-                <div class="form-group" style="justify-content:center;">
+                <div class="form-group">
                     <div class="filter-actions">
                         <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
                         <a href="{{ route('conta-pagar.index') }}" class="btn btn--ghost btn--sm">Limpar</a>

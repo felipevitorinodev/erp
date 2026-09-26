@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\UnidadeMedida;
+use App\Models\UnidadesMedida\UnidadeMedida;
 use Illuminate\Database\Seeder;
 
 class UnidadeMedidaSeeder extends Seeder

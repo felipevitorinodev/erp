@@ -1,14 +1,14 @@
 <?php
 
-use App\Models\Cliente;
-use App\Models\Empresa;
-use App\Models\FormaPagamento;
-use App\Models\Fornecedor;
-use App\Models\Funcionario;
-use App\Models\Grupo;
-use App\Models\Produto;
-use App\Models\UnidadeMedida;
-use App\Models\Venda;
+use App\Models\Clientes\Cliente;
+use App\Models\Empresas\Empresa;
+use App\Models\FormasPagamento\FormaPagamento;
+use App\Models\Fornecedores\Fornecedor;
+use App\Models\Funcionarios\Funcionario;
+use App\Models\Grupos\Grupo;
+use App\Models\Produtos\Produto;
+use App\Models\UnidadesMedida\UnidadeMedida;
+use App\Models\Vendas\Venda;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -214,5 +214,107 @@ Route::middleware('auth')->group(function () {
             ->limit(50)
             ->get();
     })->name('api.cliente.vendas');
+
+    // === CADASTROS RÁPIDOS (Modais) ===
+
+    Route::post('/api/grupos/store', function () {
+        $data = request()->validate([
+            'nome' => 'required|string|max:100',
+        ], [
+            'nome.required' => 'O nome do grupo é obrigatório.',
+        ]);
+
+        $grupo = Grupo::create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($data['nome']),
+            'ativo' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $grupo->id,
+            'nome' => $grupo->nome,
+            'message' => 'Grupo criado com sucesso!',
+        ]);
+    })->name('api.grupos.store');
+
+    Route::post('/api/unidades-medida/store', function () {
+        $data = request()->validate([
+            'nome' => 'required|string|max:50',
+            'sigla' => 'required|string|max:10',
+        ], [
+            'nome.required' => 'O nome é obrigatório.',
+            'sigla.required' => 'A sigla é obrigatória.',
+        ]);
+
+        $unidade = UnidadeMedida::create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($data['nome']),
+            'sigla' => strtoupper(trim($data['sigla'])),
+            'ativo' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $unidade->id,
+            'nome' => $unidade->nome,
+            'sigla' => $unidade->sigla,
+            'message' => 'Unidade de medida criada com sucesso!',
+        ]);
+    })->name('api.unidades-medida.store');
+
+    Route::post('/api/fornecedores/store', function () {
+        $data = request()->validate([
+            'nome' => 'required|string|max:200',
+            'cnpj' => 'nullable|string|max:18',
+            'telefone' => 'nullable|string|max:20',
+        ], [
+            'nome.required' => 'O nome do fornecedor é obrigatório.',
+        ]);
+
+        $fornecedor = Fornecedor::create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($data['nome']),
+            'cnpj' => $data['cnpj'] ?? null,
+            'telefone' => $data['telefone'] ?? null,
+            'ativo' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $fornecedor->id,
+            'nome' => $fornecedor->nome,
+            'message' => 'Fornecedor criado com sucesso!',
+        ]);
+    })->name('api.fornecedores.store');
+
+    Route::post('/api/clientes/store', function () {
+        $data = request()->validate([
+            'nome' => 'required|string|max:200',
+            'cpf' => 'nullable|string|max:14',
+            'cnpj' => 'nullable|string|max:18',
+            'telefone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:100',
+        ], [
+            'nome.required' => 'O nome do cliente é obrigatório.',
+        ]);
+
+        $cliente = Cliente::create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($data['nome']),
+            'cpf' => $data['cpf'] ?? null,
+            'cnpj' => $data['cnpj'] ?? null,
+            'telefone' => $data['telefone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'ativo' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $cliente->id,
+            'nome' => $cliente->nome,
+            'message' => 'Cliente criado com sucesso!',
+        ]);
+    })->name('api.clientes.store');
 
 });

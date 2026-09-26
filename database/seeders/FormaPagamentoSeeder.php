@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Empresa;
-use App\Models\FormaPagamento;
+use App\Models\Empresas\Empresa;
+use App\Models\FormasPagamento\FormaPagamento;
 use Illuminate\Database\Seeder;
 
 class FormaPagamentoSeeder extends Seeder

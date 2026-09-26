@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\Comissao;
-use App\Models\Empresa;
-use App\Models\Funcionario;
-use App\Models\User;
-use App\Models\Venda;
-use App\Repositories\VendaRepository;
-use App\Services\CategoriaPadraoService;
+use App\Models\Comissoes\Comissao;
+use App\Models\Empresas\Empresa;
+use App\Models\Funcionarios\Funcionario;
+use App\Models\Usuarios\User;
+use App\Models\Vendas\Venda;
+use App\Repositories\Vendas\VendaRepository;
+use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -15,11 +15,12 @@
 </head>
 
 <body>
+    @include('partials.page-loader')
 
     <header class="header">
         <button type="button" class="header__menu" id="btn-sidebar-toggle" aria-label="Abrir menu"
             aria-expanded="false">
-            <span class="header__menu-icon" aria-hidden="true"></span>
+            <span class="header__menu-icon" aria-hidden="true"><span></span></span>
         </button>
 
         <div class="header__brand">
@@ -29,10 +30,19 @@
         </div>
 
         <div class="header__user">
-            <span class="header__user-name">{{ Auth::user()->name }}</span>
+            <div class="header__identity">
+                <span class="header__user-name">{{ Auth::user()->name }}</span>
+            </div>
             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                 @csrf
-                <button type="submit" class="header__logout">Sair</button>
+                <button type="submit" class="header__logout" title="Sair do sistema">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header__logout-icon">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span class="header__logout-text">Sair</span>
+                </button>
             </form>
         </div>
     </header>
@@ -43,181 +53,231 @@
 
         <aside class="sidebar">
             <nav class="sidebar__nav">
+                @php
+                    $perfil = auth()->user()->perfil ?? '';
+                    $podeFinanceiro = in_array($perfil, ['admin', 'financeiro'], true);
+                    $podeOperacional = in_array($perfil, ['admin', 'operador'], true);
+                    $ehAdmin = $perfil === 'admin';
+                @endphp
 
-                <div class="sidebar__group" data-group>
+                {{-- Início --}}
+                <div class="sidebar__group">
                     <a href="/" class="sidebar__link {{ request()->is('/') ? 'sidebar__link--active' : '' }}">
-                        <span class="sidebar__icon">&#9632;</span> Início
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        INÍCIO
                     </a>
                 </div>
 
+                {{-- Vendas --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">OPERACIONAL</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.64 16H19a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span class="sidebar__group-label">Vendas</span>
+                        <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('venda.create') }}"
+                            class="sidebar__link sidebar__link--action {{ request()->routeIs('venda.create') ? 'sidebar__link--active' : '' }}">
+                            + Nova Venda
+                        </a>
                         <a href="{{ route('venda.index') }}"
-                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Vendas
+                            class="sidebar__link {{ request()->routeIs('venda.index', 'venda.show', 'venda.edit') ? 'sidebar__link--active' : '' }}">
+                            Histórico de Vendas
                         </a>
                         <a href="{{ route('orcamento.index') }}"
                             class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Orçamentos
+                            Orçamentos
+                        </a>
+                        @if ($podeOperacional)
+                            <a href="{{ route('comissao.index') }}"
+                                class="sidebar__link {{ request()->routeIs('comissao.*') ? 'sidebar__link--active' : '' }}">
+                                Comissões
+                            </a>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Estoque --}}
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                            </path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <span class="sidebar__group-label">Estoque</span>
+                        <span class="sidebar__group-arrow">›</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('produto.index') }}"
+                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
+                            Produtos
                         </a>
                         <a href="{{ route('entrada-estoque.index') }}"
                             class="sidebar__link {{ request()->routeIs('entrada-estoque.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Entradas de Estoque
+                            Entradas (Compras)
                         </a>
-                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'operador'], true))
-                            <a href="{{ route('comissao.index') }}"
-                                class="sidebar__link {{ request()->routeIs('comissao.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Comissões
-                            </a>
-                        @endif
+                        <a href="{{ route('estoque.ajuste.create') }}"
+                            class="sidebar__link {{ request()->routeIs('estoque.ajuste.*') ? 'sidebar__link--active' : '' }}">
+                            Ajuste Manual
+                        </a>
+                        <a href="{{ route('relatorio.estoque') }}"
+                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
+                            Posição Atual
+                        </a>
                     </div>
                 </div>
 
-                @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">FINANCEIRO</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
+                {{-- Financeiro --}}
+                @if ($podeFinanceiro)
+                    <div class="sidebar__group" data-group>
+                        <div class="sidebar__group-toggle" data-toggle>
+                            <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <span class="sidebar__group-label">Financeiro</span>
+                            <span class="sidebar__group-arrow">›</span>
+                        </div>
+                        <div class="sidebar__group-links" data-links>
+                            <a href="{{ route('conta-receber.index') }}"
+                                class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
+                                A Receber
+                            </a>
+                            <a href="{{ route('conta-pagar.index') }}"
+                                class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
+                                A Pagar
+                            </a>
+                            <a href="{{ route('fluxo-de-caixa.index') }}"
+                                class="sidebar__link {{ request()->routeIs('fluxo-de-caixa.*') ? 'sidebar__link--active' : '' }}">
+                                Fluxo de Caixa
+                            </a>
+                            <a href="{{ route('categoria-financeira.index') }}"
+                                class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
+                                Categorias
+                            </a>
+                            @if ($ehAdmin)
+                                <a href="{{ route('formaPagamento.index') }}"
+                                    class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
+                                    Formas de Pagamento
+                                </a>
+                            @endif
+                        </div>
                     </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('conta-receber.index') }}"
-                            class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Contas a Receber
-                        </a>
-                        <a href="{{ route('conta-pagar.index') }}"
-                            class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Contas a Pagar
-                        </a>
-                        <a href="{{ route('fluxo-de-caixa.index') }}"
-                            class="sidebar__link {{ request()->routeIs('fluxo-de-caixa.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Fluxo de Caixa
-                        </a>
-                    </div>
-                </div>
                 @endif
 
+                {{-- Cadastros --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">CADASTROS</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span class="sidebar__group-label">Cadastros</span>
+                        <span class="sidebar__group-arrow">›</span>
                     </div>
-
                     <div class="sidebar__group-links" data-links>
-
                         <a href="{{ route('cliente.index') }}"
                             class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Clientes
+                            Clientes
                         </a>
-
                         <a href="{{ route('fornecedor.index') }}"
                             class="sidebar__link {{ request()->routeIs('fornecedor.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Fornecedores
+                            Fornecedores
                         </a>
-
-                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'operador'], true))
+                        @if ($podeOperacional)
                             <a href="{{ route('funcionario.index') }}"
                                 class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Funcionários
+                                Funcionários
                             </a>
                         @endif
-
-                        {{-- Sub-grupo: Produtos --}}
-                        <div class="sidebar__subgroup" data-subgroup>
-                            <div class="sidebar__subgroup-toggle {{ request()->routeIs('produto.*', 'grupo.*', 'unidadeMedida.*') ? 'sidebar__subgroup-toggle--open' : '' }}"
-                                data-subtoggle>
-                                <span class="sidebar__subgroup-name">
-                                    <span class="sidebar__icon">&#9632;</span> Produtos
-                                </span>
-                                <span class="sidebar__subgroup-arrow">&#9660;</span>
-                            </div>
-                            <div class="sidebar__subgroup-links" data-sublinks>
-                                <a href="{{ route('produto.index') }}"
-                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                                    <span class="sidebar__icon">&#9632;</span> Todos os Produtos
-                                </a>
-                                <a href="{{ route('grupo.index') }}"
-                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
-                                    <span class="sidebar__icon">&#9632;</span> Grupos
-                                </a>
-                                <a href="{{ route('unidadeMedida.index') }}"
-                                    class="sidebar__link sidebar__link--sub {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
-                                    <span class="sidebar__icon">&#9632;</span> Unidades de Medida
-                                </a>
-                            </div>
-                        </div>
-
+                        <a href="{{ route('grupo.index') }}"
+                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
+                            Grupos de Produtos
+                        </a>
+                        <a href="{{ route('unidadeMedida.index') }}"
+                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
+                            Unidades de Medida
+                        </a>
                     </div>
                 </div>
 
+                {{-- Relatórios --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">RELATÓRIOS</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                        <span class="sidebar__group-label">Relatórios</span>
+                        <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
                         <a href="{{ route('relatorio.vendas') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.vendas*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Vendas por Período
+                            Vendas por Período
                         </a>
                         <a href="{{ route('relatorio.produtos-mais-vendidos') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.produtos-mais-vendidos*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Produtos Mais Vendidos
+                            Produtos Mais Vendidos
                         </a>
-                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
+                        @if ($podeFinanceiro)
                             <a href="{{ route('relatorio.contas-receber') }}"
                                 class="sidebar__link {{ request()->routeIs('relatorio.contas-receber*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Contas a Receber
+                                Contas a Receber
                             </a>
                             <a href="{{ route('relatorio.contas-pagar') }}"
                                 class="sidebar__link {{ request()->routeIs('relatorio.contas-pagar*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                                Contas a Pagar
                             </a>
                         @endif
-                        <a href="{{ route('relatorio.estoque') }}"
-                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Posição de Estoque
-                        </a>
                     </div>
                 </div>
 
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">CONFIGURAÇÃO</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        @if((auth()->user()->perfil ?? '') === 'admin')
-                            <a href="{{ route('formaPagamento.index') }}"
-                                class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Formas de Pagamento
-                            </a>
-                        @endif
-                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
-                            <a href="{{ route('categoria-financeira.index') }}"
-                                class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Categorias Financeiras
-                            </a>
-                        @endif
-                        <a href="{{ route('estoque.ajuste.create') }}"
-                            class="sidebar__link {{ request()->routeIs('estoque.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Ajuste de Estoque
-                        </a>
-                        @if((auth()->user()->perfil ?? '') === 'admin')
+                {{-- Configurações (Admin) --}}
+                @if ($ehAdmin)
+                    <div class="sidebar__group" data-group>
+                        <div class="sidebar__group-toggle" data-toggle>
+                            <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                </path>
+                            </svg>
+                            <span class="sidebar__group-label">Configurações</span>
+                            <span class="sidebar__group-arrow">›</span>
+                        </div>
+                        <div class="sidebar__group-links" data-links>
                             <a href="{{ route('usuario.index') }}"
                                 class="sidebar__link {{ request()->routeIs('usuario.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Usuários
+                                Usuários
                             </a>
                             <a href="{{ route('empresa.index') }}"
                                 class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
-                                <span class="sidebar__icon">&#9632;</span> Empresas
+                                Empresa
                             </a>
-                        @endif
+                        </div>
                     </div>
-                </div>
+                @endif
 
             </nav>
         </aside>
@@ -293,6 +353,7 @@
     <script src="{{ asset('js/jquery.min.js') }}"></script>
     <script src="{{ asset('js/autocomplete.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
+    @include('partials.page-loader-script')
 
     <script>
         document.querySelectorAll('[data-group]').forEach(function(group) {
@@ -335,6 +396,9 @@
             });
         });
     </script>
+
+    {{-- Modais são colocados fora de qualquer form --}}
+    @stack('modals')
 
     @stack('scripts')
 

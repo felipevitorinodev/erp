@@ -1,331 +1,34 @@
+@php
+    $situacoes = [
+        'em_andamento' => 'Em andamento',
+        'confirmada' => 'Confirmada',
+        'cancelada' => 'Cancelada',
+    ];
+    $situacaoLabel = $situacoes[$venda->situacao] ?? ($venda->situacao ?: '—');
+    $faixa = match ($venda->situacao) {
+        'confirmada' => '',
+        'cancelada' => 'status-strip--erro',
+        default => 'status-strip--espera',
+    };
+    $cliente = $venda->cliente;
+    $documento = $cliente?->cpf ?: ($cliente?->cnpj ?: '—');
+    $telefone = $cliente?->telefone ?: $cliente?->celular;
+    $vendedor = $venda->funcionario->nome ?? $venda->usuario->name ?? '—';
+    $pagamento = is_string($venda->forma_pagamento) ? $venda->forma_pagamento : ($venda->forma_pagamento->nome ?? null);
+    $pagamento = $pagamento ?: '—';
+@endphp
 <!doctype html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="utf-8">
     <title>Venda #{{ $venda->numero }} - Visys</title>
-    <style>
-        @font-face {
-            font-family: 'DejaVuSans';
-            src: local('DejaVu Sans'), local('DejaVuSans');
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html,
-        body {
-            font-family: 'DejaVuSans', Arial, Helvetica, sans-serif;
-            font-size: 11px;
-            color: #1E293B;
-            background: #ffffff;
-            -webkit-print-color-adjust: exact;
-        }
-
-        .page {
-            padding: 28px 32px 24px;
-        }
-
-        /* ── TOPO ── */
-        .header {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 22px;
-            padding-bottom: 16px;
-            border-bottom: 3px solid #1C2B42;
-        }
-
-        .header td {
-            vertical-align: middle;
-        }
-
-        .logo {
-            height: 44px;
-            width: auto;
-        }
-
-        .brand-sub {
-            font-size: 9px;
-            color: #64748B;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-top: 3px;
-        }
-
-        .doc-badge {
-            text-align: right;
-        }
-
-        .doc-badge .label {
-            display: inline-block;
-            background: #1C2B42;
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: bold;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            padding: 5px 14px;
-            border-radius: 3px;
-        }
-
-        .doc-badge .numero {
-            display: block;
-            font-size: 20px;
-            font-weight: bold;
-            color: #1C2B42;
-            margin-top: 5px;
-        }
-
-        .doc-badge .data {
-            font-size: 10px;
-            color: #64748B;
-            margin-top: 2px;
-        }
-
-        /* ── STATUS STRIP ── */
-        .status-strip {
-            width: 100%;
-            background: #E7F5EE;
-            border: 1px solid #B2DFC4;
-            border-radius: 4px;
-            padding: 7px 14px;
-            margin-bottom: 20px;
-            font-size: 10px;
-            color: #1A6B3C;
-        }
-
-        .status-strip strong {
-            font-size: 11px;
-        }
-
-        /* ── INFO BOXES ── */
-        .info-section {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 22px;
-        }
-
-        .info-box {
-            width: 48%;
-            border: 1px solid #E2E8F0;
-            border-radius: 4px;
-            padding: 12px 14px;
-            vertical-align: top;
-            background: #F8FAFC;
-        }
-
-        .info-box-gap {
-            width: 4%;
-        }
-
-        .info-box-title {
-            font-size: 9px;
-            font-weight: bold;
-            color: #64748B;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            padding-bottom: 7px;
-            margin-bottom: 7px;
-            border-bottom: 1px solid #E2E8F0;
-        }
-
-        .info-line {
-            margin-bottom: 5px;
-            line-height: 1.45;
-            color: #334155;
-        }
-
-        .info-line strong {
-            color: #1E293B;
-        }
-
-        /* ── SECTION HEADING ── */
-        .section-heading {
-            font-size: 9px;
-            font-weight: bold;
-            color: #64748B;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            margin-bottom: 6px;
-            padding-left: 2px;
-        }
-
-        /* ── ITEMS TABLE ── */
-        table.items {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 4px;
-        }
-
-        table.items thead th {
-            background: #1C2B42;
-            color: #ffffff;
-            padding: 9px 10px;
-            font-size: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        table.items thead th:first-child {
-            border-radius: 3px 0 0 0;
-        }
-
-        table.items thead th:last-child {
-            border-radius: 0 3px 0 0;
-        }
-
-        table.items tbody td {
-            padding: 9px 10px;
-            border-bottom: 1px solid #E2E8F0;
-            vertical-align: middle;
-            color: #334155;
-        }
-
-        table.items tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        table.items tbody tr:nth-child(even) td {
-            background: #F8FAFC;
-        }
-
-        table.items tfoot td {
-            padding: 0;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .item-nome {
-            font-weight: bold;
-            color: #1E293B;
-        }
-
-        /* ── TOTALS ── */
-        .totals-wrap {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-        }
-
-        .totals-box {
-            width: 280px;
-            border: 1px solid #E2E8F0;
-            border-radius: 4px;
-            background: #F8FAFC;
-            padding: 14px 16px;
-            margin-left: auto;
-        }
-
-        .totals-inner {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .totals-inner td {
-            padding: 4px 0;
-            font-size: 11px;
-            color: #475569;
-        }
-
-        .totals-inner tr.divider td {
-            border-top: 1px solid #CBD5E1;
-            padding-top: 8px;
-            margin-top: 4px;
-        }
-
-        .totals-inner tr.grand-total td {
-            font-size: 15px;
-            font-weight: bold;
-            color: #1C2B42;
-            padding-top: 8px;
-        }
-
-        .totals-inner .accent {
-            color: #E66A35;
-        }
-
-        /* ── OBSERVAÇÕES ── */
-        .obs-box {
-            margin-top: 22px;
-            border: 1px solid #E2E8F0;
-            border-radius: 4px;
-            padding: 10px 14px;
-            background: #FFFBF7;
-            font-size: 10px;
-            color: #64748B;
-            line-height: 1.5;
-        }
-
-        .obs-box strong {
-            display: block;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #94A3B8;
-            margin-bottom: 4px;
-        }
-
-        /* ── ASSINATURAS ── */
-        .signatures {
-            margin-top: 52px;
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .signatures td {
-            width: 40%;
-            text-align: center;
-            vertical-align: bottom;
-        }
-
-        .signatures .gap {
-            width: 20%;
-        }
-
-        .sig-line {
-            border-top: 1px solid #94A3B8;
-            padding-top: 7px;
-            font-size: 10px;
-            color: #64748B;
-        }
-
-        .sig-line strong {
-            display: block;
-            color: #1E293B;
-            font-size: 10px;
-        }
-
-        /* ── FOOTER ── */
-        .footer {
-            margin-top: 36px;
-            padding-top: 10px;
-            border-top: 1px solid #E2E8F0;
-            font-size: 9px;
-            color: #94A3B8;
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        .footer .dot {
-            margin: 0 4px;
-        }
-    </style>
+    @include('pdf._estilos')
 </head>
 
 <body>
     <div class="page">
 
-        <!-- ── CABEÇALHO ── -->
         <table class="header">
             <tr>
                 <td style="width: 55%;">
@@ -336,40 +39,42 @@
                     <span class="label">Comprovante de Venda</span>
                     <span class="numero">#{{ $venda->numero }}</span>
                     <div class="data">{{ $venda->data_venda->format('d/m/Y') }}</div>
-
                 </td>
             </tr>
         </table>
 
-        <!-- ── STATUS ── -->
-        <div class="status-strip">
-            ✔ &nbsp;<strong>Venda concluída</strong>
-            &nbsp;·&nbsp; Vendedor: <strong>{{ $venda->usuario->name ?? '—' }}</strong>
-            &nbsp;·&nbsp; Pagamento:
-            <strong>{{ $venda->forma_pagamento->nome ?? ($venda->forma_pagamento_text ?? '—') }}</strong>
+        <div class="status-strip {{ $faixa }}">
+            <strong>{{ $situacaoLabel }}</strong>
+            &nbsp;·&nbsp; Vendedor: <strong>{{ $vendedor }}</strong>
+            &nbsp;·&nbsp; Pagamento: <strong>{{ $pagamento }}</strong>
         </div>
 
-        <!-- ── DADOS ── -->
         <table class="info-section">
             <tr>
                 <td class="info-box">
                     <div class="info-box-title">Dados do Cliente</div>
-                    <div class="info-line"><strong>Nome:</strong> {{ $venda->cliente->nome ?? '—' }}</div>
-                    <div class="info-line"><strong>CPF/CNPJ:</strong>
-                        {{ $venda->cliente->cpf ?: $venda->cliente->cnpj ?? '—' }}</div>
+                    <div class="info-line"><strong>Nome:</strong> {{ $cliente->nome ?? '— Consumidor Final —' }}</div>
+                    <div class="info-line"><strong>CPF/CNPJ:</strong> {{ $documento }}</div>
+                    @if ($telefone)
+                        <div class="info-line"><strong>Telefone:</strong> {{ $telefone }}</div>
+                    @endif
+                    @if ($cliente?->cidade)
+                        <div class="info-line"><strong>Cidade:</strong>
+                            {{ $cliente->cidade }}{{ $cliente->estado ? '/' . $cliente->estado : '' }}</div>
+                    @endif
                 </td>
                 <td class="info-box-gap"></td>
                 <td class="info-box">
                     <div class="info-box-title">Detalhes da Operação</div>
-                    <div class="info-line"><strong>Vendedor:</strong> {{ $venda->usuario->name ?? '—' }}</div>
-                    <div class="info-line"><strong>Pagamento:</strong>
-                        {{ $venda->forma_pagamento->nome ?? ($venda->forma_pagamento_text ?? '—') }}</div>
-                    <div class="info-line"><strong>Status:</strong> Concluído</div>
+                    <div class="info-line"><strong>Vendedor:</strong> {{ $vendedor }}</div>
+                    <div class="info-line"><strong>Pagamento:</strong> {{ $pagamento }}</div>
+                    <div class="info-line"><strong>Entrega:</strong>
+                        {{ $venda->data_entrega ? $venda->data_entrega->format('d/m/Y') : '—' }}</div>
+                    <div class="info-line"><strong>Status:</strong> {{ $situacaoLabel }}</div>
                 </td>
             </tr>
         </table>
 
-        <!-- ── ITENS ── -->
         <div class="section-heading">Itens da Venda</div>
         <table class="items">
             <thead>
@@ -382,27 +87,29 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($venda->itens as $item)
+                @forelse ($venda->itens as $item)
                     <tr>
-                        <td><span class="item-nome">{{ $item->produto_nome }}</span></td>
+                        <td>
+                            <span class="item-nome">{{ $item->produto_nome }}</span>
+                            @if ($item->produto_codigo)
+                                <span class="item-codigo">Cód. {{ $item->produto_codigo }}</span>
+                            @endif
+                        </td>
                         <td class="text-right">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
                         <td class="text-right">R$&nbsp;{{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
                         <td class="text-right">
-                            @if ($item->desconto > 0)
-                                <span
-                                    style="color: #E66A35;">R$&nbsp;{{ number_format($item->desconto, 2, ',', '.') }}</span>
-                            @else
-                                <span style="color: #E66A35;">R$&nbsp;0,00</span>
-                            @endif
+                            <span class="accent" style="color:#E66A35;">R$&nbsp;{{ number_format($item->desconto, 2, ',', '.') }}</span>
                         </td>
-                        <td class="text-right"><strong>R$&nbsp;{{ number_format($item->total, 2, ',', '.') }}</strong>
-                        </td>
+                        <td class="text-right"><strong>R$&nbsp;{{ number_format($item->total, 2, ',', '.') }}</strong></td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center">Nenhum item nesta venda.</td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
 
-        <!-- ── TOTAIS ── -->
         <table class="totals-wrap">
             <tr>
                 <td style="width: 50%;"></td>
@@ -416,15 +123,13 @@
                             @if ($venda->desconto > 0)
                                 <tr>
                                     <td class="accent">Desconto</td>
-                                    <td class="text-right accent">
-                                        R$&nbsp;{{ number_format($venda->desconto, 2, ',', '.') }}</td>
+                                    <td class="text-right accent">R$&nbsp;{{ number_format($venda->desconto, 2, ',', '.') }}</td>
                                 </tr>
                             @endif
                             @if ($venda->acrescimo > 0)
                                 <tr>
                                     <td>Acréscimo</td>
-                                    <td class="text-right">+
-                                        R$&nbsp;{{ number_format($venda->acrescimo, 2, ',', '.') }}</td>
+                                    <td class="text-right">+ R$&nbsp;{{ number_format($venda->acrescimo, 2, ',', '.') }}</td>
                                 </tr>
                             @endif
                             <tr class="divider grand-total">
@@ -437,13 +142,19 @@
             </tr>
         </table>
 
-        <!-- ── RODAPÉ ── -->
+        @if ($venda->observacoes)
+            <div class="obs-box">
+                <strong>Observações</strong>
+                {{ $venda->observacoes }}
+            </div>
+        @endif
+
         <div class="footer">
             Visys Sistemas
             <span class="dot">·</span>
             Documento gerado em {{ date('d/m/Y \à\s H:i:s') }}
             <span class="dot">·</span>
-            'Visys Gestão'
+            Visys Gestão
         </div>
 
     </div>
