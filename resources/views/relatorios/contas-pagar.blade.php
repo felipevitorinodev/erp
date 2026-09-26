@@ -5,8 +5,10 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('relatorio.contas-pagar.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <a href="{{ route('relatorio.contas-pagar.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
+        <x-export-dropdown
+            :pdf="route('relatorio.contas-pagar.pdf', request()->query())"
+            :csv="route('relatorio.contas-pagar.csv', request()->query())"
+        />
     </div>
 @endsection
 
@@ -27,7 +29,7 @@
                     <label class="form-label">Situação</label>
                     <select name="situacao" class="form-control">
                         <option value="">— Todas —</option>
-                        @foreach(['aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada'] as $valor => $label)
+                        @foreach(['em_aberto' => 'Em aberto', 'aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada'] as $valor => $label)
                             <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -43,6 +45,18 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vencimento</label>
+                    <select name="vencimento" class="form-control">
+                        <option value="">— Todos —</option>
+                        <option value="vencidos" {{ ($filtros['vencimento'] ?? '') === 'vencidos' ? 'selected' : '' }}>Vencidos</option>
+                        <option value="a_vencer" {{ ($filtros['vencimento'] ?? '') === 'a_vencer' ? 'selected' : '' }}>A vencer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Descrição ou fornecedor">
                 </div>
                 <div class="form-group">
                     <div class="filter-actions">

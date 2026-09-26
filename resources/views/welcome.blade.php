@@ -110,19 +110,19 @@
     </p>
     <div class="alerts-grid">
         @if($contasReceberVencidasVal > 0)
-        <a href="{{ route('conta-receber.index') }}?situacao=vencida" class="alert-card alert-card--warning">
+        <a href="{{ route('relatorio.contas-receber', ['vencimento' => 'vencidos', 'data_inicio' => '2000-01-01', 'data_fim' => date('Y-m-d')]) }}" class="alert-card alert-card--warning">
             <span class="alert-card__value">{{ $contasReceberVencidasVal }}</span>
             <span class="alert-card__label">contas a receber vencidas</span>
         </a>
         @endif
         @if($contasPagarVencidasVal > 0)
-        <a href="{{ route('conta-pagar.index') }}?situacao=vencida" class="alert-card alert-card--danger">
+        <a href="{{ route('relatorio.contas-pagar', ['vencimento' => 'vencidos', 'data_inicio' => '2000-01-01', 'data_fim' => date('Y-m-d')]) }}" class="alert-card alert-card--danger">
             <span class="alert-card__value">{{ $contasPagarVencidasVal }}</span>
             <span class="alert-card__label">contas a pagar vencidas</span>
         </a>
         @endif
         @if($estoqueCriticoVal > 0)
-        <a href="{{ route('relatorio.estoque') }}?filtro=critico" class="alert-card alert-card--warning">
+        <a href="{{ route('relatorio.estoque', ['apenas_critico' => 1]) }}" class="alert-card alert-card--warning">
             <span class="alert-card__value">{{ $estoqueCriticoVal }}</span>
             <span class="alert-card__label">produtos com estoque baixo</span>
         </a>
@@ -144,7 +144,11 @@
         </a>
 
         @if($podeFinanceiro)
-        <a href="{{ route('conta-receber.index') }}?situacao=pendente&data_inicio={{ date('Y-m-d') }}&data_fim={{ date('Y-m-d', strtotime('+7 days')) }}" class="stat-card">
+        <a href="{{ route('relatorio.contas-receber', [
+            'data_inicio' => date('Y-m-d'),
+            'data_fim' => date('Y-m-d', strtotime('+7 days')),
+            'situacao' => 'em_aberto',
+        ]) }}" class="stat-card">
             <span class="stat-card__label">A receber (7 dias)</span>
             <span class="stat-card__value">{{ $aReceberTexto }}</span>
         </a>

@@ -42,7 +42,7 @@
                             <th>E-mail</th>
                             <th>Perfil</th>
                             <th>Situação</th>
-                            <th class="text-right">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,18 +66,21 @@
                                         <span class="badge badge--error">Inativo</span>
                                     @endif
                                 </td>
-                                <td class="text-right" style="white-space:nowrap;">
-                                    <a href="{{ route('usuario.edit', $usuario) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                <td class="col-actions" data-label="Ações">
+                                    <a href="{{ route('usuario.edit', $usuario) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     @if((int) $usuario->id !== (int) auth()->id())
                                         <form method="POST" action="{{ route('usuario.destroy', $usuario) }}" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn--danger btn--sm"
+                                            <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                title="Excluir" aria-label="Excluir"
                                                 data-confirm="Confirmar exclusão do usuário {{ $usuario->name }}?"
                                                 data-confirm-title="Excluir"
                                                 data-confirm-ok="Excluir"
                                                 data-confirm-variant="danger">
-                                                Excluir
+                                                <x-icon name="trash" />
                                             </button>
                                         </form>
                                     @endif
@@ -85,7 +88,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="5" class="empty-state">
                                     Nenhum usuário cadastrado.
                                 </td>
                             </tr>

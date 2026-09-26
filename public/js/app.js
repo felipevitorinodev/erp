@@ -896,3 +896,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+/* Dropdown "Exportar" (PDF / CSV) */
+(function () {
+    function closeAllExportDropdowns(except) {
+        document.querySelectorAll('[data-export-dropdown].is-open').forEach(function (wrap) {
+            if (except && wrap === except) return;
+            wrap.classList.remove('is-open');
+            var menu = wrap.querySelector('.export-dropdown__menu');
+            var toggle = wrap.querySelector('[data-export-toggle]');
+            if (menu) menu.hidden = true;
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        var toggle = e.target.closest('[data-export-toggle]');
+        if (toggle) {
+            e.preventDefault();
+            var wrap = toggle.closest('[data-export-dropdown]');
+            if (!wrap) return;
+            var isOpen = wrap.classList.contains('is-open');
+            closeAllExportDropdowns();
+            if (!isOpen) {
+                wrap.classList.add('is-open');
+                var menu = wrap.querySelector('.export-dropdown__menu');
+                if (menu) menu.hidden = false;
+                toggle.setAttribute('aria-expanded', 'true');
+            }
+            return;
+        }
+
+        if (!e.target.closest('[data-export-dropdown]')) {
+            closeAllExportDropdowns();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAllExportDropdowns();
+    });
+})();

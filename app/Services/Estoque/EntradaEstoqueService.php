@@ -46,10 +46,14 @@ class EntradaEstoqueService
         $parser = new NfeXmlParser();
         $parsed = $parser->parse($xmlContent);
 
-        // 2. Duplicate check
+        // 2. Duplicate check (ignora excluídas; libera chave órfã para reimportar)
+        EntradaEstoque::onlyTrashed()
+            ->where('empresa_id', $empresaId)
+            ->where('chave_acesso', $parsed['nota']['chave_acesso'])
+            ->update(['chave_acesso' => null, 'xml_importado' => null]);
+
         $entradaExistente = EntradaEstoque::where('empresa_id', $empresaId)
             ->where('chave_acesso', $parsed['nota']['chave_acesso'])
-            ->whereNull('deleted_at')
             ->first();
 
         if ($entradaExistente) {
@@ -197,9 +201,13 @@ class EntradaEstoqueService
             $chaveAcesso = $dadosXml['nota']['chave_acesso'] ?? null;
             
             if ($chaveAcesso) {
+                EntradaEstoque::onlyTrashed()
+                    ->where('empresa_id', $empresaId)
+                    ->where('chave_acesso', $chaveAcesso)
+                    ->update(['chave_acesso' => null, 'xml_importado' => null]);
+
                 $entradaExistente = EntradaEstoque::where('empresa_id', $empresaId)
                     ->where('chave_acesso', $chaveAcesso)
-                    ->whereNull('deleted_at')
                     ->first();
 
                 if ($entradaExistente) {
@@ -400,6 +408,7 @@ class EntradaEstoqueService
         $this->autorizarEntrada($entradaEstoque);
 
         $numero = $entradaEstoque->numero;
+        $eraConfirmada = $entradaEstoque->situacao === 'confirmada';
 
         try {
             $this->repository->destroy($entradaEstoque->id);
@@ -408,8 +417,12 @@ class EntradaEstoqueService
                 ->with('error', $ex->getMessage());
         }
 
+        $msg = $eraConfirmada
+            ? 'Compra #' . $numero . ' excluída. Estoque e conta a pagar foram revertidos.'
+            : 'Compra #' . $numero . ' excluída com sucesso.';
+
         return redirect()->route('entrada-estoque.index')
-            ->with('success', 'Entrada #' . $numero . ' excluída com sucesso.');
+            ->with('success', $msg);
     }
 
     private function autorizarEntrada(EntradaEstoque $entrada): void

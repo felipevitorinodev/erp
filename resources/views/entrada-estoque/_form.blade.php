@@ -109,41 +109,45 @@
 }
 </style>
 @endpush
-<div class="form-grid form-grid--col-3">
-    <div class="form-group">
-        <label class="form-label">Fornecedor</label>
-        <div class="autocomplete-wrap">
-            <input type="text" id="input-fornecedor" class="form-control"
-                value="{{ old('fornecedor_nome', $entrada && $entrada->fornecedor ? $entrada->fornecedor->nome : '') }}"
-                placeholder="Digite para buscar..." autocomplete="off">
-            <input type="hidden" name="fornecedor_id" id="hidden-fornecedor-id"
-                value="{{ old('fornecedor_id', $entrada->fornecedor_id ?? '') }}">
+<div class="form-section">
+    <div class="form-section__title">Dados da entrada</div>
+    <div class="form-grid form-grid--col-3">
+        <div class="form-group">
+            <label class="form-label">Fornecedor</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="input-fornecedor" class="form-control"
+                    value="{{ old('fornecedor_nome', $entrada && $entrada->fornecedor ? $entrada->fornecedor->nome : '') }}"
+                    placeholder="Digite para buscar..." autocomplete="off">
+                <input type="hidden" name="fornecedor_id" id="hidden-fornecedor-id"
+                    value="{{ old('fornecedor_id', $entrada->fornecedor_id ?? '') }}">
+            </div>
+            @error('fornecedor_id')<span class="form-error">{{ $message }}</span>@enderror
         </div>
-        @error('fornecedor_id')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
 
-    <div class="form-group">
-        <label class="form-label form-label--required">Número da NF</label>
-        <input type="text" name="numero"
-            class="form-control @error('numero') is-invalid @enderror"
-            value="{{ old('numero', $entrada->numero ?? '') }}"
-            maxlength="20" placeholder="Ex: 12345">
-        @error('numero')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
+        <div class="form-group">
+            <label class="form-label form-label--required">Número da NF</label>
+            <input type="text" name="numero"
+                class="form-control @error('numero') is-invalid @enderror"
+                value="{{ old('numero', $entrada->numero ?? '') }}"
+                maxlength="20" placeholder="Ex: 12345">
+            @error('numero')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
 
-    <div class="form-group">
-        <label class="form-label form-label--required">Data da Entrada</label>
-        <input type="date" name="data_entrada"
-            class="form-control @error('data_entrada') is-invalid @enderror"
-            value="{{ old('data_entrada', $entrada ? $entrada->data_entrada?->format('Y-m-d') : date('Y-m-d')) }}">
-        @error('data_entrada')<span class="form-error">{{ $message }}</span>@enderror
+        <div class="form-group">
+            <label class="form-label form-label--required">Data da Entrada</label>
+            <input type="date" name="data_entrada"
+                class="form-control @error('data_entrada') is-invalid @enderror"
+                value="{{ old('data_entrada', $entrada ? $entrada->data_entrada?->format('Y-m-d') : date('Y-m-d')) }}">
+            @error('data_entrada')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
     </div>
 </div>
 
 {{-- Itens --}}
-<div class="itens-panel">
+<div class="form-section">
+    <div class="form-section__title">Itens</div>
+    <div class="itens-panel">
     <div class="section-toolbar">
-        <span class="section-toolbar__title">Itens da Entrada</span>
         <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar Item</button>
     </div>
 
@@ -209,6 +213,7 @@
     <div class="itens-empty" id="itens-empty" @if($itensExistentes->count()) hidden @endif>
         Nenhum item adicionado. Toque em <strong>+ Adicionar Item</strong> para começar.
     </div>
+</div>
 </div>
 
 {{-- Totais --}}

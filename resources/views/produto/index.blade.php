@@ -74,23 +74,32 @@
                                 <td data-label="Preço Venda" class="col-num">R$ {{ number_format($produto->preco_venda, 2, ',', '.') }}</td>
                                 <td data-label="Estoque" class="col-num">{{ number_format((float) $produto->estoque_atual, 2, ',', '.') }}
                                     {{ $produto->unidadeMedida->sigla ?? '' }}</td>
-                                <td data-label="Situação">{{ $produto->ativo ? 'Ativo' : 'Inativo' }}</td>
+                                <td data-label="Situação">
+                                    @if($produto->ativo)
+                                        <span class="badge badge--success">Ativo</span>
+                                    @else
+                                        <span class="badge badge--neutral">Inativo</span>
+                                    @endif
+                                </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('produto.edit', $produto) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                    <a href="{{ route('produto.edit', $produto) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('produto.destroy', $produto) }}"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Excluir este produto?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="8" class="empty-state">
                                     Nenhum produto cadastrado.
                                 </td>
                             </tr>

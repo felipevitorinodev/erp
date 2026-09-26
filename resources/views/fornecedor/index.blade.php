@@ -42,41 +42,44 @@
                             <th>CPF / CNPJ</th>
                             <th>Telefone</th>
                             <th>Cidade / UF</th>
-                            <th class="text-right" style="width:1%; white-space:nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($fornecedores as $fornecedor)
                             <tr>
-                                <td class="text-muted">{{ $fornecedor->id }}</td>
-                                <td>{{ $fornecedor->nome }}</td>
-                                <td>{{ $fornecedor->nome_fantasia ?? '—' }}</td>
-                                <td>{{ $fornecedor->cpf ?: ($fornecedor->cnpj ?: '—') }}</td>
-                                <td>{{ $fornecedor->telefone ?? $fornecedor->celular ?? '—' }}</td>
-                                <td>
+                                <td data-label="Código" class="text-muted">{{ $fornecedor->id }}</td>
+                                <td data-label="Nome">{{ $fornecedor->nome }}</td>
+                                <td data-label="Nome Fantasia">{{ $fornecedor->nome_fantasia ?? '—' }}</td>
+                                <td data-label="CPF / CNPJ">{{ $fornecedor->cpf ?: ($fornecedor->cnpj ?: '—') }}</td>
+                                <td data-label="Telefone">{{ $fornecedor->telefone ?? $fornecedor->celular ?? '—' }}</td>
+                                <td data-label="Cidade / UF">
                                     @if($fornecedor->cidade)
                                         {{ $fornecedor->cidade }}{{ $fornecedor->estado ? '/' . $fornecedor->estado : '' }}
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="text-right" style="white-space:nowrap;">
+                                <td class="col-actions" data-label="Ações">
                                     <a href="{{ route('fornecedor.edit', $fornecedor) }}"
-                                        class="btn btn--ghost btn--sm">Editar</a>
+                                        class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('fornecedor.destroy', $fornecedor) }}"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Excluir este fornecedor?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="7" class="empty-state">
                                     Nenhum fornecedor cadastrado.
                                 </td>
                             </tr>

@@ -3,12 +3,21 @@
         var loader = document.getElementById('page-loader');
         if (!loader) return;
 
+        var hideTimer = null;
+
         function show() {
             loader.hidden = false;
             document.body.setAttribute('aria-busy', 'true');
+            if (hideTimer) window.clearTimeout(hideTimer);
+            // Fallback: se a página não navegar (ex.: download), esconde o loader
+            hideTimer = window.setTimeout(hide, 4000);
         }
 
         function hide() {
+            if (hideTimer) {
+                window.clearTimeout(hideTimer);
+                hideTimer = null;
+            }
             loader.hidden = true;
             document.body.removeAttribute('aria-busy');
         }
@@ -17,6 +26,16 @@
             return url.pathname === window.location.pathname
                 && url.search === window.location.search
                 && url.hash !== '';
+        }
+
+        function isDownloadLink(link, url) {
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-loader')) return true;
+            var path = (url.pathname || '').toLowerCase();
+            return path.endsWith('/csv')
+                || path.endsWith('.csv')
+                || path.endsWith('.pdf')
+                || path.endsWith('.xlsx')
+                || path.endsWith('.xls');
         }
 
         function navegar(href) {
@@ -43,6 +62,7 @@
 
             if (url.origin !== window.location.origin) return;
             if (samePageHash(url)) return;
+            if (isDownloadLink(link, url)) return;
 
             event.preventDefault();
             navegar(link.href);
@@ -69,5 +89,9 @@
         }
 
         window.addEventListener('pageshow', hide);
+        window.addEventListener('pagehide', hide);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') hide();
+        });
     })();
 </script>

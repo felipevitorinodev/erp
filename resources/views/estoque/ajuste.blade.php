@@ -9,7 +9,9 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('estoque.historico') }}" class="btn btn--ghost btn--sm">Histórico</a>
+        <a href="{{ route('estoque.historico') }}" class="btn btn--ghost btn--sm btn--icon" title="Histórico" aria-label="Histórico">
+            <x-icon name="history" />
+        </a>
     </div>
 @endsection
 

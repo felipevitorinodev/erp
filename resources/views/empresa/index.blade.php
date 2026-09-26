@@ -45,37 +45,40 @@
                             <th>Cidade</th>
                             <th>Logradouro</th>
                             <th>Uf</th>
-                            <th class="text-right" style="width: 1%; white-space: nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($empresas as $empresa)
                             <tr>
-                                <td>{{ $empresa->id }}</td>
-                                <td>{{ $empresa->razao_social }}</td>
-                                <td>{{ $empresa->cnpj }}</td>
-                                <td>{{ $empresa->ie }}</td>
-                                <td>{{ $empresa->im }}</td>
-                                <td>{{ $empresa->cep }}</td>
-                                <td>{{ $empresa->cidade }}</td>
-                                <td>{{ $empresa->logradouro }}</td>
-                                <td>{{ $empresa->uf }}</td>
-                                <td class="text-right" style="white-space: nowrap;">
-                                    <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                <td data-label="Código">{{ $empresa->id }}</td>
+                                <td data-label="Razão Social">{{ $empresa->razao_social }}</td>
+                                <td data-label="CNPJ">{{ $empresa->cnpj }}</td>
+                                <td data-label="Inscrição Estadual">{{ $empresa->ie }}</td>
+                                <td data-label="Inscrição Municipal">{{ $empresa->im }}</td>
+                                <td data-label="Cep">{{ $empresa->cep }}</td>
+                                <td data-label="Cidade">{{ $empresa->cidade }}</td>
+                                <td data-label="Logradouro">{{ $empresa->logradouro }}</td>
+                                <td data-label="Uf">{{ $empresa->uf }}</td>
+                                <td class="col-actions" data-label="Ações">
+                                    <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('empresa.destroy', $empresa) }}"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted" style="padding: 2rem;">
+                                <td colspan="10" class="empty-state">
                                     Nenhuma empresa cadastrada.
                                 </td>
                             </tr>

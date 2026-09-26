@@ -39,30 +39,39 @@
                             <th>Nome</th>
                             <th>grupo Pai</th>
                             <th>Situação</th>
-                            <th class="text-right" style="width:1%; white-space:nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($grupos as $grupo)
                             <tr>
-                                <td>{{ $grupo->nome }}</td>
-                                <td>{{ $grupo->parent->nome ?? '—' }}</td>
-                                <td>{{ $grupo->ativo ? 'Ativa' : 'Inativa' }}</td>
-                                <td class="text-right" style="white-space:nowrap;">
-                                    <a href="{{ route('grupo.edit', $grupo) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                <td data-label="Nome">{{ $grupo->nome }}</td>
+                                <td data-label="grupo Pai">{{ $grupo->parent->nome ?? '—' }}</td>
+                                <td data-label="Situação">
+                                    @if($grupo->ativo)
+                                        <span class="badge badge--success">Ativa</span>
+                                    @else
+                                        <span class="badge badge--neutral">Inativa</span>
+                                    @endif
+                                </td>
+                                <td class="col-actions" data-label="Ações">
+                                    <a href="{{ route('grupo.edit', $grupo) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('grupo.destroy', $grupo) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Excluir este grupo?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="4" class="empty-state">
                                     Nenhuma grupo cadastrada.
                                 </td>
                             </tr>

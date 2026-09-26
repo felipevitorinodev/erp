@@ -29,14 +29,38 @@
             </a>
         </div>
 
+        @php
+            $user = Auth::user();
+            $userName = $user->name ?? 'Usuário';
+            $userPerfil = match ($user->perfil ?? '') {
+                'admin' => 'Administrador',
+                'financeiro' => 'Financeiro',
+                'operador' => 'Operador',
+                default => 'Usuário',
+            };
+            $empresa = $user->empresa;
+            $userEmpresa = $empresa?->nome_fantasia ?: ($empresa?->razao_social ?: null);
+            $userInitials = collect(preg_split('/\s+/', trim($userName)))
+                ->filter()
+                ->take(2)
+                ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))
+                ->implode('');
+        @endphp
+
         <div class="header__user">
-            <div class="header__identity">
-                <span class="header__user-name">{{ Auth::user()->name }}</span>
+            <div class="header__identity" title="{{ $userName }}{{ $userEmpresa ? ' — ' . $userEmpresa : '' }}">
+                <span class="header__avatar" aria-hidden="true">{{ $userInitials ?: 'U' }}</span>
+                <div class="header__identity-text">
+                    <span class="header__user-name">{{ $userName }}</span>
+                    <span class="header__user-meta">
+                        {{ $userPerfil }}@if($userEmpresa) · {{ $userEmpresa }}@endif
+                    </span>
+                </div>
             </div>
-            <form method="POST" action="{{ route('logout') }}" class="d-inline">
+            <form method="POST" action="{{ route('logout') }}" class="header__logout-form">
                 @csrf
-                <button type="submit" class="header__logout" title="Sair do sistema">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header__logout-icon">
+                <button type="submit" class="header__logout" title="Sair do sistema" aria-label="Sair">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header__logout-icon" aria-hidden="true">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>

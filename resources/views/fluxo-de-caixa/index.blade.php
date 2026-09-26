@@ -4,7 +4,7 @@
 @section('page_title', 'Fluxo de Caixa')
 
 @section('page_actions')
-    <a href="{{ route('fluxo-de-caixa.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
+    <x-export-dropdown :csv="route('fluxo-de-caixa.csv', request()->query())" />
 @endsection
 
 @section('content')

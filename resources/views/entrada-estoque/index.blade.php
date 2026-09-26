@@ -83,15 +83,33 @@
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('entrada-estoque.show', $entrada) }}" class="btn btn--ghost btn--sm">Ver</a>
+                                    <a href="{{ route('entrada-estoque.show', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
+                                        <x-icon name="eye" />
+                                    </a>
                                     @if($entrada->situacao === 'rascunho')
-                                        <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                        <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                            <x-icon name="edit" />
+                                        </a>
                                     @endif
+                                    <form method="POST" action="{{ route('entrada-estoque.destroy', $entrada) }}" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
+                                            data-confirm="{{ $entrada->situacao === 'confirmada'
+                                                ? 'Excluir a compra #' . $entrada->numero . '? O estoque e a conta a pagar serão revertidos.'
+                                                : 'Confirmar exclusão da compra #' . $entrada->numero . '?' }}"
+                                            data-confirm-title="Excluir compra"
+                                            data-confirm-ok="Excluir"
+                                            data-confirm-variant="danger">
+                                            <x-icon name="trash" />
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="6" class="empty-state">
                                     Nenhuma entrada de estoque cadastrada.
                                 </td>
                             </tr>

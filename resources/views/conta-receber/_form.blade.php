@@ -1,97 +1,104 @@
 @php $conta = $conta ?? null; @endphp
-<div class="form-grid form-grid--col-2">
-    <div class="form-group">
-        <label class="form-label form-label--required">Descrição</label>
-        <input type="text" name="descricao"
-            class="form-control @error('descricao') is-invalid @enderror"
-            value="{{ old('descricao', $conta->descricao ?? '') }}"
-            maxlength="200" required>
-        @error('descricao')<span class="form-error">{{ $message }}</span>@enderror
+
+<div class="form-section">
+    <div class="form-section__title">Dados da conta</div>
+    <div class="form-grid form-grid--col-2">
+        <div class="form-group">
+            <label class="form-label form-label--required">Descrição</label>
+            <input type="text" name="descricao"
+                class="form-control @error('descricao') is-invalid @enderror"
+                value="{{ old('descricao', $conta->descricao ?? '') }}"
+                maxlength="200" required>
+            @error('descricao')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Cliente</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="input-cliente" class="form-control"
+                    value="{{ old('cliente_nome', $conta && $conta->cliente ? $conta->cliente->nome : '') }}"
+                    placeholder="Digite para buscar..." autocomplete="off">
+                <input type="hidden" name="cliente_id" id="hidden-cliente-id"
+                    value="{{ old('cliente_id', $conta->cliente_id ?? '') }}">
+            </div>
+            @error('cliente_id')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
     </div>
 
-    <div class="form-group">
-        <label class="form-label">Cliente</label>
-        <div class="autocomplete-wrap">
-            <input type="text" id="input-cliente" class="form-control"
-                value="{{ old('cliente_nome', $conta && $conta->cliente ? $conta->cliente->nome : '') }}"
-                placeholder="Digite para buscar..." autocomplete="off">
-            <input type="hidden" name="cliente_id" id="hidden-cliente-id"
-                value="{{ old('cliente_id', $conta->cliente_id ?? '') }}">
+    <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
+        <div class="form-group">
+            <label class="form-label">Venda vinculada</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="input-venda" class="form-control"
+                    value="{{ old('venda_nome', $conta && $conta->venda ? ('#' . $conta->venda->numero) : '') }}"
+                    placeholder="Digite número ou cliente..." autocomplete="off">
+                <input type="hidden" name="venda_id" id="hidden-venda-id"
+                    value="{{ old('venda_id', $conta->venda_id ?? '') }}">
+            </div>
+            @error('venda_id')<span class="form-error">{{ $message }}</span>@enderror
         </div>
-        @error('cliente_id')<span class="form-error">{{ $message }}</span>@enderror
+
+        <div class="form-group">
+            <label class="form-label form-label--required">Valor</label>
+            @include('components.input-numeric', [
+                'name' => 'valor',
+                'value' => old('valor', isset($conta) && $conta ? number_format($conta->valor, 2, ',', '.') : ''),
+                'class' => 'input-moeda ' . ($errors->has('valor') ? 'is-invalid' : ''),
+                'decimals' => 2,
+                'placeholder' => '0,00',
+                'required' => true
+            ])
+            @error('valor')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
+
+        <div class="form-group">
+            <label class="form-label form-label--required">Vencimento</label>
+            <input type="date" name="data_vencimento"
+                class="form-control @error('data_vencimento') is-invalid @enderror"
+                value="{{ old('data_vencimento', $conta ? $conta->data_vencimento?->format('Y-m-d') : date('Y-m-d')) }}"
+                required>
+            @error('data_vencimento')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
+    </div>
+
+    <div class="form-grid form-grid--col-2" style="margin-top:1rem;">
+        <div class="form-group">
+            <label class="form-label">Forma de Pagamento</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="input-forma-pagamento" class="form-control"
+                    value="{{ old('forma_pagamento', $conta->forma_pagamento ?? '') }}"
+                    placeholder="Selecione a forma de pagamento..." autocomplete="off">
+                <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
+                    value="{{ old('forma_pagamento', $conta->forma_pagamento ?? '') }}">
+            </div>
+            @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select name="categoria_id" class="form-control @error('categoria_id') is-invalid @enderror">
+                <option value="">— Sem categoria —</option>
+                @foreach($categorias ?? [] as $categoria)
+                    <option value="{{ $categoria->id }}"
+                        {{ (string) old('categoria_id', $conta->categoria_id ?? '') === (string) $categoria->id ? 'selected' : '' }}>
+                        {{ $categoria->nome }}
+                    </option>
+                @endforeach
+            </select>
+            @error('categoria_id')<span class="form-error">{{ $message }}</span>@enderror
+        </div>
     </div>
 </div>
 
-<div class="form-grid form-grid--col-3" style="margin-top:1rem;">
-    <div class="form-group">
-        <label class="form-label">Venda vinculada</label>
-        <div class="autocomplete-wrap">
-            <input type="text" id="input-venda" class="form-control"
-                value="{{ old('venda_nome', $conta && $conta->venda ? ('#' . $conta->venda->numero) : '') }}"
-                placeholder="Digite número ou cliente..." autocomplete="off">
-            <input type="hidden" name="venda_id" id="hidden-venda-id"
-                value="{{ old('venda_id', $conta->venda_id ?? '') }}">
+<div class="form-section">
+    <div class="form-section__title">Observações</div>
+    <div class="form-grid form-grid--col-1">
+        <div class="form-group">
+            <label class="form-label">Observações</label>
+            <textarea name="observacoes" class="form-control @error('observacoes') is-invalid @enderror"
+                rows="3" style="resize:none;">{{ old('observacoes', $conta->observacoes ?? '') }}</textarea>
+            @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror
         </div>
-        @error('venda_id')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
-
-    <div class="form-group">
-        <label class="form-label form-label--required">Valor</label>
-        @include('components.input-numeric', [
-            'name' => 'valor',
-            'value' => old('valor', isset($conta) && $conta ? number_format($conta->valor, 2, ',', '.') : ''),
-            'class' => 'input-moeda ' . ($errors->has('valor') ? 'is-invalid' : ''),
-            'decimals' => 2,
-            'placeholder' => '0,00',
-            'required' => true
-        ])
-        @error('valor')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
-
-    <div class="form-group">
-        <label class="form-label form-label--required">Vencimento</label>
-        <input type="date" name="data_vencimento"
-            class="form-control @error('data_vencimento') is-invalid @enderror"
-            value="{{ old('data_vencimento', $conta ? $conta->data_vencimento?->format('Y-m-d') : date('Y-m-d')) }}"
-            required>
-        @error('data_vencimento')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
-</div>
-
-<div class="form-grid form-grid--col-2" style="margin-top:1rem;">
-    <div class="form-group">
-        <label class="form-label">Forma de Pagamento</label>
-        <div class="autocomplete-wrap">
-            <input type="text" id="input-forma-pagamento" class="form-control"
-                value="{{ old('forma_pagamento', $conta->forma_pagamento ?? '') }}"
-                placeholder="Selecione a forma de pagamento..." autocomplete="off">
-            <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
-                value="{{ old('forma_pagamento', $conta->forma_pagamento ?? '') }}">
-        </div>
-        @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Categoria</label>
-        <select name="categoria_id" class="form-control @error('categoria_id') is-invalid @enderror">
-            <option value="">— Sem categoria —</option>
-            @foreach($categorias ?? [] as $categoria)
-                <option value="{{ $categoria->id }}"
-                    {{ (string) old('categoria_id', $conta->categoria_id ?? '') === (string) $categoria->id ? 'selected' : '' }}>
-                    {{ $categoria->nome }}
-                </option>
-            @endforeach
-        </select>
-        @error('categoria_id')<span class="form-error">{{ $message }}</span>@enderror
-    </div>
-</div>
-
-<div class="form-grid form-grid--col-1" style="margin-top:1rem;">
-    <div class="form-group">
-        <label class="form-label">Observações</label>
-        <textarea name="observacoes" class="form-control @error('observacoes') is-invalid @enderror"
-            rows="3" style="resize:none;">{{ old('observacoes', $conta->observacoes ?? '') }}</textarea>
-        @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
 

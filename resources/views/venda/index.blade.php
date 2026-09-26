@@ -84,23 +84,28 @@
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('venda.show', $venda) }}" class="btn btn--ghost btn--sm">Ver</a>
+                                    <a href="{{ route('venda.show', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
+                                        <x-icon name="eye" />
+                                    </a>
                                     @if($venda->situacao !== 'cancelada')
-                                        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                            <x-icon name="edit" />
+                                        </a>
                                     @endif
                                     <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="7" class="text-center text-muted empty-state">
                                     Nenhuma venda cadastrada.
                                 </td>
                             </tr>

@@ -10,11 +10,15 @@
 @section('page_actions')
     <div class="page-actions">
 
-        <a href="{{ route('conta-pagar.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
+        <a href="{{ route('conta-pagar.index') }}" class="btn btn--ghost btn--sm btn--icon" title="Voltar" aria-label="Voltar">
+            <x-icon name="arrow-left" />
+        </a>
         
         @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
             <button type="button" class="btn btn--success btn--sm" id="btn-abrir-pagar">Registrar Pagamento</button>
-            <a href="{{ route('conta-pagar.edit', $conta) }}" class="btn btn--ghost btn--sm">Editar</a>
+            <a href="{{ route('conta-pagar.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                <x-icon name="edit" />
+            </a>
             <form method="POST" action="{{ route('conta-pagar.cancelar', $conta) }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn--danger btn--sm" data-confirm="Cancelar esta conta?"
@@ -28,9 +32,10 @@
             <form method="POST" action="{{ route('conta-pagar.destroy', $conta) }}" class="d-inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
+                <button type="submit" class="btn btn--danger btn--sm btn--icon" data-confirm="Confirmar exclusão?"
+                    title="Excluir" aria-label="Excluir"
                     data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                    Excluir
+                    <x-icon name="trash" />
                 </button>
             </form>
         @endif

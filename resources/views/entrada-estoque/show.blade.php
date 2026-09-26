@@ -9,43 +9,53 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('entrada-estoque.index') }}" class="btn btn--ghost btn--sm">Voltar</a>
+        <a href="{{ route('entrada-estoque.index') }}" class="btn btn--ghost btn--sm btn--icon" title="Voltar" aria-label="Voltar">
+            <x-icon name="arrow-left" />
+        </a>
 
         @if($entrada->situacao === 'rascunho')
-            <form method="POST" action="{{ route('entrada-estoque.confirmar', $entrada) }}" class="d-inline">
+            <form method="POST" action="{{ route('entrada-estoque.confirmar', $entrada) }}">
                 @csrf
                 <button type="submit" class="btn btn--primary btn--sm"
                     data-confirm="Confirmar a entrada #{{ $entrada->numero }}? O estoque será atualizado e uma conta a pagar será gerada."
                     data-confirm-title="Confirmar entrada"
                     data-confirm-ok="Confirmar">
-                    ✔ Confirmar
+                    <x-icon name="check" />
+                    Confirmar
                 </button>
             </form>
 
-            <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm">Editar</a>
-
-            <form method="POST" action="{{ route('entrada-estoque.destroy', $entrada) }}" class="d-inline">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn--danger btn--sm"
-                    data-confirm="Confirmar exclusão da entrada #{{ $entrada->numero }}?"
-                    data-confirm-title="Excluir"
-                    data-confirm-ok="Excluir"
-                    data-confirm-variant="danger">
-                    Excluir
-                </button>
-            </form>
+            <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                <x-icon name="edit" />
+            </a>
         @endif
 
         @if($entrada->situacao === 'confirmada')
-            <form method="POST" action="{{ route('entrada-estoque.cancelar', $entrada) }}" class="d-inline">
+            <form method="POST" action="{{ route('entrada-estoque.cancelar', $entrada) }}">
                 @csrf
-                <button type="submit" class="btn btn--danger btn--sm"
+                <button type="submit" class="btn btn--ghost btn--sm btn--icon" title="Cancelar" aria-label="Cancelar"
                     data-confirm="Cancelar a entrada #{{ $entrada->numero }}? O estoque e a conta a pagar serão revertidos."
                     data-confirm-title="Cancelar entrada"
                     data-confirm-ok="Cancelar"
                     data-confirm-variant="danger">
-                    Cancelar
+                    <x-icon name="x-circle" />
+                </button>
+            </form>
+        @endif
+
+        @if(in_array($entrada->situacao, ['rascunho', 'confirmada', 'cancelada'], true))
+            <form method="POST" action="{{ route('entrada-estoque.destroy', $entrada) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                    title="Excluir" aria-label="Excluir"
+                    data-confirm="{{ $entrada->situacao === 'confirmada'
+                        ? 'Excluir a compra #' . $entrada->numero . '? O estoque e a conta a pagar serão revertidos e o registro será removido.'
+                        : 'Confirmar exclusão da compra #' . $entrada->numero . '?' }}"
+                    data-confirm-title="Excluir compra"
+                    data-confirm-ok="Excluir"
+                    data-confirm-variant="danger">
+                    <x-icon name="trash" />
                 </button>
             </form>
         @endif

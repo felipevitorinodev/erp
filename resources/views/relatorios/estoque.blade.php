@@ -5,8 +5,10 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('relatorio.estoque.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <a href="{{ route('relatorio.estoque.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
+        <x-export-dropdown
+            :pdf="route('relatorio.estoque.pdf', request()->query())"
+            :csv="route('relatorio.estoque.csv', request()->query())"
+        />
     </div>
 @endsection
 
@@ -25,6 +27,18 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Estoque</label>
+                    <select name="estoque" class="form-control">
+                        <option value="">— Todos —</option>
+                        <option value="zerado" {{ ($filtros['estoque'] ?? '') === 'zerado' ? 'selected' : '' }}>Zerado</option>
+                        <option value="com_estoque" {{ ($filtros['estoque'] ?? '') === 'com_estoque' ? 'selected' : '' }}>Com estoque</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Nome ou código">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Apenas crítico</label>

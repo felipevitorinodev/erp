@@ -210,9 +210,20 @@ class EntradaEstoqueRepository
             $entrada = EntradaEstoque::where('empresa_id', auth()->user()->empresa_id)
                 ->findOrFail($id);
 
-            if ($entrada->situacao !== 'rascunho') {
-                throw new \Exception('Somente entradas em rascunho podem ser excluídas.');
+            if ($entrada->situacao === 'confirmada') {
+                $this->cancelar($entrada->load('itens'));
+                $entrada->refresh();
             }
+
+            if (!in_array($entrada->situacao, ['rascunho', 'cancelada'], true)) {
+                throw new \Exception('Não é possível excluir esta entrada no status atual.');
+            }
+
+            // Libera a chave da NF-e para permitir reimportar o mesmo XML
+            $entrada->update([
+                'chave_acesso'  => null,
+                'xml_importado' => null,
+            ]);
 
             return (bool) $entrada->delete();
         });

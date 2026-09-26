@@ -9,49 +9,55 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
+        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm btn--icon" title="Voltar" aria-label="Voltar">
+            <x-icon name="arrow-left" />
+        </a>
 
         @if($venda->situacao === 'em_andamento')
-            <form method="POST" action="{{ route('venda.confirmar', $venda) }}" class="d-inline">
+            <form method="POST" action="{{ route('venda.confirmar', $venda) }}">
                 @csrf
                 <button type="submit" class="btn btn--primary btn--sm"
                     data-confirm="Confirmar a venda #{{ $venda->numero }}? O estoque será atualizado."
                     data-confirm-title="Confirmar venda"
                     data-confirm-ok="Confirmar venda">
-                    ✔ Confirmar Venda
+                    <x-icon name="check" />
+                    Confirmar
                 </button>
             </form>
         @endif
 
-        <a href="{{ route('venda.pdf', $venda) }}" class="btn btn--ghost btn--sm" target="_blank" title="Gerar PDF">PDF</a>
+        <x-export-dropdown :pdf="route('venda.pdf', $venda)" />
 
         @if($venda->situacao === 'em_andamento')
-            <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
+            <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                <x-icon name="edit" />
+            </a>
         @endif
 
         @if($venda->situacao !== 'cancelada')
-            <form method="POST" action="{{ route('venda.cancelar', $venda) }}" class="d-inline">
+            <form method="POST" action="{{ route('venda.cancelar', $venda) }}">
                 @csrf
-                <button type="submit" class="btn btn--danger btn--sm"
+                <button type="submit" class="btn btn--danger btn--sm btn--icon" title="Cancelar" aria-label="Cancelar"
                     data-confirm="Cancelar a venda #{{ $venda->numero }}?"
                     data-confirm-title="Cancelar venda"
                     data-confirm-ok="Cancelar venda"
                     data-confirm-variant="danger">
-                    Cancelar Venda
+                    <x-icon name="x-circle" />
                 </button>
             </form>
         @endif
 
         @if(in_array($venda->situacao, ['cancelada', 'em_andamento'], true))
-            <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
+            <form method="POST" action="{{ route('venda.destroy', $venda) }}">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn--danger btn--sm"
+                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                    title="Excluir" aria-label="Excluir"
                     data-confirm="Confirmar exclusão?"
                     data-confirm-title="Excluir"
                     data-confirm-ok="Excluir"
                     data-confirm-variant="danger">
-                    Excluir
+                    <x-icon name="trash" />
                 </button>
             </form>
         @endif

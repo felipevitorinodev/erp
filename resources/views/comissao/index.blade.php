@@ -113,11 +113,12 @@
                                     @if($comissao->situacao === 'pendente')
                                         <form method="POST" action="{{ route('comissao.pagar', $comissao) }}" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn--primary btn--sm"
+                                            <button type="submit" class="btn btn--primary btn--sm btn--icon"
+                                                title="Pagar" aria-label="Pagar"
                                                 data-confirm="Marcar esta comissão como paga?"
                                                 data-confirm-title="Pagar comissão"
                                                 data-confirm-ok="Confirmar">
-                                                Pagar
+                                                <x-icon name="dollar" />
                                             </button>
                                         </form>
                                     @else
@@ -127,7 +128,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted" style="padding:2rem;">Nenhuma comissão encontrada.</td>
+                                <td colspan="9" class="text-center text-muted empty-state">Nenhuma comissão encontrada.</td>
                             </tr>
                         @endforelse
                     </tbody>

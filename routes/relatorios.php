@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/relatorios/vendas', function () {
-        $empresaId = auth()->user()->empresa_id ?? 0;
-
+    $periodoPadrao = function (): array {
         $dataInicio = request('data_inicio')
             ? Carbon::parse(request('data_inicio'))->toDateString()
             : now()->startOfMonth()->toDateString();
@@ -24,14 +22,133 @@ Route::middleware('auth')->group(function () {
             ? Carbon::parse(request('data_fim'))->toDateString()
             : now()->toDateString();
 
+        return [$dataInicio, $dataFim];
+    };
+
+    $aplicarFiltrosVendas = function ($query) {
+        if (request()->filled('situacao')) {
+            $query->where('situacao', request('situacao'));
+        }
+
+        if (request()->filled('forma_pagamento')) {
+            $query->where('forma_pagamento', 'like', '%' . request('forma_pagamento') . '%');
+        }
+
+        if (request()->filled('busca')) {
+            $busca = request('busca');
+            $query->where(function ($q) use ($busca) {
+                $q->where('numero', 'like', "%{$busca}%")
+                    ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+            });
+        }
+
+        return $query;
+    };
+
+    $aplicarFiltrosContas = function ($query, string $relacionamentoNome) {
+        $situacao = request('situacao');
+        if ($situacao === 'em_aberto' || $situacao === 'pendente') {
+            $query->whereIn('situacao', ['aberta', 'parcial']);
+        } elseif (request()->filled('situacao')) {
+            $query->where('situacao', $situacao);
+        }
+
+        if (request()->filled('categoria_id')) {
+            $query->where('categoria_id', request('categoria_id'));
+        }
+
+        $vencimento = request('vencimento');
+        if ($vencimento === 'vencidos') {
+            $query->whereDate('data_vencimento', '<', now()->toDateString())
+                ->whereNotIn('situacao', ['paga', 'cancelada']);
+        } elseif ($vencimento === 'a_vencer') {
+            $query->whereDate('data_vencimento', '>=', now()->toDateString())
+                ->whereNotIn('situacao', ['paga', 'cancelada']);
+        }
+
+        if (request()->filled('busca')) {
+            $busca = request('busca');
+            $query->where(function ($q) use ($busca, $relacionamentoNome) {
+                $q->where('descricao', 'like', "%{$busca}%")
+                    ->orWhereHas($relacionamentoNome, fn ($rel) => $rel->where('nome', 'like', "%{$busca}%"));
+            });
+        }
+
+        return $query;
+    };
+
+    $queryProdutosMaisVendidos = function (int $empresaId, string $dataInicio, string $dataFim) {
+        $query = DB::table('venda_itens')
+            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
+            ->leftJoin('produtos', 'produtos.id', '=', 'venda_itens.produto_id')
+            ->where('vendas.empresa_id', $empresaId)
+            ->where('vendas.situacao', 'confirmada')
+            ->whereNull('vendas.deleted_at')
+            ->whereDate('vendas.data_venda', '>=', $dataInicio)
+            ->whereDate('vendas.data_venda', '<=', $dataFim);
+
+        if (request()->filled('grupo_id')) {
+            $query->where('produtos.grupo_id', request('grupo_id'));
+        }
+
+        if (request()->filled('busca')) {
+            $busca = request('busca');
+            $query->where(function ($q) use ($busca) {
+                $q->where('venda_itens.produto_nome', 'like', "%{$busca}%")
+                    ->orWhere('venda_itens.produto_codigo', 'like', "%{$busca}%");
+            });
+        }
+
+        $ordenar = request('ordenar') === 'valor' ? 'valor_total' : 'qtd_total';
+
+        return $query
+            ->groupBy('venda_itens.produto_nome', 'venda_itens.produto_codigo')
+            ->select(
+                'venda_itens.produto_nome',
+                'venda_itens.produto_codigo',
+                DB::raw('SUM(venda_itens.quantidade) as qtd_total'),
+                DB::raw('SUM(venda_itens.total) as valor_total')
+            )
+            ->orderByDesc($ordenar);
+    };
+
+    $aplicarFiltrosEstoque = function ($query) {
+        if (request()->filled('grupo_id')) {
+            $query->where('grupo_id', request('grupo_id'));
+        }
+
+        if (request()->boolean('apenas_critico')) {
+            $query->whereColumn('estoque_atual', '<=', 'estoque_minimo');
+        }
+
+        $estoque = request('estoque');
+        if ($estoque === 'zerado') {
+            $query->where('estoque_atual', '<=', 0);
+        } elseif ($estoque === 'com_estoque') {
+            $query->where('estoque_atual', '>', 0);
+        }
+
+        if (request()->filled('busca')) {
+            $busca = request('busca');
+            $query->where(function ($q) use ($busca) {
+                $q->where('nome', 'like', "%{$busca}%")
+                    ->orWhere('codigo', 'like', "%{$busca}%");
+            });
+        }
+
+        return $query;
+    };
+
+    Route::get('/relatorios/vendas', function () use ($periodoPadrao, $aplicarFiltrosVendas) {
+        $empresaId = auth()->user()->empresa_id ?? 0;
+        [$dataInicio, $dataFim] = $periodoPadrao();
+
         $query = Venda::with('cliente')
             ->where('empresa_id', $empresaId)
             ->whereDate('data_venda', '>=', $dataInicio)
             ->whereDate('data_venda', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
+        $aplicarFiltrosVendas($query);
 
         $totalConfirmadas = (float) (clone $query)
             ->where('situacao', 'confirmada')
@@ -43,74 +160,51 @@ Route::middleware('auth')->group(function () {
             'vendas'            => $vendas,
             'total_confirmadas' => $totalConfirmadas,
             'filtros'           => [
-                'data_inicio' => $dataInicio,
-                'data_fim'    => $dataFim,
-                'situacao'    => request('situacao', ''),
+                'data_inicio'      => $dataInicio,
+                'data_fim'         => $dataFim,
+                'situacao'         => request('situacao', ''),
+                'busca'            => request('busca', ''),
+                'forma_pagamento'  => request('forma_pagamento', ''),
             ],
         ]);
     })->name('relatorio.vendas');
 
-    Route::get('/relatorios/produtos-mais-vendidos', function () {
+    Route::get('/relatorios/produtos-mais-vendidos', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
-
-        $produtos = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
-            ->where('vendas.empresa_id', $empresaId)
-            ->where('vendas.situacao', 'confirmada')
-            ->whereNull('vendas.deleted_at')
-            ->whereDate('vendas.data_venda', '>=', $dataInicio)
-            ->whereDate('vendas.data_venda', '<=', $dataFim)
-            ->groupBy('venda_itens.produto_nome', 'venda_itens.produto_codigo')
-            ->select(
-                'venda_itens.produto_nome',
-                'venda_itens.produto_codigo',
-                DB::raw('SUM(venda_itens.quantidade) as qtd_total'),
-                DB::raw('SUM(venda_itens.total) as valor_total')
-            )
-            ->orderByDesc('qtd_total')
+        $produtos = $queryProdutosMaisVendidos($empresaId, $dataInicio, $dataFim)
             ->paginate(20)
             ->withQueryString();
 
+        $grupos = Grupo::where('empresa_id', $empresaId)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
+
         return view('relatorios.produtos-mais-vendidos', [
             'produtos' => $produtos,
+            'grupos'   => $grupos,
             'filtros'  => [
                 'data_inicio' => $dataInicio,
                 'data_fim'    => $dataFim,
+                'grupo_id'    => request('grupo_id', ''),
+                'ordenar'     => request('ordenar', 'qtd'),
+                'busca'       => request('busca', ''),
             ],
         ]);
     })->name('relatorio.produtos-mais-vendidos');
 
-    Route::get('/relatorios/contas-receber', function () {
+    Route::get('/relatorios/contas-receber', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaReceber::with(['cliente', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'cliente');
 
         $todas = (clone $query)->with(['cliente', 'categoria'])->orderBy('data_vencimento')->get();
 
@@ -142,33 +236,22 @@ Route::middleware('auth')->group(function () {
                 'data_fim'      => $dataFim,
                 'situacao'      => request('situacao', ''),
                 'categoria_id'  => request('categoria_id', ''),
+                'vencimento'    => request('vencimento', ''),
+                'busca'         => request('busca', ''),
             ],
         ]);
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber');
 
-    Route::get('/relatorios/contas-pagar', function () {
+    Route::get('/relatorios/contas-pagar', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaPagar::with(['fornecedor', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'fornecedor');
 
         $todas = (clone $query)->with(['fornecedor', 'categoria'])->orderBy('data_vencimento')->get();
 
@@ -200,11 +283,13 @@ Route::middleware('auth')->group(function () {
                 'data_fim'     => $dataFim,
                 'situacao'     => request('situacao', ''),
                 'categoria_id' => request('categoria_id', ''),
+                'vencimento'   => request('vencimento', ''),
+                'busca'        => request('busca', ''),
             ],
         ]);
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar');
 
-    Route::get('/relatorios/estoque', function () {
+    Route::get('/relatorios/estoque', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
         $query = Produto::with(['grupos', 'unidadeMedida'])
@@ -212,13 +297,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true)
             ->where('controla_estoque', true);
 
-        if (request()->filled('grupo_id')) {
-            $query->where('grupo_id', request('grupo_id'));
-        }
-
-        if (request()->boolean('apenas_critico')) {
-            $query->whereColumn('estoque_atual', '<=', 'estoque_minimo');
-        }
+        $aplicarFiltrosEstoque($query);
 
         $produtos = $query->orderBy('nome')->paginate(20)->withQueryString();
 
@@ -233,29 +312,24 @@ Route::middleware('auth')->group(function () {
             'filtros'  => [
                 'grupo_id'       => request('grupo_id', ''),
                 'apenas_critico' => request()->boolean('apenas_critico'),
+                'busca'          => request('busca', ''),
+                'estoque'        => request('estoque', ''),
             ],
         ]);
     })->name('relatorio.estoque');
 
     // ---- CSV exports ----
 
-    Route::get('/relatorios/vendas/csv', function () {
+    Route::get('/relatorios/vendas/csv', function () use ($periodoPadrao, $aplicarFiltrosVendas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = Venda::with('cliente')
             ->where('empresa_id', $empresaId)
             ->whereDate('data_venda', '>=', $dataInicio)
             ->whereDate('data_venda', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
+        $aplicarFiltrosVendas($query);
 
         $vendas = $query->orderBy('data_venda')->orderBy('numero')->get();
         $filename = 'relatorio-vendas-' . date('Y-m-d') . '.csv';
@@ -283,32 +357,11 @@ Route::middleware('auth')->group(function () {
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->name('relatorio.vendas.csv');
 
-    Route::get('/relatorios/produtos-mais-vendidos/csv', function () {
+    Route::get('/relatorios/produtos-mais-vendidos/csv', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
-        $produtos = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
-            ->where('vendas.empresa_id', $empresaId)
-            ->where('vendas.situacao', 'confirmada')
-            ->whereNull('vendas.deleted_at')
-            ->whereDate('vendas.data_venda', '>=', $dataInicio)
-            ->whereDate('vendas.data_venda', '<=', $dataFim)
-            ->groupBy('venda_itens.produto_nome', 'venda_itens.produto_codigo')
-            ->select(
-                'venda_itens.produto_nome',
-                'venda_itens.produto_codigo',
-                DB::raw('SUM(venda_itens.quantidade) as qtd_total'),
-                DB::raw('SUM(venda_itens.total) as valor_total')
-            )
-            ->orderByDesc('qtd_total')
-            ->get();
-
+        $produtos = $queryProdutosMaisVendidos($empresaId, $dataInicio, $dataFim)->get();
         $filename = 'relatorio-produtos-mais-vendidos-' . date('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($produtos) {
@@ -327,26 +380,16 @@ Route::middleware('auth')->group(function () {
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->name('relatorio.produtos-mais-vendidos.csv');
 
-    Route::get('/relatorios/contas-receber/csv', function () {
+    Route::get('/relatorios/contas-receber/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaReceber::with(['cliente', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'cliente');
 
         $contas = $query->orderBy('data_vencimento')->get();
         $filename = 'relatorio-contas-receber-' . date('Y-m-d') . '.csv';
@@ -370,26 +413,16 @@ Route::middleware('auth')->group(function () {
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber.csv');
 
-    Route::get('/relatorios/contas-pagar/csv', function () {
+    Route::get('/relatorios/contas-pagar/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaPagar::with(['fornecedor', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'fornecedor');
 
         $contas = $query->orderBy('data_vencimento')->get();
         $filename = 'relatorio-contas-pagar-' . date('Y-m-d') . '.csv';
@@ -413,7 +446,7 @@ Route::middleware('auth')->group(function () {
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar.csv');
 
-    Route::get('/relatorios/estoque/csv', function () {
+    Route::get('/relatorios/estoque/csv', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
         $query = Produto::with(['grupos', 'unidadeMedida'])
@@ -421,12 +454,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true)
             ->where('controla_estoque', true);
 
-        if (request()->filled('grupo_id')) {
-            $query->where('grupo_id', request('grupo_id'));
-        }
-        if (request()->boolean('apenas_critico')) {
-            $query->whereColumn('estoque_atual', '<=', 'estoque_minimo');
-        }
+        $aplicarFiltrosEstoque($query);
 
         $produtos = $query->orderBy('nome')->get();
         $filename = 'relatorio-estoque-' . date('Y-m-d') . '.csv';
@@ -449,23 +477,16 @@ Route::middleware('auth')->group(function () {
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->name('relatorio.estoque.csv');
 
-    Route::get('/relatorios/vendas/pdf', function () {
+    Route::get('/relatorios/vendas/pdf', function () use ($periodoPadrao, $aplicarFiltrosVendas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = Venda::with('cliente')
             ->where('empresa_id', $empresaId)
             ->whereDate('data_venda', '>=', $dataInicio)
             ->whereDate('data_venda', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
+        $aplicarFiltrosVendas($query);
 
         $situacoes = [
             'em_andamento' => 'Em andamento',
@@ -485,10 +506,18 @@ Route::middleware('auth')->group(function () {
             $situacoes[$venda->situacao] ?? $venda->situacao,
         ])->all();
 
+        $resumoPartes = ['Situação: ' . ($situacoes[request('situacao')] ?? 'Todas')];
+        if (request()->filled('busca')) {
+            $resumoPartes[] = 'Busca: ' . request('busca');
+        }
+        if (request()->filled('forma_pagamento')) {
+            $resumoPartes[] = 'Pagamento: ' . request('forma_pagamento');
+        }
+
         $pdf = Pdf::loadView('pdf.relatorio', [
             'titulo' => 'Vendas por período',
             'periodo' => Carbon::parse($dataInicio)->format('d/m/Y') . ' a ' . Carbon::parse($dataFim)->format('d/m/Y'),
-            'resumo' => 'Situação: ' . ($situacoes[request('situacao')] ?? 'Todas'),
+            'resumo' => implode(' · ', $resumoPartes),
             'secao' => 'Vendas',
             'colunas' => [
                 ['label' => 'Número', 'width' => '12%'],
@@ -507,31 +536,11 @@ Route::middleware('auth')->group(function () {
         return $pdf->stream('relatorio-vendas-' . date('Y-m-d') . '.pdf');
     })->name('relatorio.vendas.pdf');
 
-    Route::get('/relatorios/produtos-mais-vendidos/pdf', function () {
+    Route::get('/relatorios/produtos-mais-vendidos/pdf', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
-        $produtos = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
-            ->where('vendas.empresa_id', $empresaId)
-            ->where('vendas.situacao', 'confirmada')
-            ->whereNull('vendas.deleted_at')
-            ->whereDate('vendas.data_venda', '>=', $dataInicio)
-            ->whereDate('vendas.data_venda', '<=', $dataFim)
-            ->groupBy('venda_itens.produto_nome', 'venda_itens.produto_codigo')
-            ->select(
-                'venda_itens.produto_nome',
-                'venda_itens.produto_codigo',
-                DB::raw('SUM(venda_itens.quantidade) as qtd_total'),
-                DB::raw('SUM(venda_itens.total) as valor_total')
-            )
-            ->orderByDesc('qtd_total')
-            ->get();
+        $produtos = $queryProdutosMaisVendidos($empresaId, $dataInicio, $dataFim)->get();
 
         $linhas = $produtos->values()->map(fn ($produto, $indice) => [
             ($indice + 1) . 'º',
@@ -541,10 +550,20 @@ Route::middleware('auth')->group(function () {
             'R$ ' . number_format($produto->valor_total, 2, ',', '.'),
         ])->all();
 
+        $resumoPartes = ['Somente vendas confirmadas'];
+        if (request()->filled('grupo_id')) {
+            $grupoNome = Grupo::where('empresa_id', $empresaId)->whereKey(request('grupo_id'))->value('nome') ?: '—';
+            $resumoPartes[] = 'Grupo: ' . $grupoNome;
+        }
+        $resumoPartes[] = 'Ordenação: ' . (request('ordenar') === 'valor' ? 'Valor' : 'Quantidade');
+        if (request()->filled('busca')) {
+            $resumoPartes[] = 'Busca: ' . request('busca');
+        }
+
         $pdf = Pdf::loadView('pdf.relatorio', [
             'titulo' => 'Produtos mais vendidos',
             'periodo' => Carbon::parse($dataInicio)->format('d/m/Y') . ' a ' . Carbon::parse($dataFim)->format('d/m/Y'),
-            'resumo' => 'Somente vendas confirmadas',
+            'resumo' => implode(' · ', $resumoPartes),
             'secao' => 'Produtos',
             'colunas' => [
                 ['label' => 'Posição', 'width' => '10%'],
@@ -562,32 +581,28 @@ Route::middleware('auth')->group(function () {
         return $pdf->stream('relatorio-produtos-mais-vendidos-' . date('Y-m-d') . '.pdf');
     })->name('relatorio.produtos-mais-vendidos.pdf');
 
-    Route::get('/relatorios/contas-receber/pdf', function () {
+    Route::get('/relatorios/contas-receber/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaReceber::with(['cliente', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'cliente');
 
         $situacoes = [
+            'em_aberto' => 'Em aberto',
             'aberta' => 'Aberta',
             'parcial' => 'Parcial',
             'paga' => 'Paga',
             'cancelada' => 'Cancelada',
+        ];
+
+        $vencimentoLabels = [
+            'vencidos' => 'Vencidos',
+            'a_vencer' => 'A vencer',
         ];
 
         $contas = $query->orderBy('data_vencimento')->get();
@@ -602,10 +617,21 @@ Route::middleware('auth')->group(function () {
             $situacoes[$conta->situacao] ?? $conta->situacao,
         ])->all();
 
+        $resumoPartes = [
+            'Vencimento no período',
+            'Situação: ' . ($situacoes[request('situacao')] ?? 'Todas'),
+        ];
+        if (request()->filled('vencimento')) {
+            $resumoPartes[] = 'Filtro: ' . ($vencimentoLabels[request('vencimento')] ?? request('vencimento'));
+        }
+        if (request()->filled('busca')) {
+            $resumoPartes[] = 'Busca: ' . request('busca');
+        }
+
         $pdf = Pdf::loadView('pdf.relatorio', [
             'titulo' => 'Contas a receber',
             'periodo' => Carbon::parse($dataInicio)->format('d/m/Y') . ' a ' . Carbon::parse($dataFim)->format('d/m/Y'),
-            'resumo' => 'Vencimento no período · Situação: ' . ($situacoes[request('situacao')] ?? 'Todas'),
+            'resumo' => implode(' · ', $resumoPartes),
             'secao' => 'Contas',
             'colunas' => [
                 ['label' => 'Nº', 'width' => '8%'],
@@ -627,32 +653,28 @@ Route::middleware('auth')->group(function () {
         return $pdf->stream('relatorio-contas-receber-' . date('Y-m-d') . '.pdf');
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber.pdf');
 
-    Route::get('/relatorios/contas-pagar/pdf', function () {
+    Route::get('/relatorios/contas-pagar/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
-        $dataInicio = request('data_inicio')
-            ? Carbon::parse(request('data_inicio'))->toDateString()
-            : now()->startOfMonth()->toDateString();
-        $dataFim = request('data_fim')
-            ? Carbon::parse(request('data_fim'))->toDateString()
-            : now()->toDateString();
+        [$dataInicio, $dataFim] = $periodoPadrao();
 
         $query = ContaPagar::with(['fornecedor', 'categoria'])
             ->where('empresa_id', $empresaId)
             ->whereDate('data_vencimento', '>=', $dataInicio)
             ->whereDate('data_vencimento', '<=', $dataFim);
 
-        if (request()->filled('situacao')) {
-            $query->where('situacao', request('situacao'));
-        }
-        if (request()->filled('categoria_id')) {
-            $query->where('categoria_id', request('categoria_id'));
-        }
+        $aplicarFiltrosContas($query, 'fornecedor');
 
         $situacoes = [
+            'em_aberto' => 'Em aberto',
             'aberta' => 'Aberta',
             'parcial' => 'Parcial',
             'paga' => 'Paga',
             'cancelada' => 'Cancelada',
+        ];
+
+        $vencimentoLabels = [
+            'vencidos' => 'Vencidos',
+            'a_vencer' => 'A vencer',
         ];
 
         $contas = $query->orderBy('data_vencimento')->get();
@@ -667,10 +689,21 @@ Route::middleware('auth')->group(function () {
             $situacoes[$conta->situacao] ?? $conta->situacao,
         ])->all();
 
+        $resumoPartes = [
+            'Vencimento no período',
+            'Situação: ' . ($situacoes[request('situacao')] ?? 'Todas'),
+        ];
+        if (request()->filled('vencimento')) {
+            $resumoPartes[] = 'Filtro: ' . ($vencimentoLabels[request('vencimento')] ?? request('vencimento'));
+        }
+        if (request()->filled('busca')) {
+            $resumoPartes[] = 'Busca: ' . request('busca');
+        }
+
         $pdf = Pdf::loadView('pdf.relatorio', [
             'titulo' => 'Contas a pagar',
             'periodo' => Carbon::parse($dataInicio)->format('d/m/Y') . ' a ' . Carbon::parse($dataFim)->format('d/m/Y'),
-            'resumo' => 'Vencimento no período · Situação: ' . ($situacoes[request('situacao')] ?? 'Todas'),
+            'resumo' => implode(' · ', $resumoPartes),
             'secao' => 'Contas',
             'colunas' => [
                 ['label' => 'Nº', 'width' => '8%'],
@@ -692,7 +725,7 @@ Route::middleware('auth')->group(function () {
         return $pdf->stream('relatorio-contas-pagar-' . date('Y-m-d') . '.pdf');
     })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar.pdf');
 
-    Route::get('/relatorios/estoque/pdf', function () {
+    Route::get('/relatorios/estoque/pdf', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
         $query = Produto::with(['grupos', 'unidadeMedida'])
@@ -700,12 +733,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true)
             ->where('controla_estoque', true);
 
-        if (request()->filled('grupo_id')) {
-            $query->where('grupo_id', request('grupo_id'));
-        }
-        if (request()->boolean('apenas_critico')) {
-            $query->whereColumn('estoque_atual', '<=', 'estoque_minimo');
-        }
+        $aplicarFiltrosEstoque($query);
 
         $produtos = $query->orderBy('nome')->get();
         $linhas = $produtos->map(fn ($produto) => [
@@ -722,10 +750,26 @@ Route::middleware('auth')->group(function () {
             $grupoNome = Grupo::where('empresa_id', $empresaId)->whereKey(request('grupo_id'))->value('nome') ?: '—';
         }
 
+        $estoqueLabels = [
+            'zerado' => 'Zerado',
+            'com_estoque' => 'Com estoque',
+        ];
+
+        $resumoPartes = ['Grupo: ' . $grupoNome];
+        if (request()->boolean('apenas_critico')) {
+            $resumoPartes[] = 'Somente estoque crítico';
+        }
+        if (request()->filled('estoque')) {
+            $resumoPartes[] = 'Estoque: ' . ($estoqueLabels[request('estoque')] ?? request('estoque'));
+        }
+        if (request()->filled('busca')) {
+            $resumoPartes[] = 'Busca: ' . request('busca');
+        }
+
         $pdf = Pdf::loadView('pdf.relatorio', [
             'titulo' => 'Posição de estoque',
             'periodo' => now()->format('d/m/Y'),
-            'resumo' => 'Grupo: ' . $grupoNome . (request()->boolean('apenas_critico') ? ' · Somente estoque crítico' : ''),
+            'resumo' => implode(' · ', $resumoPartes),
             'secao' => 'Produtos',
             'colunas' => [
                 ['label' => 'Código', 'width' => '12%'],

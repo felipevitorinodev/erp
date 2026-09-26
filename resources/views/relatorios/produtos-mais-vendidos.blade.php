@@ -5,8 +5,10 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('relatorio.produtos-mais-vendidos.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <a href="{{ route('relatorio.produtos-mais-vendidos.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
+        <x-export-dropdown
+            :pdf="route('relatorio.produtos-mais-vendidos.pdf', request()->query())"
+            :csv="route('relatorio.produtos-mais-vendidos.csv', request()->query())"
+        />
     </div>
 @endsection
 
@@ -22,6 +24,29 @@
                 <div class="form-group">
                     <label class="form-label">Data fim</label>
                     <input type="date" name="data_fim" class="form-control" value="{{ $filtros['data_fim'] }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grupo</label>
+                    <select name="grupo_id" class="form-control">
+                        <option value="">— Todos —</option>
+                        @foreach($grupos ?? [] as $grupo)
+                            <option value="{{ $grupo->id }}"
+                                {{ (string) ($filtros['grupo_id'] ?? '') === (string) $grupo->id ? 'selected' : '' }}>
+                                {{ $grupo->nome }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ordenar por</label>
+                    <select name="ordenar" class="form-control">
+                        <option value="qtd" {{ ($filtros['ordenar'] ?? 'qtd') === 'qtd' ? 'selected' : '' }}>Quantidade</option>
+                        <option value="valor" {{ ($filtros['ordenar'] ?? '') === 'valor' ? 'selected' : '' }}>Valor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Nome ou código">
                 </div>
                 <div class="form-group">
                     <div class="filter-actions">

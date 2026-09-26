@@ -42,37 +42,44 @@
                             <th>Departamento</th>
                             <th>Admissão</th>
                             <th>Situação</th>
-                            <th class="text-right" style="width:1%; white-space:nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($funcionarios as $funcionario)
                             <tr>
-                                <td>{{ $funcionario->nome }}</td>
-                                <td>{{ $funcionario->cpf ?? '—' }}</td>
-                                <td>{{ $funcionario->cargo ?? '—' }}</td>
-                                <td>{{ $funcionario->departamento ?? '—' }}</td>
-                                <td>{{ $funcionario->data_admissao ? $funcionario->data_admissao->format('d/m/Y') : '—' }}</td>
-                                <td>
-                                    {{ $funcionario->ativo ? 'Ativo' : 'Inativo' }}
+                                <td data-label="Nome">{{ $funcionario->nome }}</td>
+                                <td data-label="CPF">{{ $funcionario->cpf ?? '—' }}</td>
+                                <td data-label="Cargo">{{ $funcionario->cargo ?? '—' }}</td>
+                                <td data-label="Departamento">{{ $funcionario->departamento ?? '—' }}</td>
+                                <td data-label="Admissão">{{ $funcionario->data_admissao ? $funcionario->data_admissao->format('d/m/Y') : '—' }}</td>
+                                <td data-label="Situação">
+                                    @if($funcionario->ativo)
+                                        <span class="badge badge--success">Ativo</span>
+                                    @else
+                                        <span class="badge badge--neutral">Inativo</span>
+                                    @endif
                                 </td>
-                                <td class="text-right" style="white-space:nowrap;">
+                                <td class="col-actions" data-label="Ações">
                                     <a href="{{ route('funcionario.edit', $funcionario) }}"
-                                        class="btn btn--ghost btn--sm">Editar</a>
+                                        class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('funcionario.destroy', $funcionario) }}"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Excluir este funcionário?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="7" class="empty-state">
                                     Nenhum funcionário cadastrado.
                                 </td>
                             </tr>

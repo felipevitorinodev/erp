@@ -5,8 +5,10 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('relatorio.vendas.csv', request()->query()) }}" class="btn btn--ghost btn--sm">Exportar CSV</a>
-        <a href="{{ route('relatorio.vendas.pdf', request()->query()) }}" class="btn btn--ghost btn--sm" target="_blank">PDF</a>
+        <x-export-dropdown
+            :pdf="route('relatorio.vendas.pdf', request()->query())"
+            :csv="route('relatorio.vendas.csv', request()->query())"
+        />
     </div>
 @endsection
 
@@ -31,6 +33,14 @@
                             <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Forma de pagamento</label>
+                    <input type="text" name="forma_pagamento" class="form-control" value="{{ $filtros['forma_pagamento'] ?? '' }}" placeholder="Forma de pagamento">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Número ou cliente">
                 </div>
                 <div class="form-group">
                     <div class="filter-actions">

@@ -9,54 +9,63 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm" title="Voltar">Voltar</a>
-        <a href="{{ route('orcamento.pdf', $orcamento) }}" class="btn btn--ghost btn--sm" target="_blank"
-            title="Gerar PDF">PDF</a>
+        <a href="{{ route('orcamento.index') }}" class="btn btn--ghost btn--sm btn--icon" title="Voltar" aria-label="Voltar">
+            <x-icon name="arrow-left" />
+        </a>
+
+        <x-export-dropdown :pdf="route('orcamento.pdf', $orcamento)" />
 
         @if ($orcamento->situacao === 'pendente')
-            <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}" class="d-inline">
+            <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}">
                 @csrf
                 <button type="submit" class="btn btn--success btn--sm"
                     data-confirm="Aprovar o orçamento #{{ $orcamento->numero }} e gerar uma venda?"
-                    data-confirm-title="Aprovar orçamento" data-confirm-ok="Aprovar e gerar venda"
+                    data-confirm-title="Aprovar orçamento"
+                    data-confirm-ok="Aprovar e gerar venda"
                     data-confirm-variant="success">
-                    {{-- fallback: se a funcionalidade de confirmação via JS não estiver carregada, submete o form --}}
-                    <span
-                        onclick="if(!window.modalConfirmAttached){ var f=this.closest('button').form || this.closest('form'); if(f){ f.submit(); } return false; }"></span>
-                    ✔ Aprovar
+                    <x-icon name="check" />
+                    Aprovar
                 </button>
             </form>
 
-            <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
+            <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                <x-icon name="edit" />
+            </a>
 
-            <form method="POST" action="{{ route('orcamento.recusar', $orcamento) }}" class="d-inline">
+            <form method="POST" action="{{ route('orcamento.recusar', $orcamento) }}">
                 @csrf
-                <button type="submit" class="btn btn--warning btn--sm"
+                <button type="submit" class="btn btn--warning btn--sm btn--icon" title="Recusar" aria-label="Recusar"
                     data-confirm="Recusar o orçamento #{{ $orcamento->numero }}?"
-                    data-confirm-title="Recusar orçamento" data-confirm-ok="Recusar"
+                    data-confirm-title="Recusar orçamento"
+                    data-confirm-ok="Recusar"
                     data-confirm-variant="warning">
-                    Recusar
+                    <x-icon name="ban" />
                 </button>
             </form>
 
-            <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}" class="d-inline">
+            <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}">
                 @csrf
-                <button type="submit" class="btn btn--danger btn--sm"
-                    data-confirm="Cancelar o orçamento #{{ $orcamento->numero }}?" data-confirm-title="Cancelar orçamento"
-                    data-confirm-ok="Cancelar orçamento" data-confirm-variant="danger">
-                    Cancelar
+                <button type="submit" class="btn btn--danger btn--sm btn--icon" title="Cancelar" aria-label="Cancelar"
+                    data-confirm="Cancelar o orçamento #{{ $orcamento->numero }}?"
+                    data-confirm-title="Cancelar orçamento"
+                    data-confirm-ok="Cancelar orçamento"
+                    data-confirm-variant="danger">
+                    <x-icon name="x-circle" />
                 </button>
             </form>
         @endif
 
         @if (in_array($orcamento->situacao, ['pendente', 'cancelado', 'recusado'], true))
-            <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" class="d-inline">
+            <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
-                    data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger" title="Excluir"
-                    aria-label="Excluir">
-                    Excluir
+                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                    title="Excluir" aria-label="Excluir"
+                    data-confirm="Confirmar exclusão?"
+                    data-confirm-title="Excluir"
+                    data-confirm-ok="Excluir"
+                    data-confirm-variant="danger">
+                    <x-icon name="trash" />
                 </button>
             </form>
         @endif

@@ -42,40 +42,43 @@
                             <th>CPF / CNPJ</th>
                             <th>Telefone</th>
                             <th>Cidade / UF</th>
-                            <th class="text-right" style="width:1%; white-space:nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($clientes as $cliente)
                             <tr>
-                                <td class="text-muted">{{ $cliente->id }}</td>
-                                <td>{{ $cliente->nome }}</td>
-                                <td>{{ $cliente->nome_fantasia ?? '—' }}</td>
-                                <td>{{ $cliente->cpf ?: ($cliente->cnpj ?: '—') }}</td>
-                                <td>{{ $cliente->telefone ?? $cliente->celular ?? '—' }}</td>
-                                <td>
+                                <td data-label="Código" class="text-muted">{{ $cliente->id }}</td>
+                                <td data-label="Nome">{{ $cliente->nome }}</td>
+                                <td data-label="Nome Fantasia">{{ $cliente->nome_fantasia ?? '—' }}</td>
+                                <td data-label="CPF / CNPJ">{{ $cliente->cpf ?: ($cliente->cnpj ?: '—') }}</td>
+                                <td data-label="Telefone">{{ $cliente->telefone ?? $cliente->celular ?? '—' }}</td>
+                                <td data-label="Cidade / UF">
                                     @if($cliente->cidade)
                                         {{ $cliente->cidade }}{{ $cliente->estado ? '/' . $cliente->estado : '' }}
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="text-right" style="white-space:nowrap;">
-                                    <a href="{{ route('cliente.edit', $cliente) }}" class="btn btn--ghost btn--sm">Editar</a>
+                                <td class="col-actions" data-label="Ações">
+                                    <a href="{{ route('cliente.edit', $cliente) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('cliente.destroy', $cliente) }}"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm"
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                            title="Excluir" aria-label="Excluir"
                                             data-confirm="Excluir este cliente?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            Excluir
+                                            <x-icon name="trash" />
                                         </button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted" style="padding:2rem;">
+                                <td colspan="7" class="empty-state">
                                     Nenhum cliente cadastrado.
                                 </td>
                             </tr>
