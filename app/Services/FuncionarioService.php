@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Funcionario;
 use App\Repositories\FuncionarioRepository;
+use Illuminate\Http\Request;
 
 class FuncionarioService
 {
@@ -11,11 +12,14 @@ class FuncionarioService
         protected FuncionarioRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $funcionarios = $this->repository->index();
+        $funcionarios = $this->repository->index($request);
 
-        return view('funcionario.index', ['funcionarios' => $funcionarios]);
+        return view('funcionario.index', [
+            'funcionarios' => $funcionarios,
+            'filtros'      => $request->only(['busca']),
+        ]);
     }
 
     public function create()

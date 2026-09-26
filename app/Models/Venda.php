@@ -17,6 +17,7 @@ class Venda extends Model
         'empresa_id',
         'cliente_id',
         'usuario_id',
+        'funcionario_id',
         'numero',
         'data_venda',
         'data_entrega',
@@ -61,5 +62,15 @@ class Venda extends Model
     public function contasReceber()
     {
         return $this->hasMany(ContaReceber::class);
+    }
+
+    public function funcionario()
+    {
+        return $this->belongsTo(Funcionario::class);
+    }
+
+    public function comissoes()
+    {
+        return $this->hasMany(Comissao::class);
     }
 }

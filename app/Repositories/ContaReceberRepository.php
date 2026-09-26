@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\ContaReceber;
 use App\Models\FormaPagamento;
 use App\Models\Venda;
+use App\Services\CategoriaPadraoService;
 use Illuminate\Http\Request;
 
 class ContaReceberRepository
@@ -16,6 +17,13 @@ class ContaReceberRepository
             ->orderByDesc('id');
 
         if ($request) {
+            if ($request->filled('busca')) {
+                $busca = $request->busca;
+                $query->where(function ($q) use ($busca) {
+                    $q->where('descricao', 'like', "%{$busca}%")
+                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                });
+            }
             if ($request->filled('situacao')) {
                 $query->where('situacao', $request->situacao);
             }
@@ -25,7 +33,7 @@ class ContaReceberRepository
             }
         }
 
-        return $query->get();
+        return $query->paginate(20);
     }
 
     public function findOrFail(int $id): ContaReceber
@@ -103,6 +111,7 @@ class ContaReceberRepository
             'valor_pago'      => 0,
             'data_vencimento' => $vencimento->format('Y-m-d'),
             'forma_pagamento' => $forma->nome,
+            'categoria_id'    => app(CategoriaPadraoService::class)->idReceitaVendas((int) $venda->empresa_id),
             'situacao'        => 'aberta',
             'observacoes'     => 'Gerada automaticamente na confirmação da venda.',
         ]);

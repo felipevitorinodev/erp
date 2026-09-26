@@ -5,18 +5,22 @@ namespace App\Services;
 use App\Http\Requests\EmpresaRequest;
 use App\Models\Empresa;
 use App\Repositories\EmpresaRepository;
+use Illuminate\Http\Request;
 
 class EmpresaService
 {
-    public function __construct
-    (
+    public function __construct(
         protected EmpresaRepository $empresaRepository
-    ){}
+    ) {}
 
-    public function index() {
-        $empresas = $this->empresaRepository->index();
+    public function index(Request $request)
+    {
+        $empresas = $this->empresaRepository->index($request);
 
-        return view('empresa.index' , ['empresas' => $empresas]);
+        return view('empresa.index', [
+            'empresas' => $empresas,
+            'filtros'  => $request->only(['busca']),
+        ]);
     }
 
     public function create() {

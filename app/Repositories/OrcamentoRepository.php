@@ -4,15 +4,36 @@ namespace App\Repositories;
 
 use App\Models\Orcamento;
 use App\Models\OrcamentoItem;
+use Illuminate\Http\Request;
 
 class OrcamentoRepository
 {
-    public function index()
+    public function index(?Request $request = null)
     {
-        return Orcamento::with(['cliente'])
+        $query = Orcamento::with(['cliente'])
             ->where('empresa_id', auth()->user()->empresa_id)
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+
+        if ($request) {
+            if ($request->filled('busca')) {
+                $busca = $request->busca;
+                $query->where(function ($q) use ($busca) {
+                    $q->where('numero', 'like', "%{$busca}%")
+                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                });
+            }
+            if ($request->filled('situacao')) {
+                $query->where('situacao', $request->situacao);
+            }
+            if ($request->filled('data_inicio')) {
+                $query->whereDate('data_orcamento', '>=', $request->data_inicio);
+            }
+            if ($request->filled('data_fim')) {
+                $query->whereDate('data_orcamento', '<=', $request->data_fim);
+            }
+        }
+
+        return $query->paginate(20);
     }
 
     public function findOrFail(int $id): Orcamento
@@ -50,6 +71,13 @@ class OrcamentoRepository
     public function cancelar(Orcamento $orcamento): Orcamento
     {
         $orcamento->update(['situacao' => 'cancelado']);
+
+        return $orcamento;
+    }
+
+    public function recusar(Orcamento $orcamento): Orcamento
+    {
+        $orcamento->update(['situacao' => 'recusado']);
 
         return $orcamento;
     }

@@ -3,22 +3,26 @@
 namespace App\Repositories;
 
 use App\Models\Grupo;
+use Illuminate\Http\Request;
 
 class GrupoRepository
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct
-    (
+    public function __construct(
         protected Grupo $grupo
-    )
-    {}
+    ) {}
 
-    public function index(){
-        return $this->grupo::where('empresa_id', auth()->user()->empresa_id)
-            ->orderBy('nome')
-            ->get();
+    public function index(?Request $request = null)
+    {
+        $query = $this->grupo::with('parent')
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome');
+
+        if ($request && $request->filled('busca')) {
+            $busca = $request->busca;
+            $query->where('nome', 'like', "%{$busca}%");
+        }
+
+        return $query->paginate(20);
     }
 
     public function principais()

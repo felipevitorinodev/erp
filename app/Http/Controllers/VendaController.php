@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\VendaRequest;
 use App\Models\Venda;
 use App\Services\VendaService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class VendaController extends Controller
 {
@@ -13,9 +13,9 @@ class VendaController extends Controller
         protected VendaService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()
@@ -23,7 +23,7 @@ class VendaController extends Controller
         return $this->service->create();
     }
 
-    public function store(Request $request)
+    public function store(VendaRequest $request)
     {
         return $this->service->store($request);
     }
@@ -38,7 +38,7 @@ class VendaController extends Controller
         return $this->service->edit($venda);
     }
 
-    public function update(Request $request, Venda $venda)
+    public function update(VendaRequest $request, Venda $venda)
     {
         return $this->service->update($request, $venda);
     }

@@ -12,12 +12,10 @@ class DatabaseSeeder extends Seeder
             EmpresaSeeder::class,
             AuthSeeder::class,
             ClienteConsumidorSeeder::class,
-            // ClienteSeeder::class,
-            // FornecedorSeeder::class,
-            // FuncionarioSeeder::class,
             GrupoSeeder::class,
             UnidadeMedidaSeeder::class,
             FormaPagamentoSeeder::class,
+            DemoDadosSeeder::class,
         ]);
     }
 }

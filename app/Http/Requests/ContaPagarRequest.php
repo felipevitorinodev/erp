@@ -2,11 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Models\CategoriaFinanceira;
+use App\Traits\ConversorMoeda;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class ContaPagarRequest extends FormRequest
 {
+    use ConversorMoeda;
+
     public function authorize(): bool
     {
         return true;
@@ -20,6 +24,7 @@ class ContaPagarRequest extends FormRequest
             'valor'           => 'required',
             'data_vencimento' => 'required|date',
             'forma_pagamento' => 'nullable|string|max:100',
+            'categoria_id'    => 'nullable|exists:categorias_financeiras,id',
             'observacoes'     => 'nullable|string',
         ];
 
@@ -37,6 +42,30 @@ class ContaPagarRequest extends FormRequest
 
             if ($valor <= 0) {
                 $validator->errors()->add('valor', 'O campo valor deve ser maior que zero.');
+            }
+
+            if ($this->filled('categoria_id')) {
+                $empresaId = (int) auth()->user()->empresa_id;
+                $valida = CategoriaFinanceira::where('id', $this->input('categoria_id'))
+                    ->where('empresa_id', $empresaId)
+                    ->where('tipo', 'despesa')
+                    ->where('ativo', true)
+                    ->exists();
+
+                if (!$valida) {
+                    $validator->errors()->add('categoria_id', 'Categoria inválida para conta a pagar.');
+                }
+            }
+
+            $empresaId = (int) auth()->user()->empresa_id;
+
+            if ($this->filled('fornecedor_id')) {
+                $fornecedorOk = \App\Models\Fornecedor::where('id', $this->input('fornecedor_id'))
+                    ->where('empresa_id', $empresaId)
+                    ->exists();
+                if (!$fornecedorOk) {
+                    $validator->errors()->add('fornecedor_id', 'Fornecedor inválido para esta empresa.');
+                }
             }
         });
     }
@@ -60,12 +89,17 @@ class ContaPagarRequest extends FormRequest
             'valor'           => 'valor',
             'data_vencimento' => 'data de vencimento',
             'forma_pagamento' => 'forma de pagamento',
+            'categoria_id'    => 'categoria',
             'observacoes'     => 'observações',
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        if (!$this->filled('categoria_id')) {
+            $this->merge(['categoria_id' => null]);
+        }
+
         if ($this->filled('valor')) {
             $v = (string) $this->input('valor');
             $v = trim($v);
@@ -82,23 +116,5 @@ class ContaPagarRequest extends FormRequest
 
             $this->merge(['valor' => $v]);
         }
-    }
-
-    protected function parseMoeda(mixed $valor): float
-    {
-        if (is_null($valor) || $valor === '') {
-            return 0.0;
-        }
-
-        $str = trim((string) $valor);
-
-        if (str_contains($str, ',') && str_contains($str, '.')) {
-            $str = str_replace('.', '', $str);
-            $str = str_replace(',', '.', $str);
-        } elseif (str_contains($str, ',')) {
-            $str = str_replace(',', '.', $str);
-        }
-
-        return round((float) $str, 2);
     }
 }

@@ -4,13 +4,18 @@ namespace App\Services;
 
 use App\Http\Requests\ContaPagarRequest;
 use App\Models\ContaPagar;
+use App\Repositories\CategoriaFinanceiraRepository;
 use App\Repositories\ContaPagarRepository;
+use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 
 class ContaPagarService
 {
+    use ConversorMoeda;
+
     public function __construct(
-        protected ContaPagarRepository $repository
+        protected ContaPagarRepository $repository,
+        protected CategoriaFinanceiraRepository $categoriaFinanceiraRepository
     ) {}
 
     public function index(Request $request)
@@ -19,13 +24,15 @@ class ContaPagarService
 
         return view('conta-pagar.index', [
             'contas'  => $contas,
-            'filtros' => $request->only(['situacao', 'data_vencimento']),
+            'filtros' => $request->only(['busca', 'situacao', 'data_vencimento']),
         ]);
     }
 
     public function create()
     {
-        return view('conta-pagar.create');
+        return view('conta-pagar.create', [
+            'categorias' => $this->categoriaFinanceiraRepository->listarAtivasPorTipo('despesa'),
+        ]);
     }
 
     public function store(ContaPagarRequest $request)
@@ -44,7 +51,7 @@ class ContaPagarService
     public function show(ContaPagar $contaPagar)
     {
         $this->garantirEmpresa($contaPagar);
-        $contaPagar->load('fornecedor');
+        $contaPagar->load(['fornecedor', 'categoria', 'entradaEstoque']);
 
         return view('conta-pagar.show', ['conta' => $contaPagar]);
     }
@@ -58,9 +65,18 @@ class ContaPagarService
                 ->with('error', 'Conta paga ou cancelada não pode ser editada.');
         }
 
-        $contaPagar->load('fornecedor');
+        $contaPagar->load(['fornecedor', 'categoria']);
 
-        return view('conta-pagar.edit', ['conta' => $contaPagar]);
+        $categorias = $this->categoriaFinanceiraRepository->listarAtivasPorTipo('despesa');
+        if ($contaPagar->categoria_id && !$categorias->contains('id', $contaPagar->categoria_id) && $contaPagar->categoria) {
+            $categorias->push($contaPagar->categoria);
+            $categorias = $categorias->sortBy('nome')->values();
+        }
+
+        return view('conta-pagar.edit', [
+            'conta'       => $contaPagar,
+            'categorias'  => $categorias,
+        ]);
     }
 
     public function update(ContaPagarRequest $request, ContaPagar $contaPagar)
@@ -110,17 +126,16 @@ class ContaPagarService
         }
 
         $novoValorPago = round((float) $contaPagar->valor_pago + $valorInformado, 2);
-        $situacao      = $novoValorPago >= (float) $contaPagar->valor ? 'paga' : 'parcial';
+        $valorTotal    = round((float) $contaPagar->valor, 2);
+        $situacao      = $novoValorPago >= $valorTotal ? 'paga' : 'parcial';
 
+        // Sempre grava data_pagamento (parcial e paga) — o fluxo de caixa depende disso
         $dados = [
             'valor_pago'      => $novoValorPago,
             'situacao'        => $situacao,
             'forma_pagamento' => $request->forma_pagamento ?: $contaPagar->forma_pagamento,
+            'data_pagamento'  => $request->data_pagamento,
         ];
-
-        if ($situacao === 'paga') {
-            $dados['data_pagamento'] = $request->data_pagamento;
-        }
 
         $this->repository->pagar($contaPagar, $dados);
 
@@ -151,6 +166,17 @@ class ContaPagarService
     public function destroy(ContaPagar $contaPagar)
     {
         $this->garantirEmpresa($contaPagar);
+
+        if ($contaPagar->entrada_estoque_id) {
+            return redirect()->route('conta-pagar.show', $contaPagar)
+                ->with('error', 'Conta vinculada a uma entrada de estoque não pode ser excluída. Cancele a entrada ou a conta.');
+        }
+
+        if (in_array($contaPagar->situacao, ['paga', 'parcial'], true)) {
+            return redirect()->route('conta-pagar.show', $contaPagar)
+                ->with('error', 'Conta com pagamento registrado não pode ser excluída. Cancele-a primeiro, se permitido.');
+        }
+
         $this->repository->destroy($contaPagar->id);
 
         return redirect()->route('conta-pagar.index')
@@ -165,6 +191,7 @@ class ContaPagarService
             'valor'           => $this->parseMoeda($request->valor),
             'data_vencimento' => $request->data_vencimento,
             'forma_pagamento' => $request->forma_pagamento,
+            'categoria_id'    => $request->categoria_id ?: null,
             'observacoes'     => $request->observacoes,
         ];
     }
@@ -174,23 +201,5 @@ class ContaPagarService
         if ((int) $conta->empresa_id !== (int) auth()->user()->empresa_id) {
             abort(404);
         }
-    }
-
-    protected function parseMoeda(mixed $valor): float
-    {
-        if (is_null($valor) || $valor === '') {
-            return 0.0;
-        }
-
-        $str = trim((string) $valor);
-
-        if (str_contains($str, ',') && str_contains($str, '.')) {
-            $str = str_replace('.', '', $str);
-            $str = str_replace(',', '.', $str);
-        } elseif (str_contains($str, ',')) {
-            $str = str_replace(',', '.', $str);
-        }
-
-        return round((float) $str, 2);
     }
 }

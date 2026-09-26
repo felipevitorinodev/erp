@@ -112,6 +112,17 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Comissão (%)</label>
+                        @include('components.input-numeric', [
+                            'name' => 'percentual_comissao',
+                            'value' => old('percentual_comissao', '0'),
+                            'class' => $errors->has('percentual_comissao') ? 'is-invalid' : '',
+                            'decimals' => 2
+                        ])
+                        @error('percentual_comissao')<span class="form-error">{{ $message }}</span>@enderror
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Tipo de Contrato</label>
                         <select name="tipo_contrato" class="form-control @error('tipo_contrato') is-invalid @enderror">
                             <option value="">Selecione</option>

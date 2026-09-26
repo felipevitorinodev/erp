@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Grupo;
 use App\Repositories\GrupoRepository;
+use Illuminate\Http\Request;
 
 class GrupoService
 {
@@ -11,11 +12,14 @@ class GrupoService
         protected GrupoRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $grupos = $this->repository->index();
+        $grupos = $this->repository->index($request);
 
-        return view('grupo.index', ['grupos' => $grupos]);
+        return view('grupo.index', [
+            'grupos'  => $grupos,
+            'filtros' => $request->only(['busca']),
+        ]);
     }
 
     public function create()

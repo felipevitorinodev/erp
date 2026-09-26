@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FornecedorRequest;
 use App\Models\Fornecedor;
 use App\Services\FornecedorService;
+use Illuminate\Http\Request;
 
 class FornecedorController extends Controller
 {
@@ -12,9 +13,9 @@ class FornecedorController extends Controller
         protected FornecedorService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()

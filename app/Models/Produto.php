@@ -54,12 +54,12 @@ class Produto extends Model
         'ativo'                     => 'boolean',
         'controla_estoque'          => 'boolean',
         'permite_venda_sem_estoque' => 'boolean',
-        'preco_custo'               => 'decimal:4',
-        'preco_venda'               => 'decimal:4',
-        'preco_minimo'              => 'decimal:4',
-        'estoque_minimo'            => 'decimal:3',
-        'estoque_maximo'            => 'decimal:3',
-        'estoque_atual'             => 'decimal:3',
+        'preco_custo'               => 'decimal:2',
+        'preco_venda'               => 'decimal:2',
+        'preco_minimo'              => 'decimal:2',
+        'estoque_minimo'            => 'decimal:2',
+        'estoque_maximo'            => 'decimal:2',
+        'estoque_atual'             => 'decimal:2',
     ];
 
     public function empresa()

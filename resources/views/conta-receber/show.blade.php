@@ -24,14 +24,16 @@
 
 
 
-        <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
-                data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                Excluir
-            </button>
-        </form>
+        @if (!in_array($conta->situacao, ['paga', 'parcial', 'cancelada'], true) && !$conta->venda_id)
+            <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
+                    data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                    Excluir
+                </button>
+            </form>
+        @endif
     </div>
 @endsection
 
@@ -71,6 +73,10 @@
                             —
                         @endif
                     </span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <span>{{ $conta->categoria->nome ?? '—' }}</span>
                 </div>
             </div>
             <div class="form-grid form-grid--col-4" style="margin-top:1rem;">

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\UnidadeMedida;
 use App\Repositories\UnidadeMedidaRepository;
+use Illuminate\Http\Request;
 
 class UnidadeMedidaService
 {
@@ -11,11 +12,14 @@ class UnidadeMedidaService
         protected UnidadeMedidaRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $unidadesMedida = $this->repository->index();
+        $unidadesMedida = $this->repository->index($request);
 
-        return view('unidadeMedida.index', ['unidadesMedida' => $unidadesMedida]);
+        return view('unidadeMedida.index', [
+            'unidadesMedida' => $unidadesMedida,
+            'filtros'        => $request->only(['busca']),
+        ]);
     }
 
     public function create()

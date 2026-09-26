@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Requests\FornecedorRequest;
 use App\Models\Fornecedor;
 use App\Repositories\FornecedorRepository;
+use Illuminate\Http\Request;
 
 class FornecedorService
 {
@@ -12,11 +13,14 @@ class FornecedorService
         protected FornecedorRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $fornecedores = $this->repository->index();
+        $fornecedores = $this->repository->index($request);
 
-        return view('fornecedor.index', ['fornecedores' => $fornecedores]);
+        return view('fornecedor.index', [
+            'fornecedores' => $fornecedores,
+            'filtros'      => $request->only(['busca']),
+        ]);
     }
 
     public function create()

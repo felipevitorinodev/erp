@@ -12,6 +12,11 @@
     <div class="card mb-2">
         <div class="card__body">
             <form method="GET" action="{{ route('conta-pagar.index') }}" class="form-grid form-grid--col-3">
+                <div class="form-group form-group--span-2">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+                        placeholder="Descrição ou fornecedor">
+                </div>
                 <div class="form-group">
                     <label class="form-label">Situação</label>
                     <select name="situacao" class="form-control">
@@ -51,10 +56,10 @@
                             <th>Descrição</th>
                             <th>Fornecedor</th>
                             <th>Vencimento</th>
-                            <th>Valor</th>
-                            <th>Pago</th>
+                            <th class="col-num">Valor</th>
+                            <th class="col-num">Pago</th>
                             <th>Situação</th>
-                            <th class="text-right" style="width:1%; white-space:nowrap;">Ações</th>
+                            <th class="col-actions">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -64,15 +69,15 @@
                                     && !in_array($conta->situacao, ['paga', 'cancelada'], true);
                             @endphp
                             <tr>
-                                <td class="text-muted">{{ $conta->id }}</td>
-                                <td>{{ $conta->descricao }}</td>
-                                <td>{{ $conta->fornecedor->nome ?? '—' }}</td>
-                                <td class="{{ $vencido ? 'text--danger' : '' }}">
+                                <td data-label="Nº" class="text-muted">{{ $conta->id }}</td>
+                                <td data-label="Descrição">{{ $conta->descricao }}</td>
+                                <td data-label="Fornecedor">{{ $conta->fornecedor->nome ?? '—' }}</td>
+                                <td data-label="Vencimento" class="{{ $vencido ? 'text--danger' : '' }}">
                                     {{ $conta->data_vencimento->format('d/m/Y') }}
                                 </td>
-                                <td>R$ {{ number_format($conta->valor, 2, ',', '.') }}</td>
-                                <td>R$ {{ number_format($conta->valor_pago, 2, ',', '.') }}</td>
-                                <td>
+                                <td data-label="Valor" class="col-num">R$ {{ number_format($conta->valor, 2, ',', '.') }}</td>
+                                <td data-label="Pago" class="col-num">R$ {{ number_format($conta->valor_pago, 2, ',', '.') }}</td>
+                                <td data-label="Situação">
                                     @if($conta->situacao === 'paga')
                                         <span class="badge badge--success">Paga</span>
                                     @elseif($conta->situacao === 'parcial')
@@ -83,7 +88,7 @@
                                         <span class="badge badge--warning">Aberta</span>
                                     @endif
                                 </td>
-                                <td class="text-right" style="white-space:nowrap;">
+                                <td class="col-actions" data-label="Ações">
                                     <a href="{{ route('conta-pagar.show', $conta) }}" class="btn btn--ghost btn--sm">Ver</a>
                                     @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
                                         <a href="{{ route('conta-pagar.edit', $conta) }}" class="btn btn--ghost btn--sm">Editar</a>
@@ -108,6 +113,9 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+        <div class="card__footer">
+            {{ $contas->withQueryString()->links() }}
         </div>
     </div>
 

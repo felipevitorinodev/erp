@@ -27,9 +27,11 @@ class TenantSafetyTest extends TestCase
         ]);
 
         // criar usuário da empresa B
-        $user = User::factory()->create();
-        $user->empresa_id = $empresaB->id;
-        $user->save();
+        $user = User::factory()->create([
+            'empresa_id' => $empresaB->id,
+            'perfil'     => 'admin',
+            'ativo'      => true,
+        ]);
 
         // autenticar e tentar acessar rota de edição do produto (deve retornar 404)
         $response = $this->actingAs($user)->get(route('produto.edit', $produto));

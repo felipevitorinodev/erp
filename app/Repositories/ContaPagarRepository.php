@@ -14,6 +14,13 @@ class ContaPagarRepository
             ->orderByDesc('id');
 
         if ($request) {
+            if ($request->filled('busca')) {
+                $busca = $request->busca;
+                $query->where(function ($q) use ($busca) {
+                    $q->where('descricao', 'like', "%{$busca}%")
+                        ->orWhereHas('fornecedor', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                });
+            }
             if ($request->filled('situacao')) {
                 $query->where('situacao', $request->situacao);
             }
@@ -23,7 +30,7 @@ class ContaPagarRepository
             }
         }
 
-        return $query->get();
+        return $query->paginate(20);
     }
 
     public function findOrFail(int $id): ContaPagar

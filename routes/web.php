@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoriaFinanceiraController;
+use App\Http\Controllers\AjusteEstoqueController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ComissaoController;
 use App\Http\Controllers\ContaPagarController;
 use App\Http\Controllers\ContaReceberController;
 use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\EntradaEstoqueController;
+use App\Http\Controllers\FluxoCaixaController;
 use App\Http\Controllers\FornecedorController;
 use App\Http\Controllers\FormaPagamentoController;
 use App\Http\Controllers\FuncionarioController;
@@ -12,34 +17,85 @@ use App\Http\Controllers\GrupoController;
 use App\Http\Controllers\OrcamentoController;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\UnidadeMedidaController;
+use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\VendaController;
-use App\Models\Cliente;
-use App\Models\Empresa;
-use App\Models\FormaPagamento;
-use App\Models\Fornecedor;
-use App\Models\Grupo;
+use App\Models\ContaPagar;
+use App\Models\ContaReceber;
 use App\Models\Produto;
-use App\Models\UnidadeMedida;
 use App\Models\Venda;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::get('/esqueci-senha', [AuthController::class, 'showForgotPassword'])->name('password.request');
+Route::post('/esqueci-senha', [AuthController::class, 'sendResetLink'])->name('password.email');
+Route::get('/redefinir-senha/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+Route::post('/redefinir-senha', [AuthController::class, 'resetPassword'])->name('password.update');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
 
     Route::get('/', function () {
-        return view('welcome');
+        $empresaId = auth()->user()->empresa_id ?? 0;
+        $hoje = now()->toDateString();
+        $em7Dias = now()->addDays(7)->toDateString();
+
+        $vendasHoje = Venda::where('empresa_id', $empresaId)
+            ->whereDate('data_venda', $hoje)
+            ->count();
+
+        $faturamentoHoje = (float) Venda::where('empresa_id', $empresaId)
+            ->where('situacao', 'confirmada')
+            ->whereDate('data_venda', $hoje)
+            ->sum('total');
+
+        $contasReceberVencidas = ContaReceber::where('empresa_id', $empresaId)
+            ->whereDate('data_vencimento', '<', $hoje)
+            ->whereIn('situacao', ['aberta', 'parcial'])
+            ->count();
+
+        $contasPagarVencidas = ContaPagar::where('empresa_id', $empresaId)
+            ->whereDate('data_vencimento', '<', $hoje)
+            ->whereIn('situacao', ['aberta', 'parcial'])
+            ->count();
+
+        $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
+            ->whereBetween('data_vencimento', [$hoje, $em7Dias])
+            ->whereIn('situacao', ['aberta', 'parcial'])
+            ->sum('valor');
+
+        $estoqueCritico = Produto::where('empresa_id', $empresaId)
+            ->where('controla_estoque', true)
+            ->where('ativo', true)
+            ->whereColumn('estoque_atual', '<=', 'estoque_minimo')
+            ->count();
+
+        return view('welcome', [
+            'vendasHoje'            => $vendasHoje,
+            'faturamentoHoje'       => $faturamentoHoje,
+            'contasReceberVencidas' => $contasReceberVencidas,
+            'contasPagarVencidas'   => $contasPagarVencidas,
+            'aReceber7Dias'         => $aReceber7Dias,
+            'estoqueCritico'        => $estoqueCritico,
+        ]);
     });
 
-    Route::prefix('empresa')->group(function () {
+    Route::prefix('empresa')->middleware('perfil:admin')->group(function () {
         Route::get('/', [EmpresaController::class, 'index'])->name('empresa.index');
         Route::get('/novo', [EmpresaController::class, 'create'])->name('empresa.create');
         Route::post('/salvar', [EmpresaController::class, 'store'])->name('empresa.store');
         Route::get('{empresa}/editar', [EmpresaController::class, 'edit'])->name('empresa.edit');
         Route::put('{empresa}/editar/salvar', [EmpresaController::class, 'update'])->name('empresa.update');
         Route::delete('{empresa}/excluir', [EmpresaController::class, 'destroy'])->name('empresa.destroy');
+    });
+
+    Route::prefix('usuario')->middleware('perfil:admin')->group(function () {
+        Route::get('/', [UsuarioController::class, 'index'])->name('usuario.index');
+        Route::get('/novo', [UsuarioController::class, 'create'])->name('usuario.create');
+        Route::post('/salvar', [UsuarioController::class, 'store'])->name('usuario.store');
+        Route::get('{usuario}/editar', [UsuarioController::class, 'edit'])->name('usuario.edit');
+        Route::put('{usuario}/editar/salvar', [UsuarioController::class, 'update'])->name('usuario.update');
+        Route::delete('{usuario}/excluir', [UsuarioController::class, 'destroy'])->name('usuario.destroy');
     });
 
     Route::prefix('cliente')->group(function () {
@@ -60,7 +116,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{fornecedor}/excluir', [FornecedorController::class, 'destroy'])->name('fornecedor.destroy');
     });
 
-    Route::prefix('funcionario')->group(function () {
+    Route::prefix('funcionario')->middleware('perfil:admin,operador')->group(function () {
         Route::get('/', [FuncionarioController::class, 'index'])->name('funcionario.index');
         Route::get('/novo', [FuncionarioController::class, 'create'])->name('funcionario.create');
         Route::post('/salvar', [FuncionarioController::class, 'store'])->name('funcionario.store');
@@ -87,7 +143,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{unidadeMedida}/excluir', [UnidadeMedidaController::class, 'destroy'])->name('unidadeMedida.destroy');
     });
 
-    Route::prefix('formaPagamento')->group(function () {
+    Route::prefix('formaPagamento')->middleware('perfil:admin')->group(function () {
         Route::get('/', [FormaPagamentoController::class, 'index'])->name('formaPagamento.index');
         Route::get('/novo', [FormaPagamentoController::class, 'create'])->name('formaPagamento.create');
         Route::post('/salvar', [FormaPagamentoController::class, 'store'])->name('formaPagamento.store');
@@ -103,6 +159,11 @@ Route::middleware('auth')->group(function () {
         Route::get('{produto}/editar', [ProdutoController::class, 'edit'])->name('produto.edit');
         Route::put('{produto}/editar/salvar', [ProdutoController::class, 'update'])->name('produto.update');
         Route::delete('{produto}/excluir', [ProdutoController::class, 'destroy'])->name('produto.destroy');
+    });
+
+    Route::prefix('comissao')->middleware('perfil:admin,operador')->group(function () {
+        Route::get('/', [ComissaoController::class, 'index'])->name('comissao.index');
+        Route::post('{comissao}/pagar', [ComissaoController::class, 'pagar'])->name('comissao.pagar');
     });
 
     Route::prefix('venda')->group(function () {
@@ -127,11 +188,39 @@ Route::middleware('auth')->group(function () {
         Route::get('{orcamento}/editar', [OrcamentoController::class, 'edit'])->name('orcamento.edit');
         Route::put('{orcamento}/editar/salvar', [OrcamentoController::class, 'update'])->name('orcamento.update');
         Route::post('{orcamento}/aprovar', [OrcamentoController::class, 'aprovar'])->name('orcamento.aprovar');
+        Route::post('{orcamento}/recusar', [OrcamentoController::class, 'recusar'])->name('orcamento.recusar');
         Route::post('{orcamento}/cancelar', [OrcamentoController::class, 'cancelar'])->name('orcamento.cancelar');
         Route::delete('{orcamento}/excluir', [OrcamentoController::class, 'destroy'])->name('orcamento.destroy');
     });
 
-    Route::prefix('conta-receber')->group(function () {
+    Route::prefix('entrada-estoque')->group(function () {
+        Route::get('/', [EntradaEstoqueController::class, 'index'])->name('entrada-estoque.index');
+        Route::get('/nova', [EntradaEstoqueController::class, 'create'])->name('entrada-estoque.create');
+        Route::post('/salvar', [EntradaEstoqueController::class, 'store'])->name('entrada-estoque.store');
+        Route::get('{entradaEstoque}/ver', [EntradaEstoqueController::class, 'show'])->name('entrada-estoque.show');
+        Route::get('{entradaEstoque}/editar', [EntradaEstoqueController::class, 'edit'])->name('entrada-estoque.edit');
+        Route::put('{entradaEstoque}/editar/salvar', [EntradaEstoqueController::class, 'update'])->name('entrada-estoque.update');
+        Route::post('{entradaEstoque}/confirmar', [EntradaEstoqueController::class, 'confirmar'])->name('entrada-estoque.confirmar');
+        Route::post('{entradaEstoque}/cancelar', [EntradaEstoqueController::class, 'cancelar'])->name('entrada-estoque.cancelar');
+        Route::delete('{entradaEstoque}/excluir', [EntradaEstoqueController::class, 'destroy'])->name('entrada-estoque.destroy');
+    });
+
+    Route::prefix('estoque')->group(function () {
+        Route::get('/ajuste', [AjusteEstoqueController::class, 'create'])->name('estoque.ajuste.create');
+        Route::post('/ajuste', [AjusteEstoqueController::class, 'store'])->name('estoque.ajuste.store');
+        Route::get('/historico', [AjusteEstoqueController::class, 'historico'])->name('estoque.historico');
+    });
+
+    Route::prefix('categoria-financeira')->middleware('perfil:admin,financeiro')->group(function () {
+        Route::get('/', [CategoriaFinanceiraController::class, 'index'])->name('categoria-financeira.index');
+        Route::get('/nova', [CategoriaFinanceiraController::class, 'create'])->name('categoria-financeira.create');
+        Route::post('/salvar', [CategoriaFinanceiraController::class, 'store'])->name('categoria-financeira.store');
+        Route::get('{categoriaFinanceira}/editar', [CategoriaFinanceiraController::class, 'edit'])->name('categoria-financeira.edit');
+        Route::put('{categoriaFinanceira}/editar/salvar', [CategoriaFinanceiraController::class, 'update'])->name('categoria-financeira.update');
+        Route::delete('{categoriaFinanceira}/excluir', [CategoriaFinanceiraController::class, 'destroy'])->name('categoria-financeira.destroy');
+    });
+
+    Route::prefix('conta-receber')->middleware('perfil:admin,financeiro')->group(function () {
         Route::get('/', [ContaReceberController::class, 'index'])->name('conta-receber.index');
         Route::get('/nova', [ContaReceberController::class, 'create'])->name('conta-receber.create');
         Route::post('/salvar', [ContaReceberController::class, 'store'])->name('conta-receber.store');
@@ -143,7 +232,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{contaReceber}/excluir', [ContaReceberController::class, 'destroy'])->name('conta-receber.destroy');
     });
 
-    Route::prefix('conta-pagar')->group(function () {
+    Route::prefix('conta-pagar')->middleware('perfil:admin,financeiro')->group(function () {
         Route::get('/', [ContaPagarController::class, 'index'])->name('conta-pagar.index');
         Route::get('/nova', [ContaPagarController::class, 'create'])->name('conta-pagar.create');
         Route::post('/salvar', [ContaPagarController::class, 'store'])->name('conta-pagar.store');
@@ -155,181 +244,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('{contaPagar}/excluir', [ContaPagarController::class, 'destroy'])->name('conta-pagar.destroy');
     });
 
-    Route::get('/api/clientes/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = Cliente::where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'cpf', 'cnpj')
-            ->limit($limit)
-            ->get();
-    })->name('api.clientes.busca');
-
-    Route::get('/api/fornecedores/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = Fornecedor::where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'cpf', 'cnpj')
-            ->limit($limit)
-            ->get();
-    })->name('api.fornecedores.busca');
-
-    Route::get('/api/produtos/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = Produto::where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q) {
-                $builder->where('nome', 'like', '%' . $q . '%')
-                    ->orWhere('codigo', 'like', '%' . $q . '%');
-            });
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'codigo', 'preco_venda')
-            ->limit($limit)
-            ->get();
-    })->name('api.produtos.busca');
-
-    Route::get('/api/grupos/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = Grupo::with('parent:id,nome')
-            ->where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
-        }
-
-        if (request()->boolean('apenas_principais')) {
-            $query->whereNull('parent_id');
-        }
-
-        if (request()->filled('exclude')) {
-            $query->where('id', '!=', request('exclude'));
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'parent_id')
-            ->limit($limit)
-            ->get();
-    })->name('api.grupos.busca');
-
-    Route::get('/api/unidades-medida/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = UnidadeMedida::where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q) {
-                $builder->where('nome', 'like', '%' . $q . '%')
-                    ->orWhere('sigla', 'like', '%' . $q . '%');
-            });
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'sigla')
-            ->limit($limit)
-            ->get();
-    })->name('api.unidades-medida.busca');
-
-    Route::get('/api/empresas/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = Empresa::query();
-
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q) {
-                $builder->where('razao_social', 'like', '%' . $q . '%')
-                    ->orWhere('nome_fantasia', 'like', '%' . $q . '%')
-                    ->orWhere('cnpj', 'like', '%' . $q . '%');
-            });
-        }
-
-        return $query->orderBy('razao_social')
-            ->select('id', 'razao_social', 'nome_fantasia', 'cnpj')
-            ->limit($limit)
-            ->get();
-    })->name('api.empresas.busca');
-
-    Route::get('/api/vendas/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-        $empresaId = auth()->user()->empresa_id;
-
-        $query = Venda::with('cliente:id,nome')
-            ->where('empresa_id', $empresaId);
-
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q) {
-                $builder->where('numero', 'like', '%' . $q . '%')
-                    ->orWhereHas('cliente', function ($c) use ($q) {
-                        $c->where('nome', 'like', '%' . $q . '%');
-                    });
-            });
-        }
-
-        if (request()->filled('cliente_id')) {
-            $query->where('cliente_id', request('cliente_id'));
-        }
-
-        return $query->orderBy('numero')
-            ->select('id', 'numero', 'data_venda', 'total', 'cliente_id', 'situacao')
-            ->limit($limit)
-            ->get();
-    })->name('api.vendas.busca');
-
-    Route::get('/api/formas-pagamento/busca', function () {
-        $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
-
-        $query = FormaPagamento::where('empresa_id', auth()->user()->empresa_id)
-            ->where('ativo', true);
-
-        if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
-        }
-
-        return $query->orderBy('nome')
-            ->select('id', 'nome', 'tipo', 'gera_conta_receber', 'dias_vencimento')
-            ->limit($limit)
-            ->get();
-    })->name('api.formas-pagamento.busca');
-
-    Route::get('/api/cliente/{cliente}/vendas', function (Cliente $cliente) {
-        if ((int) $cliente->empresa_id !== (int) auth()->user()->empresa_id) {
-            abort(404);
-        }
-
-        return Venda::where('empresa_id', auth()->user()->empresa_id)
-            ->where('cliente_id', $cliente->id)
-            ->orderByDesc('id')
-            ->select('id', 'numero', 'data_venda', 'total', 'situacao')
-            ->limit(50)
-            ->get();
-    })->name('api.cliente.vendas');
+    Route::get('/fluxo-de-caixa', [FluxoCaixaController::class, 'index'])
+        ->middleware('perfil:admin,financeiro')
+        ->name('fluxo-de-caixa.index');
+    Route::get('/fluxo-de-caixa/csv', [FluxoCaixaController::class, 'csv'])
+        ->middleware('perfil:admin,financeiro')
+        ->name('fluxo-de-caixa.csv');
 
 });

@@ -151,10 +151,12 @@
             this.setAttribute('data-decimals', '2');
         }
     });
-    // quantidades -> 3 casas
+    // quantidades -> 2 casas (respeita data-decimals se já definido)
     $(document).on('input', '.input-qtd', function () {
         if (!this.classList.contains('input-numeric')) {
             this.classList.add('input-numeric');
+        }
+        if (!this.getAttribute('data-decimals')) {
             this.setAttribute('data-decimals', '2');
         }
     });
@@ -162,6 +164,8 @@
     $(document).on('focus', '.input-preco, .input-desc-item, .input-moeda, .totals-box__input, #input-desconto, #input-acrescimo, .input-qtd', function () {
             if (!this.classList.contains('input-numeric')) {
             this.classList.add('input-numeric');
+        }
+        if (!this.getAttribute('data-decimals')) {
             if (this.classList.contains('input-qtd')) {
                 this.setAttribute('data-decimals', '2');
             } else {
@@ -248,25 +252,6 @@
                 }
             });
 
-            // debug last click submitter capture
-            (function attachClickCaptureDebug() {
-                var orig = window.__lastClickSubmitter;
-                document.addEventListener('click', function (ev) {
-                    try {
-                        var t = ev.target;
-                        var btn = t.closest ? t.closest('button, input[type=\"submit\"]') : null;
-                        if (btn) {
-                            window.__lastClickSubmitter = btn;
-                            console.debug && console.debug('modal-confirm: captured lastClickSubmitter', btn);
-                        } else {
-                            window.__lastClickSubmitter = null;
-                        }
-                    } catch (err) {
-                        window.__lastClickSubmitter = null;
-                    }
-                }, true);
-            })();
-
             // capture last clicked submitter as fallback for browsers that don't support SubmitEvent.submitter
             (function attachClickCapture() {
                 document.addEventListener('click', function (ev) {
@@ -316,7 +301,6 @@
                 }
 
                 var submitter = e.submitter || window.__lastClickSubmitter;
-                console.debug && console.debug('modal-confirm: submit intercepted', { form: form, submitter: submitter, trigger: trigger });
                 var trigger = null;
 
                 if (submitter && submitter.hasAttribute('data-confirm')) {
@@ -575,12 +559,22 @@
         // pointerdown handles both mouse and touch/pen; do not use click fallback to avoid duplicate events
         keypad.addEventListener('pointerdown', handleKeypadEvent);
 
-        // hide when tapping outside
+            // hide when tapping outside
         document.addEventListener('touchstart', function (e) {
             if (!keypad || !activeInput) return;
             if (e.target.closest('#numeric-keypad') || e.target === activeInput) return;
             hideKeypad();
         }, { passive: true });
+
+        // esconder teclado quando modal abrir
+        var modalObserver = new MutationObserver(function () {
+            document.querySelectorAll('.modal-overlay').forEach(function (m) {
+                if (!m.hidden) hideKeypad();
+            });
+        });
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            modalObserver.observe(m, { attributes: true, attributeFilter: ['hidden'] });
+        });
     }
 
     function showKeypadFor(input) {
@@ -631,8 +625,10 @@
             if (!el.matches(selector)) return;
             if (!el.classList.contains('input-numeric')) {
                 el.classList.add('input-numeric');
-                if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
-                else el.setAttribute('data-decimals', '2');
+                if (!el.getAttribute('data-decimals')) {
+                    if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
+                    else el.setAttribute('data-decimals', '2');
+                }
             }
             // initialize buffer and set replace-first behavior
             var val = String(el.value || '');
@@ -735,7 +731,7 @@
         // ensure data-decimals exists for legacy classes
         if (!el.classList.contains('input-numeric')) {
             el.classList.add('input-numeric');
-            if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '3');
+            if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
             else el.setAttribute('data-decimals', '2');
         }
         showKeypadFor(el);
@@ -749,7 +745,7 @@
         if (el.matches(selector) && isMobileClient()) {
             if (!el.classList.contains('input-numeric')) {
                 el.classList.add('input-numeric');
-                if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '3');
+                if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
                 else el.setAttribute('data-decimals', '2');
             }
             showKeypadFor(el);
@@ -767,6 +763,19 @@ document.addEventListener('submit', function (e) {
     try {
         var form = e.target;
         if (!(form instanceof HTMLFormElement)) return;
+
+        // Não desabilitar/normalizar se o submit será interceptado pelo modal de confirmação
+        var submitter = e.submitter || window.__lastClickSubmitter;
+        var needsConfirm = false;
+        if (submitter && submitter.hasAttribute && submitter.hasAttribute('data-confirm')) {
+            needsConfirm = true;
+        } else if (form.hasAttribute('data-confirm')) {
+            needsConfirm = true;
+        }
+        if (needsConfirm && form.dataset.confirmApproved !== '1') {
+            return;
+        }
+
         // prevenir double-submit
         if (form.dataset.submitted === '1') {
             e.preventDefault();
@@ -796,3 +805,94 @@ document.addEventListener('submit', function (e) {
         // noop
     }
 }, true);
+
+// Toast auto-dismiss + ViaCEP + mascaras
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.toast').forEach(function (toast) {
+        setTimeout(function () {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 4500);
+    });
+
+    document.querySelectorAll('[name="cep"]').forEach(function (cepEl) {
+        cepEl.addEventListener('blur', function () {
+            var cep = String(this.value || '').replace(/\D/g, '');
+            if (cep.length !== 8) return;
+            var form = this.closest('form') || document;
+            fetch('https://viacep.com.br/ws/' + cep + '/json/')
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d || d.erro) return;
+                    var set = function (name, val) {
+                        var el = form.querySelector('[name="' + name + '"]');
+                        if (el) el.value = val || '';
+                    };
+                    set('logradouro', d.logradouro);
+                    set('bairro', d.bairro);
+                    set('cidade', d.localidade);
+                    var uf = form.querySelector('[name="estado"]') || form.querySelector('[name="uf"]');
+                    if (uf) uf.value = d.uf || '';
+                })
+                .catch(function () {});
+        });
+    });
+
+    function onlyDigits(v) { return String(v || '').replace(/\D/g, ''); }
+
+    function maskCpf(v) {
+        v = onlyDigits(v).slice(0, 11);
+        if (v.length > 9) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+        if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+        if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+        return v;
+    }
+
+    function maskCep(v) {
+        v = onlyDigits(v).slice(0, 8);
+        if (v.length > 5) return v.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+        return v;
+    }
+
+    function maskPhone(v) {
+        v = onlyDigits(v).slice(0, 11);
+        if (v.length > 10) return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        if (v.length > 6) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        if (v.length > 2) return v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+        return v;
+    }
+
+    function maskCnpjNumeric(v) {
+        v = onlyDigits(v).slice(0, 14);
+        if (v.length > 12) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
+        if (v.length > 8) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+        if (v.length > 5) return v.replace(/(\d{2})(\d{3})(\d{1,3})/, '$1.$2.$3');
+        if (v.length > 2) return v.replace(/(\d{2})(\d{1,3})/, '$1.$2');
+        return v;
+    }
+
+    document.querySelectorAll('[name="cpf"]').forEach(function (el) {
+        el.addEventListener('input', function () { this.value = maskCpf(this.value); });
+    });
+
+    document.querySelectorAll('[name="cep"]').forEach(function (el) {
+        el.addEventListener('input', function () { this.value = maskCep(this.value); });
+    });
+
+    document.querySelectorAll('[name="telefone"], [name="celular"]').forEach(function (el) {
+        el.addEventListener('input', function () { this.value = maskPhone(this.value); });
+    });
+
+    document.querySelectorAll('[name="cnpj"]').forEach(function (el) {
+        el.addEventListener('input', function () {
+            var raw = String(this.value || '').toUpperCase();
+            var alnum = raw.replace(/[^0-9A-Z]/g, '');
+            if (/[A-Z]/.test(alnum)) {
+                this.value = alnum.slice(0, 14);
+            } else {
+                this.value = maskCnpjNumeric(alnum);
+            }
+        });
+    });
+});

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <!-- Prevent mobile zoom to improve usability on small screens -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Visys') — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
@@ -45,12 +45,60 @@
             <nav class="sidebar__nav">
 
                 <div class="sidebar__group" data-group>
-                    <a style="text-decoration: none;" href="/">
-                        <div class="sidebar__group-toggle" data-toggle>
-                            <span class="sidebar__group-label">INÍCIO</span>
-                        </div>
+                    <a href="/" class="sidebar__link {{ request()->is('/') ? 'sidebar__link--active' : '' }}">
+                        <span class="sidebar__icon">&#9632;</span> Início
                     </a>
                 </div>
+
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <span class="sidebar__group-label">OPERACIONAL</span>
+                        <span class="sidebar__group-arrow">&#9660;</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('venda.index') }}"
+                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Vendas
+                        </a>
+                        <a href="{{ route('orcamento.index') }}"
+                            class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Orçamentos
+                        </a>
+                        <a href="{{ route('entrada-estoque.index') }}"
+                            class="sidebar__link {{ request()->routeIs('entrada-estoque.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Entradas de Estoque
+                        </a>
+                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'operador'], true))
+                            <a href="{{ route('comissao.index') }}"
+                                class="sidebar__link {{ request()->routeIs('comissao.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Comissões
+                            </a>
+                        @endif
+                    </div>
+                </div>
+
+                @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <span class="sidebar__group-label">FINANCEIRO</span>
+                        <span class="sidebar__group-arrow">&#9660;</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('conta-receber.index') }}"
+                            class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Contas a Receber
+                        </a>
+                        <a href="{{ route('conta-pagar.index') }}"
+                            class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                        </a>
+                        <a href="{{ route('fluxo-de-caixa.index') }}"
+                            class="sidebar__link {{ request()->routeIs('fluxo-de-caixa.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Fluxo de Caixa
+                        </a>
+                    </div>
+                </div>
+                @endif
 
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -59,11 +107,6 @@
                     </div>
 
                     <div class="sidebar__group-links" data-links>
-
-                        <a href="{{ route('empresa.index') }}"
-                            class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Empresas
-                        </a>
 
                         <a href="{{ route('cliente.index') }}"
                             class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
@@ -75,10 +118,12 @@
                             <span class="sidebar__icon">&#9632;</span> Fornecedores
                         </a>
 
-                        <a href="{{ route('funcionario.index') }}"
-                            class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Funcionários
-                        </a>
+                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'operador'], true))
+                            <a href="{{ route('funcionario.index') }}"
+                                class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Funcionários
+                            </a>
+                        @endif
 
                         {{-- Sub-grupo: Produtos --}}
                         <div class="sidebar__subgroup" data-subgroup>
@@ -110,34 +155,31 @@
 
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">FATURAMENTO</span>
+                        <span class="sidebar__group-label">RELATÓRIOS</span>
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('venda.index') }}"
-                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Vendas
+                        <a href="{{ route('relatorio.vendas') }}"
+                            class="sidebar__link {{ request()->routeIs('relatorio.vendas*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Vendas por Período
                         </a>
-                        <a href="{{ route('orcamento.index') }}"
-                            class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Orçamentos
+                        <a href="{{ route('relatorio.produtos-mais-vendidos') }}"
+                            class="sidebar__link {{ request()->routeIs('relatorio.produtos-mais-vendidos*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Produtos Mais Vendidos
                         </a>
-                    </div>
-                </div>
-
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <span class="sidebar__group-label">FINANCEIRO</span>
-                        <span class="sidebar__group-arrow">&#9660;</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('conta-receber.index') }}"
-                            class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Contas a Receber
-                        </a>
-                        <a href="{{ route('conta-pagar.index') }}"
-                            class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
+                            <a href="{{ route('relatorio.contas-receber') }}"
+                                class="sidebar__link {{ request()->routeIs('relatorio.contas-receber*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Contas a Receber
+                            </a>
+                            <a href="{{ route('relatorio.contas-pagar') }}"
+                                class="sidebar__link {{ request()->routeIs('relatorio.contas-pagar*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Contas a Pagar
+                            </a>
+                        @endif
+                        <a href="{{ route('relatorio.estoque') }}"
+                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Posição de Estoque
                         </a>
                     </div>
                 </div>
@@ -148,10 +190,32 @@
                         <span class="sidebar__group-arrow">&#9660;</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('formaPagamento.index') }}"
-                            class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
-                            <span class="sidebar__icon">&#9632;</span> Formas de Pagamento
+                        @if((auth()->user()->perfil ?? '') === 'admin')
+                            <a href="{{ route('formaPagamento.index') }}"
+                                class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Formas de Pagamento
+                            </a>
+                        @endif
+                        @if(in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true))
+                            <a href="{{ route('categoria-financeira.index') }}"
+                                class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Categorias Financeiras
+                            </a>
+                        @endif
+                        <a href="{{ route('estoque.ajuste.create') }}"
+                            class="sidebar__link {{ request()->routeIs('estoque.*') ? 'sidebar__link--active' : '' }}">
+                            <span class="sidebar__icon">&#9632;</span> Ajuste de Estoque
                         </a>
+                        @if((auth()->user()->perfil ?? '') === 'admin')
+                            <a href="{{ route('usuario.index') }}"
+                                class="sidebar__link {{ request()->routeIs('usuario.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Usuários
+                            </a>
+                            <a href="{{ route('empresa.index') }}"
+                                class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
+                                <span class="sidebar__icon">&#9632;</span> Empresas
+                            </a>
+                        @endif
                     </div>
                 </div>
 
@@ -172,15 +236,17 @@
                 </div>
             </div>
 
-            @if (session('success'))
-                <div class="alert alert--success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="alert alert--error">
-                    {{ session('error') }}
+            @if (session('success') || session('error') || session('warning'))
+                <div class="toast-stack" id="toast-stack" aria-live="polite">
+                    @if (session('success'))
+                        <div class="toast toast--success" role="alert">{{ session('success') }}</div>
+                    @endif
+                    @if (session('error'))
+                        <div class="toast toast--error" role="alert">{{ session('error') }}</div>
+                    @endif
+                    @if (session('warning'))
+                        <div class="toast toast--warning" role="alert">{{ session('warning') }}</div>
+                    @endif
                 </div>
             @endif
 
@@ -237,7 +303,8 @@
             if (!toggle || !links || !arrow) return;
 
             var hasActive = group.querySelector('.sidebar__link--active');
-            if (!hasActive) {
+            var keepOpen = group.hasAttribute('data-keep-open');
+            if (!hasActive && !keepOpen) {
                 links.classList.add('sidebar__group-links--collapsed');
                 arrow.classList.add('sidebar__group-arrow--collapsed');
             }

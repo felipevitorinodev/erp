@@ -26,6 +26,7 @@ class Funcionario extends Model
         'cargo',
         'departamento',
         'salario',
+        'percentual_comissao',
         'data_admissao',
         'data_demissao',
         'tipo_contrato',
@@ -35,7 +36,8 @@ class Funcionario extends Model
 
     protected $casts = [
         'ativo'           => 'boolean',
-        'salario'         => 'decimal:2',
+        'salario'              => 'decimal:2',
+        'percentual_comissao'  => 'decimal:2',
         'data_nascimento' => 'date',
         'data_admissao'   => 'date',
         'data_demissao'   => 'date',
@@ -49,5 +51,15 @@ class Funcionario extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vendas()
+    {
+        return $this->hasMany(Venda::class);
+    }
+
+    public function comissoes()
+    {
+        return $this->hasMany(Comissao::class);
     }
 }

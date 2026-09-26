@@ -3,14 +3,24 @@
 namespace App\Repositories;
 
 use App\Models\UnidadeMedida;
+use Illuminate\Http\Request;
 
 class UnidadeMedidaRepository
 {
-    public function index()
+    public function index(?Request $request = null)
     {
-        return UnidadeMedida::where('empresa_id', auth()->user()->empresa_id)
-            ->orderBy('nome')
-            ->get();
+        $query = UnidadeMedida::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome');
+
+        if ($request && $request->filled('busca')) {
+            $busca = $request->busca;
+            $query->where(function ($q) use ($busca) {
+                $q->where('nome', 'like', "%{$busca}%")
+                    ->orWhere('sigla', 'like', "%{$busca}%");
+            });
+        }
+
+        return $query->paginate(20);
     }
 
     public function store(array $data)

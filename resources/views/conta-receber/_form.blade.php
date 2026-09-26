@@ -70,6 +70,20 @@
         </div>
         @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
     </div>
+
+    <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" class="form-control @error('categoria_id') is-invalid @enderror">
+            <option value="">— Sem categoria —</option>
+            @foreach($categorias ?? [] as $categoria)
+                <option value="{{ $categoria->id }}"
+                    {{ (string) old('categoria_id', $conta->categoria_id ?? '') === (string) $categoria->id ? 'selected' : '' }}>
+                    {{ $categoria->nome }}
+                </option>
+            @endforeach
+        </select>
+        @error('categoria_id')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
 </div>
 
 <div class="form-grid form-grid--col-1" style="margin-top:1rem;">

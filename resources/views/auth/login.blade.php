@@ -307,6 +307,7 @@
                         <label>
                             <input type="checkbox" name="remember"> Lembrar-me neste dispositivo
                         </label>
+                        <a href="{{ route('password.request') }}" style="font-size:12px;">Esqueci a senha</a>
                     </div>
 
                     <button type="submit" class="btn btn--primary btn-login-full">

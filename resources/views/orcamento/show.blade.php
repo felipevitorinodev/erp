@@ -30,6 +30,16 @@
 
             <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm" title="Editar">Editar</a>
 
+            <form method="POST" action="{{ route('orcamento.recusar', $orcamento) }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn--warning btn--sm"
+                    data-confirm="Recusar o orçamento #{{ $orcamento->numero }}?"
+                    data-confirm-title="Recusar orçamento" data-confirm-ok="Recusar"
+                    data-confirm-variant="warning">
+                    Recusar
+                </button>
+            </form>
+
             <form method="POST" action="{{ route('orcamento.cancelar', $orcamento) }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn--danger btn--sm"
@@ -127,10 +137,10 @@
                     <thead>
                         <tr>
                             <th>Produto</th>
-                            <th class="text-right">Qtd.</th>
-                            <th class="text-right">Preço Unit.</th>
-                            <th class="text-right">Desconto</th>
-                            <th class="text-right">Total</th>
+                            <th class="col-num">Qtd.</th>
+                            <th class="col-num">Preço Unit.</th>
+                            <th class="col-num">Desconto</th>
+                            <th class="col-num">Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,10 +153,10 @@
                                             style="font-size:11px;">({{ $item->produto_codigo }})</span>
                                     @endif
                                 </td>
-                                <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
-                                <td class="text-right">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
-                                <td class="text-right">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
-                                <td class="text-right text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
+                                <td class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
+                                <td class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                                <td class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
+                                <td class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
                             </tr>
                         @empty
                             <tr>

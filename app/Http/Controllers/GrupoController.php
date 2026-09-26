@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\GrupoRequest;
 use App\Models\Grupo;
 use App\Services\GrupoService;
+use Illuminate\Http\Request;
 
 
 class GrupoController extends Controller
@@ -14,8 +15,9 @@ class GrupoController extends Controller
         protected GrupoService $service
     ) {}
 
-    public function index(){
-        return $this->service->index();
+    public function index(Request $request)
+    {
+        return $this->service->index($request);
     }
 
     public function create(){

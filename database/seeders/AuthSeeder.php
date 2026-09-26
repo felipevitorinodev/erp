@@ -20,9 +20,17 @@ class AuthSeeder extends Seeder
             ['email' => 'admin@dev.com'],
             [
                 'empresa_id' => $empresa->id,
-                'name' => 'Desenvolvedor',
-                'password' => Hash::make('dev@123'),
+                'name'       => 'Desenvolvedor',
+                'password'   => Hash::make('dev@123'),
+                'perfil'     => 'admin',
+                'ativo'      => true,
             ]
         );
+
+        // Não altera senha/nome se o usuário já existir — só garante acesso
+        User::where('email', 'admin@dev.com')->update([
+            'perfil' => 'admin',
+            'ativo'  => true,
+        ]);
     }
 }

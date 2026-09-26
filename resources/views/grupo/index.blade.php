@@ -9,6 +9,24 @@
 
 @section('content')
 
+    <div class="card mb-2">
+        <div class="card__body">
+            <form method="GET" action="{{ route('grupo.index') }}" class="form-grid form-grid--col-3">
+                <div class="form-group form-group--span-2">
+                    <label class="form-label">Busca</label>
+                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+                        placeholder="Nome do grupo">
+                </div>
+                <div class="form-group">
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
+                        <a href="{{ route('grupo.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card__header">
             <span class="card__title">Listagem de grupos</span>
@@ -52,6 +70,9 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+        <div class="card__footer">
+            {{ $grupos->withQueryString()->links() }}
         </div>
     </div>
 

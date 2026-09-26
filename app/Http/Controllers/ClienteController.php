@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ClienteRequest;
 use App\Models\Cliente;
 use App\Services\ClienteService;
+use Illuminate\Http\Request;
 
 
 class ClienteController extends Controller
@@ -14,8 +15,9 @@ class ClienteController extends Controller
         protected ClienteService $service
     ) {}
 
-    public function index(){
-        return $this->service->index();
+    public function index(Request $request)
+    {
+        return $this->service->index($request);
     }
 
     public function create(){

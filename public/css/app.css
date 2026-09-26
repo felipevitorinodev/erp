@@ -51,6 +51,7 @@
 html,
 body {
     height: 100%;
+    overflow: hidden;
     font-family: var(--font-main);
     font-size: 14px;
     color: var(--color-text);
@@ -130,6 +131,10 @@ a:hover {
     color: rgba(255, 255, 255, 0.88);
     font-size: 13px;
     font-weight: 600;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .header__logout {
@@ -154,11 +159,14 @@ a:hover {
    LAYOUT PRINCIPAL (sidebar + main)
    ========================================= */
 .layout {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    right: 0;
+    bottom: var(--footer-h);
     display: grid;
     grid-template-columns: var(--sidebar-w) 1fr;
-    margin-top: var(--header-h);
-    height: calc(100vh - var(--header-h) - var(--footer-h));
-    padding-bottom: var(--footer-h);
+    overflow: hidden;
 }
 
 /* =========================================
@@ -167,9 +175,9 @@ a:hover {
 .sidebar {
     background: var(--color-surface);
     border-right: 1px solid var(--color-border);
-    position: sticky;
-    top: var(--header-h);
-    height: 100vh;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     box-shadow: var(--shadow-sm);
 }
@@ -237,8 +245,12 @@ a:hover {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    height: 100%;
     padding: 1.35rem 1.4rem;
     gap: 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* =========================================
@@ -394,6 +406,72 @@ a:hover {
 }
 
 /* =========================================
+   PAGINAÇÃO
+   ========================================= */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.pagination__info {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.pagination__info strong {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.pagination__links {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.pagination__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.65rem;
+    border: 1px solid var(--color-border);
+    background: #fff;
+    color: var(--color-text-mid);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-main);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.pagination__btn:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    text-decoration: none;
+}
+
+.pagination__btn--active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    cursor: default;
+}
+
+.pagination__btn--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* =========================================
    STATS GRID
    ========================================= */
 .stats-grid {
@@ -455,6 +533,7 @@ a:hover {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    table-layout: auto;
 }
 
 .table th {
@@ -468,6 +547,7 @@ a:hover {
     border-bottom: 2px solid var(--color-border);
     text-align: left;
     white-space: nowrap;
+    vertical-align: middle;
 }
 
 .table td {
@@ -475,6 +555,31 @@ a:hover {
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text);
     vertical-align: middle;
+}
+
+/* Garante alinhamento igual entre header e células (específico o bastante para vencer .table th) */
+.table th.text-right,
+.table td.text-right {
+    text-align: right;
+}
+
+.table th.text-center,
+.table td.text-center {
+    text-align: center;
+}
+
+.table th.col-num,
+.table td.col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.table th.col-actions,
+.table td.col-actions {
+    text-align: right;
+    width: 1%;
+    white-space: nowrap;
 }
 
 .table tbody tr:hover {
@@ -856,7 +961,7 @@ select.form-control {
 /* Links dentro do grupo */
 .sidebar__group-links {
     overflow: hidden;
-    max-height: 500px;
+    max-height: 2000px;
     transition: max-height 0.25s ease;
 }
 
@@ -1007,7 +1112,7 @@ select.form-control {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 200;
+    z-index: 30000;
     padding: 1rem;
 }
 
@@ -1056,6 +1161,33 @@ select.form-control {
     border-color: #175a30;
     color: #FFF;
     text-decoration: none;
+}
+
+.btn--warning {
+    background: #B45309;
+    color: #FFF;
+    border-color: #B45309;
+}
+
+.btn--warning:hover {
+    background: #92400E;
+    border-color: #92400E;
+    color: #FFF;
+    text-decoration: none;
+}
+
+.card--link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.card--link:hover {
+    text-decoration: none;
+    color: inherit;
+    border-color: var(--color-primary-lt);
+    box-shadow: var(--shadow-md);
 }
 
 .text--danger {
@@ -1494,6 +1626,13 @@ select.form-control {
 }
 
 @media (max-width: 900px) {
+    html,
+    body {
+        overflow: auto;
+        height: auto;
+        min-height: 100%;
+    }
+
     .header__menu {
         display: inline-flex;
     }
@@ -1508,10 +1647,22 @@ select.form-control {
         height: 44px;
     }
 
+    .header__user-name {
+        max-width: 110px;
+    }
+
     .layout {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
         grid-template-columns: 1fr;
         height: auto;
         min-height: calc(100vh - var(--header-h) - var(--footer-h));
+        margin-top: var(--header-h);
+        overflow: visible;
+        padding-bottom: var(--footer-h);
     }
 
     .sidebar {
@@ -1539,6 +1690,8 @@ select.form-control {
     .main {
         padding: 1rem;
         width: 100%;
+        overflow: visible;
+        min-height: 0;
     }
 
     .form-grid--col-3 {
@@ -1559,16 +1712,52 @@ select.form-control {
         flex-wrap: wrap;
     }
 
+    .page-bar {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .page-bar__title {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
     .page-bar__actions {
         width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .page-bar__actions .btn {
         flex: 0 1 auto;
     }
 
+    .filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .filter-actions .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+        min-height: 40px;
+    }
+
     .table:not(.table--cards) {
         min-width: 640px;
+    }
+
+    .home-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .form-grid.form-grid--col-3 > .form-group {
+        min-width: 0;
     }
 }
 
@@ -1612,8 +1801,9 @@ select.form-control {
     .page-bar__actions .btn {
         justify-content: center;
     }
+}
 
-/* central action row for pages (center volta/pdf/edit) */
+/* central action row for pages (center volta/pdf/edit) — global, not only mobile */
 .page-actions-center {
     display: flex;
     gap: 0.5rem;
@@ -1627,6 +1817,7 @@ select.form-control {
     min-width: 110px;
 }
 
+@media (max-width: 640px) {
     /* Mobile: ações ficam empilháveis mas não forçam largura total — mantemos botões compactos e com wrap */
     .page-bar__actions {
         display: flex;
@@ -1832,7 +2023,8 @@ select.form-control {
     }
     /* Ajustar layout quando o footer estiver oculto */
     .layout {
-        height: calc(100vh - var(--header-h));
+        height: auto;
+        min-height: calc(100vh - var(--header-h));
         padding-bottom: 0;
     }
     /* Quando a sidebar usa bottom: var(--footer-h) em mobile, resetar para 0 */
@@ -1917,6 +2109,7 @@ select.form-control {
     }
 
     .table--cards td.list-card__actions,
+    .table--cards td.col-actions,
     .table--cards td:last-child:not([colspan]) {
         justify-content: flex-end;
         flex-wrap: wrap;
@@ -1928,8 +2121,13 @@ select.form-control {
     }
 
     .table--cards td.list-card__actions::before,
+    .table--cards td.col-actions::before,
     .table--cards td:last-child:not([colspan])::before {
         display: none;
+    }
+
+    .table--cards td.col-num {
+        text-align: right;
     }
 
     .table--cards td[colspan] {
@@ -1959,7 +2157,7 @@ select.form-control {
     bottom: 0;
     background: #ffffff;
     border-top: 1px solid var(--color-border);
-    z-index: 20000;
+    z-index: 15000;
     display: none;
     box-shadow: 0 -6px 18px rgba(0,0,0,0.08);
     padding: 0.5rem;
@@ -2024,6 +2222,7 @@ select.form-control {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 .page-actions .btn {
     display: inline-flex;
@@ -2107,4 +2306,43 @@ select.form-control {
 /* Utility */
 .d-inline {
     display: inline;
+}
+
+/* =========================================
+   TOAST
+   ========================================= */
+.toast-stack {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: 420px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    left: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0.875rem 1.25rem;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: auto;
+    animation: toast-in 0.25s ease;
+}
+.toast--success { background: #166534; color: #fff; }
+.toast--error   { background: #991b1b; color: #fff; }
+.toast--warning { background: #92400e; color: #fff; }
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(1rem); }
+    to   { opacity: 1; transform: none; }
 }

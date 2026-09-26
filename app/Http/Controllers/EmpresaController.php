@@ -14,8 +14,9 @@ class EmpresaController extends Controller
         protected EmpresaService $empresaService
     ) {}
 
-    public function index(){
-        return $this->empresaService->index();
+    public function index(Request $request)
+    {
+        return $this->empresaService->index($request);
     }
 
     public function create(){

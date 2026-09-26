@@ -20,8 +20,8 @@ class VendaItem extends Model
     ];
 
     protected $casts = [
-        'quantidade'     => 'decimal:3',
-        'preco_unitario' => 'decimal:4',
+        'quantidade'     => 'decimal:2',
+        'preco_unitario' => 'decimal:2',
         'desconto'       => 'decimal:2',
         'total'          => 'decimal:2',
     ];

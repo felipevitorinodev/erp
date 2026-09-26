@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FormaPagamento;
 use App\Repositories\FormaPagamentoRepository;
+use Illuminate\Http\Request;
 
 class FormaPagamentoService
 {
@@ -11,11 +12,14 @@ class FormaPagamentoService
         protected FormaPagamentoRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $formasPagamento = $this->repository->index();
+        $formasPagamento = $this->repository->index($request);
 
-        return view('formaPagamento.index', ['formasPagamento' => $formasPagamento]);
+        return view('formaPagamento.index', [
+            'formasPagamento' => $formasPagamento,
+            'filtros'         => $request->only(['busca']),
+        ]);
     }
 
     public function create()

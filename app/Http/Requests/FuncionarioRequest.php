@@ -28,7 +28,8 @@ class FuncionarioRequest extends FormRequest
 
             'cargo'           => 'nullable|string|max:100',
             'departamento'    => 'nullable|string|max:100',
-            'salario'         => 'nullable|numeric|min:0',
+            'salario'              => 'nullable|numeric|min:0',
+            'percentual_comissao'  => 'nullable|numeric|min:0|max:100',
 
             'data_admissao'   => 'nullable|date',
             'data_demissao'   => 'nullable|date|after_or_equal:data_admissao',

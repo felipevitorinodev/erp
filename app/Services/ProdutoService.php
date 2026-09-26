@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Grupo;
 use App\Models\Produto;
 use App\Repositories\ProdutoRepository;
+use Illuminate\Http\Request;
 
 class ProdutoService
 {
@@ -11,11 +13,18 @@ class ProdutoService
         protected ProdutoRepository $repository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $produtos = $this->repository->index();
+        $produtos = $this->repository->index($request);
+        $grupos = Grupo::where('empresa_id', auth()->user()->empresa_id)
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
 
-        return view('produto.index', ['produtos' => $produtos]);
+        return view('produto.index', [
+            'produtos' => $produtos,
+            'grupos'   => $grupos,
+            'filtros'  => $request->only(['busca', 'tipo', 'grupo_id']),
+        ]);
     }
 
     public function create()

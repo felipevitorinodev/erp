@@ -125,10 +125,10 @@
                     <thead>
                         <tr>
                             <th>Produto</th>
-                            <th class="text-right">Qtd.</th>
-                            <th class="text-right">Preço Unit.</th>
-                            <th class="text-right">Desconto</th>
-                            <th class="text-right">Total</th>
+                            <th class="col-num">Qtd.</th>
+                            <th class="col-num">Preço Unit.</th>
+                            <th class="col-num">Desconto</th>
+                            <th class="col-num">Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -140,10 +140,10 @@
                                         <span class="text-muted" style="font-size:11px;">({{ $item->produto_codigo }})</span>
                                     @endif
                                 </td>
-                                <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
-                                <td class="text-right">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
-                                <td class="text-right">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
-                                <td class="text-right text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
+                                <td class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
+                                <td class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                                <td class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
+                                <td class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
                             </tr>
                         @empty
                             <tr>

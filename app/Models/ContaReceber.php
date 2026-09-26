@@ -23,6 +23,7 @@ class ContaReceber extends Model
         'data_vencimento',
         'data_pagamento',
         'forma_pagamento',
+        'categoria_id',
         'situacao',
         'observacoes',
     ];
@@ -47,5 +48,10 @@ class ContaReceber extends Model
     public function venda()
     {
         return $this->belongsTo(Venda::class);
+    }
+
+    public function categoria()
+    {
+        return $this->belongsTo(CategoriaFinanceira::class, 'categoria_id');
     }
 }

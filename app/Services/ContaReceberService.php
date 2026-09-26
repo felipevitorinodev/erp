@@ -4,13 +4,18 @@ namespace App\Services;
 
 use App\Http\Requests\ContaReceberRequest;
 use App\Models\ContaReceber;
+use App\Repositories\CategoriaFinanceiraRepository;
 use App\Repositories\ContaReceberRepository;
+use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 
 class ContaReceberService
 {
+    use ConversorMoeda;
+
     public function __construct(
-        protected ContaReceberRepository $repository
+        protected ContaReceberRepository $repository,
+        protected CategoriaFinanceiraRepository $categoriaFinanceiraRepository
     ) {}
 
     public function index(Request $request)
@@ -19,13 +24,15 @@ class ContaReceberService
 
         return view('conta-receber.index', [
             'contas'   => $contas,
-            'filtros'  => $request->only(['situacao', 'data_vencimento']),
+            'filtros'  => $request->only(['busca', 'situacao', 'data_vencimento']),
         ]);
     }
 
     public function create()
     {
-        return view('conta-receber.create');
+        return view('conta-receber.create', [
+            'categorias' => $this->categoriaFinanceiraRepository->listarAtivasPorTipo('receita'),
+        ]);
     }
 
     public function store(ContaReceberRequest $request)
@@ -44,7 +51,7 @@ class ContaReceberService
     public function show(ContaReceber $contaReceber)
     {
         $this->garantirEmpresa($contaReceber);
-        $contaReceber->load(['cliente', 'venda']);
+        $contaReceber->load(['cliente', 'venda', 'categoria']);
 
         return view('conta-receber.show', ['conta' => $contaReceber]);
     }
@@ -58,9 +65,18 @@ class ContaReceberService
                 ->with('error', 'Conta paga ou cancelada não pode ser editada.');
         }
 
-        $contaReceber->load(['cliente', 'venda']);
+        $contaReceber->load(['cliente', 'venda', 'categoria']);
 
-        return view('conta-receber.edit', ['conta' => $contaReceber]);
+        $categorias = $this->categoriaFinanceiraRepository->listarAtivasPorTipo('receita');
+        if ($contaReceber->categoria_id && !$categorias->contains('id', $contaReceber->categoria_id) && $contaReceber->categoria) {
+            $categorias->push($contaReceber->categoria);
+            $categorias = $categorias->sortBy('nome')->values();
+        }
+
+        return view('conta-receber.edit', [
+            'conta'        => $contaReceber,
+            'categorias'   => $categorias,
+        ]);
     }
 
     public function update(ContaReceberRequest $request, ContaReceber $contaReceber)
@@ -110,17 +126,16 @@ class ContaReceberService
         }
 
         $novoValorPago = round((float) $contaReceber->valor_pago + $valorInformado, 2);
-        $situacao      = $novoValorPago >= (float) $contaReceber->valor ? 'paga' : 'parcial';
+        $valorTotal    = round((float) $contaReceber->valor, 2);
+        $situacao      = $novoValorPago >= $valorTotal ? 'paga' : 'parcial';
 
+        // Sempre grava data_pagamento (parcial e paga) — o fluxo de caixa depende disso
         $dados = [
             'valor_pago'      => $novoValorPago,
             'situacao'        => $situacao,
             'forma_pagamento' => $request->forma_pagamento ?: $contaReceber->forma_pagamento,
+            'data_pagamento'  => $request->data_pagamento,
         ];
-
-        if ($situacao === 'paga') {
-            $dados['data_pagamento'] = $request->data_pagamento;
-        }
 
         $this->repository->receber($contaReceber, $dados);
 
@@ -151,6 +166,17 @@ class ContaReceberService
     public function destroy(ContaReceber $contaReceber)
     {
         $this->garantirEmpresa($contaReceber);
+
+        if ($contaReceber->venda_id) {
+            return redirect()->route('conta-receber.show', $contaReceber)
+                ->with('error', 'Conta vinculada a uma venda não pode ser excluída. Cancele a venda ou a conta.');
+        }
+
+        if (in_array($contaReceber->situacao, ['paga', 'parcial'], true)) {
+            return redirect()->route('conta-receber.show', $contaReceber)
+                ->with('error', 'Conta com recebimento registrado não pode ser excluída. Cancele-a primeiro, se permitido.');
+        }
+
         $this->repository->destroy($contaReceber->id);
 
         return redirect()->route('conta-receber.index')
@@ -166,6 +192,7 @@ class ContaReceberService
             'valor'           => $this->parseMoeda($request->valor),
             'data_vencimento' => $request->data_vencimento,
             'forma_pagamento' => $request->forma_pagamento,
+            'categoria_id'    => $request->categoria_id ?: null,
             'observacoes'     => $request->observacoes,
         ];
     }
@@ -175,23 +202,5 @@ class ContaReceberService
         if ((int) $conta->empresa_id !== (int) auth()->user()->empresa_id) {
             abort(404);
         }
-    }
-
-    protected function parseMoeda(mixed $valor): float
-    {
-        if (is_null($valor) || $valor === '') {
-            return 0.0;
-        }
-
-        $str = trim((string) $valor);
-
-        if (str_contains($str, ',') && str_contains($str, '.')) {
-            $str = str_replace('.', '', $str);
-            $str = str_replace(',', '.', $str);
-        } elseif (str_contains($str, ',')) {
-            $str = str_replace(',', '.', $str);
-        }
-
-        return round((float) $str, 2);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\OrcamentoRequest;
 use App\Models\Orcamento;
 use App\Services\OrcamentoService;
+use Illuminate\Http\Request;
 
 class OrcamentoController extends Controller
 {
@@ -12,9 +13,9 @@ class OrcamentoController extends Controller
         protected OrcamentoService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()
@@ -47,6 +48,11 @@ class OrcamentoController extends Controller
         return $this->service->aprovar($orcamento);
     }
 
+    public function recusar(Orcamento $orcamento)
+    {
+        return $this->service->recusar($orcamento);
+    }
+
     public function cancelar(Orcamento $orcamento)
     {
         return $this->service->cancelar($orcamento);
@@ -59,11 +65,6 @@ class OrcamentoController extends Controller
 
     public function pdf(Orcamento $orcamento)
     {
-        if ((int) $orcamento->empresa_id !== (int) auth()->user()->empresa_id) {
-            abort(404);
-        }
-        $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
-        return $pdf->stream('orcamento_' . $orcamento->numero . '.pdf');
+        return $this->service->pdf($orcamento);
     }
 }

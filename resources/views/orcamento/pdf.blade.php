@@ -379,7 +379,7 @@
                 @foreach ($orcamento->itens as $item)
                     <tr>
                         <td><span class="item-nome">{{ $item->produto_nome }}</span></td>
-                        <td class="text-right">{{ number_format($item->quantidade, 3, ',', '.') }}</td>
+                        <td class="text-right">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
                         <td class="text-right">R$&nbsp;{{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
                         <td class="text-right">
                             @if ($item->desconto > 0)

@@ -7,21 +7,27 @@ use App\Models\Orcamento;
 use App\Models\Produto;
 use App\Repositories\OrcamentoRepository;
 use App\Repositories\VendaRepository;
+use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrcamentoService
 {
+    use ConversorMoeda;
+
     public function __construct(
         protected OrcamentoRepository $repository,
         protected VendaRepository $vendaRepository
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $orcamentos = $this->repository->index();
+        $orcamentos = $this->repository->index($request);
 
-        return view('orcamento.index', ['orcamentos' => $orcamentos]);
+        return view('orcamento.index', [
+            'orcamentos' => $orcamentos,
+            'filtros'    => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
+        ]);
     }
 
     public function create()
@@ -67,6 +73,15 @@ class OrcamentoService
         $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
 
         return view('orcamento.show', ['orcamento' => $orcamento]);
+    }
+
+    public function pdf(Orcamento $orcamento)
+    {
+        $this->garantirEmpresa($orcamento);
+
+        $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
+        return $pdf->stream('orcamento_' . $orcamento->numero . '.pdf');
     }
 
     public function edit(Orcamento $orcamento)
@@ -181,6 +196,21 @@ class OrcamentoService
             ->with('success', 'Orçamento #' . $orcamento->numero . ' aprovado. Venda #' . $venda->numero . ' gerada.');
     }
 
+    public function recusar(Orcamento $orcamento)
+    {
+        $this->garantirEmpresa($orcamento);
+
+        if ($orcamento->situacao !== 'pendente') {
+            return redirect()->route('orcamento.show', $orcamento)
+                ->with('error', 'Somente orçamentos pendentes podem ser recusados.');
+        }
+
+        $this->repository->recusar($orcamento);
+
+        return redirect()->route('orcamento.show', $orcamento)
+            ->with('success', 'Orçamento #' . $orcamento->numero . ' recusado.');
+    }
+
     public function cancelar(Orcamento $orcamento)
     {
         $this->garantirEmpresa($orcamento);
@@ -258,23 +288,5 @@ class OrcamentoService
         }
 
         return $resultado;
-    }
-
-    protected function parseMoeda(mixed $valor): float
-    {
-        if (is_null($valor) || $valor === '') {
-            return 0.0;
-        }
-
-        $str = trim((string) $valor);
-
-        if (str_contains($str, ',') && str_contains($str, '.')) {
-            $str = str_replace('.', '', $str);
-            $str = str_replace(',', '.', $str);
-        } elseif (str_contains($str, ',')) {
-            $str = str_replace(',', '.', $str);
-        }
-
-        return round((float) $str, 2);
     }
 }

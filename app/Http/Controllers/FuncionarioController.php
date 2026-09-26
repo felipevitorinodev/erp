@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FuncionarioRequest;
 use App\Models\Funcionario;
 use App\Services\FuncionarioService;
+use Illuminate\Http\Request;
 
 class FuncionarioController extends Controller
 {
@@ -12,9 +13,9 @@ class FuncionarioController extends Controller
         protected FuncionarioService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FormaPagamentoRequest;
 use App\Models\FormaPagamento;
 use App\Services\FormaPagamentoService;
+use Illuminate\Http\Request;
 
 class FormaPagamentoController extends Controller
 {
@@ -12,9 +13,9 @@ class FormaPagamentoController extends Controller
         protected FormaPagamentoService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()

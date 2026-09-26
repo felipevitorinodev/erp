@@ -16,12 +16,14 @@ class ContaPagar extends Model
     protected $fillable = [
         'empresa_id',
         'fornecedor_id',
+        'entrada_estoque_id',
         'descricao',
         'valor',
         'valor_pago',
         'data_vencimento',
         'data_pagamento',
         'forma_pagamento',
+        'categoria_id',
         'situacao',
         'observacoes',
     ];
@@ -41,5 +43,15 @@ class ContaPagar extends Model
     public function fornecedor()
     {
         return $this->belongsTo(Fornecedor::class);
+    }
+
+    public function entradaEstoque()
+    {
+        return $this->belongsTo(EntradaEstoque::class);
+    }
+
+    public function categoria()
+    {
+        return $this->belongsTo(CategoriaFinanceira::class, 'categoria_id');
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Requests\ClienteRequest;
 
 use App\Models\Cliente;
 use App\Repositories\ClienteRepository;
+use Illuminate\Http\Request;
 
 class ClienteService
 {
@@ -14,10 +15,14 @@ class ClienteService
         protected ClienteRepository $repository
     ){}
 
-    public function index() {
-        $clientes = $this->repository->index();
+    public function index(Request $request)
+    {
+        $clientes = $this->repository->index($request);
 
-        return view('cliente.index' , ['clientes' => $clientes]);
+        return view('cliente.index', [
+            'clientes' => $clientes,
+            'filtros'  => $request->only(['busca']),
+        ]);
     }
 
     public function create() {

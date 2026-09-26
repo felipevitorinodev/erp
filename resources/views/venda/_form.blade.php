@@ -2,6 +2,18 @@
 @php $venda = $venda ?? null; @endphp
 <div class="form-grid form-grid--col-3">
     <div class="form-group">
+        <label class="form-label">Vendedor</label>
+        <div class="autocomplete-wrap">
+            <input type="text" id="input-vendedor" class="form-control"
+                value="{{ old('funcionario_nome', $venda && $venda->funcionario ? $venda->funcionario->nome : '') }}"
+                placeholder="Digite para buscar..." autocomplete="off">
+            <input type="hidden" name="funcionario_id" id="hidden-funcionario-id"
+                value="{{ old('funcionario_id', $venda->funcionario_id ?? '') }}">
+        </div>
+        @error('funcionario_id')<span class="form-error">{{ $message }}</span>@enderror
+    </div>
+
+    <div class="form-group">
         <label class="form-label">Cliente</label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-cliente" class="form-control"
@@ -23,10 +35,18 @@
 
     <div class="form-group">
         <label class="form-label form-label--required">Situação</label>
-        <select name="situacao" class="form-control @error('situacao') is-invalid @enderror">
-            <option value="em_andamento" {{ old('situacao', $venda->situacao ?? 'em_andamento') === 'em_andamento' ? 'selected' : '' }}>Em andamento</option>
-            <option value="confirmada" {{ old('situacao', $venda->situacao ?? '') === 'confirmada' ? 'selected' : '' }}>Confirmada</option>
-        </select>
+        @if(($venda->situacao ?? '') === 'confirmada')
+            <input type="hidden" name="situacao" value="confirmada">
+            <input type="text" class="form-control" value="Confirmada" disabled>
+            <span class="form-hint" style="font-size:11px;color:var(--color-text-muted);">
+                Para reverter, use Cancelar na tela da venda.
+            </span>
+        @else
+            <select name="situacao" class="form-control @error('situacao') is-invalid @enderror">
+                <option value="em_andamento" {{ old('situacao', $venda->situacao ?? 'em_andamento') === 'em_andamento' ? 'selected' : '' }}>Em andamento</option>
+                <option value="confirmada" {{ old('situacao', $venda->situacao ?? '') === 'confirmada' ? 'selected' : '' }}>Confirmada</option>
+            </select>
+        @endif
         @error('situacao')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
@@ -162,6 +182,12 @@
 (function ($) {
     var urlProdutos = '{{ route('api.produtos.busca') }}';
     var indice = {{ $venda ? $venda->itens->count() : 0 }};
+
+    initAutocomplete('#input-vendedor', '#hidden-funcionario-id', '{{ route('api.funcionarios.busca') }}', function (item) {
+        var pct = parseFloat(item.percentual_comissao || 0);
+        var pctLabel = pct > 0 ? ' — ' + pct.toFixed(2).replace('.', ',') + '%' : '';
+        return item.nome + pctLabel;
+    });
 
     initAutocomplete('#input-cliente', '#hidden-cliente-id', '{{ route('api.clientes.busca') }}', function (item) {
         var doc = item.cpf || item.cnpj || '';

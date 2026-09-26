@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProdutoRequest;
 use App\Models\Produto;
 use App\Services\ProdutoService;
+use Illuminate\Http\Request;
 
 class ProdutoController extends Controller
 {
@@ -12,9 +13,9 @@ class ProdutoController extends Controller
         protected ProdutoService $service
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->service->index();
+        return $this->service->index($request);
     }
 
     public function create()

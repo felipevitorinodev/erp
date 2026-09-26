@@ -24,14 +24,16 @@
             </form>
         @endif
 
-        <form method="POST" action="{{ route('conta-pagar.destroy', $conta) }}" class="d-inline">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
-                data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                Excluir
-            </button>
-        </form>
+        @if (!in_array($conta->situacao, ['paga', 'parcial', 'cancelada'], true) && !$conta->entrada_estoque_id)
+            <form method="POST" action="{{ route('conta-pagar.destroy', $conta) }}" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn--danger btn--sm" data-confirm="Confirmar exclusão?"
+                    data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                    Excluir
+                </button>
+            </form>
+        @endif
     </div>
 @endsection
 
@@ -53,7 +55,7 @@
             </div>
         </div>
         <div class="card__body">
-            <div class="form-grid form-grid--col-2">
+            <div class="form-grid form-grid--col-3">
                 <div class="form-group">
                     <label class="form-label">Descrição</label>
                     <span>{{ $conta->descricao }}</span>
@@ -62,7 +64,21 @@
                     <label class="form-label">Fornecedor</label>
                     <span>{{ $conta->fornecedor->nome ?? '—' }}</span>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <span>{{ $conta->categoria->nome ?? '—' }}</span>
+                </div>
             </div>
+            @if($conta->entradaEstoque)
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Entrada de Estoque</label>
+                    <span>
+                        <a href="{{ route('entrada-estoque.show', $conta->entradaEstoque) }}">
+                            #{{ $conta->entradaEstoque->numero }}
+                        </a>
+                    </span>
+                </div>
+            @endif
             <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
                 <div class="form-group">
                     <label class="form-label">Valor</label>
