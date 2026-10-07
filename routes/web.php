@@ -18,6 +18,7 @@ use App\Http\Controllers\Orcamentos\OrcamentoController;
 use App\Http\Controllers\Produtos\ProdutoController;
 use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
 use App\Http\Controllers\Usuarios\UsuarioController;
+use App\Http\Controllers\NfeController;
 use App\Http\Controllers\Vendas\VendaController;
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
@@ -166,6 +167,8 @@ Route::middleware('auth')->group(function () {
         Route::post('{comissao}/pagar', [ComissaoController::class, 'pagar'])->name('comissao.pagar');
     });
 
+    Route::get('/pdv', [VendaController::class, 'pdv'])->name('pdv.index');
+
     Route::prefix('venda')->group(function () {
         Route::get('/', [VendaController::class, 'index'])->name('venda.index');
         Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
@@ -177,6 +180,16 @@ Route::middleware('auth')->group(function () {
         Route::post('{venda}/confirmar', [VendaController::class, 'confirmar'])->name('venda.confirmar');
         Route::post('{venda}/cancelar', [VendaController::class, 'cancelar'])->name('venda.cancelar');
         Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
+    });
+
+    Route::prefix('nfe')->group(function () {
+        Route::get('/', [NfeController::class, 'index'])->name('nfe.index');
+        Route::get('/nova', [NfeController::class, 'create'])->name('nfe.create');
+        Route::post('/salvar', [NfeController::class, 'store'])->name('nfe.store');
+        Route::post('{venda}/emitir', [NfeController::class, 'emitir'])->name('nfe.emitir');
+        Route::get('{nfe}/ver', [NfeController::class, 'show'])->name('nfe.show');
+        Route::post('{nfe}/cancelar', [NfeController::class, 'cancelar'])->name('nfe.cancelar');
+        Route::get('{nfe}/danfe', [NfeController::class, 'danfe'])->name('nfe.danfe');
     });
 
     Route::prefix('orcamento')->group(function () {

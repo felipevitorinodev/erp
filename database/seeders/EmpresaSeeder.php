@@ -13,24 +13,26 @@ class EmpresaSeeder extends Seeder
      */
     public function run(): void
     {
+        $cnpj = env('SEED_EMPRESA_CNPJ', '00.000.000/0001-00');
+
         Empresa::firstOrCreate(
-            ['cnpj' => '12.345.678/0001-99'],
+            ['cnpj' => $cnpj],
             [
-                'razao_social' => 'Desenvolvimento',
-                'nome_fantasia' => 'Desenvolvimento',
+                'razao_social' => env('SEED_EMPRESA_RAZAO', 'Minha Empresa'),
+                'nome_fantasia' => env('SEED_EMPRESA_FANTASIA', 'Minha Empresa'),
                 'tipo_pessoa' => TipoPessoa::PJ->value,
-                'ie' => '123456789',
-                'im' => '987654321',
-                'email' => 'admin@dev.com',
-                'telefone' => '(83) 3333-3333',
-                'celular' => '(83) 99999-9999',
-                'cep' => '58000-000',
-                'logradouro' => 'Desenvolvimento',
-                'numero' => '00',
+                'ie' => null,
+                'im' => null,
+                'email' => env('SEED_EMPRESA_EMAIL', 'contato@minhaempresa.com'),
+                'telefone' => null,
+                'celular' => null,
+                'cep' => null,
+                'logradouro' => null,
+                'numero' => null,
                 'complemento' => null,
-                'bairro' => 'Centro',
-                'cidade' => 'João Pessoa',
-                'uf' => 'PB',
+                'bairro' => null,
+                'cidade' => env('SEED_EMPRESA_CIDADE', 'São Paulo'),
+                'uf' => env('SEED_EMPRESA_UF', 'SP'),
                 'ativo' => 1,
             ]
         );

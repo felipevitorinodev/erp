@@ -92,7 +92,7 @@
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
-                        INÍCIO
+                        Início
                     </a>
                 </div>
 
@@ -109,13 +109,13 @@
                         <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('venda.create') }}"
-                            class="sidebar__link sidebar__link--action {{ request()->routeIs('venda.create') ? 'sidebar__link--active' : '' }}">
-                            + Nova Venda
+                        <a href="{{ route('pdv.index') }}"
+                            class="sidebar__link {{ request()->routeIs('pdv.*') ? 'sidebar__link--active' : '' }}">
+                            PDV
                         </a>
                         <a href="{{ route('venda.index') }}"
-                            class="sidebar__link {{ request()->routeIs('venda.index', 'venda.show', 'venda.edit') ? 'sidebar__link--active' : '' }}">
-                            Histórico de Vendas
+                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
+                            Vendas
                         </a>
                         <a href="{{ route('orcamento.index') }}"
                             class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
@@ -127,6 +127,28 @@
                                 Comissões
                             </a>
                         @endif
+                    </div>
+                </div>
+
+                {{-- Nota Fiscal --}}
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span class="sidebar__group-label">Nota Fiscal</span>
+                        <span class="sidebar__group-arrow">›</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('nfe.index') }}"
+                            class="sidebar__link {{ request()->routeIs('nfe.*') ? 'sidebar__link--active' : '' }}">
+                            NF-e
+                        </a>
                     </div>
                 </div>
 
@@ -145,13 +167,9 @@
                         <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('produto.index') }}"
-                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                            Produtos
-                        </a>
                         <a href="{{ route('entrada-estoque.index') }}"
                             class="sidebar__link {{ request()->routeIs('entrada-estoque.*') ? 'sidebar__link--active' : '' }}">
-                            Entradas (Compras)
+                            Entradas
                         </a>
                         <a href="{{ route('estoque.ajuste.create') }}"
                             class="sidebar__link {{ request()->routeIs('estoque.ajuste.*') ? 'sidebar__link--active' : '' }}">
@@ -160,6 +178,34 @@
                         <a href="{{ route('relatorio.estoque') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
                             Posição Atual
+                        </a>
+                    </div>
+                </div>
+
+                {{-- Produtos --}}
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <line x1="3.27" y1="6.96" x2="12" y2="12.01"></line>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <span class="sidebar__group-label">Produtos</span>
+                        <span class="sidebar__group-arrow">›</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('produto.index') }}"
+                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
+                            Produtos
+                        </a>
+                        <a href="{{ route('unidadeMedida.index') }}"
+                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
+                            Unidades
+                        </a>
+                        <a href="{{ route('grupo.index') }}"
+                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
+                            Grupos
                         </a>
                     </div>
                 </div>
@@ -231,14 +277,6 @@
                                 Funcionários
                             </a>
                         @endif
-                        <a href="{{ route('grupo.index') }}"
-                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
-                            Grupos de Produtos
-                        </a>
-                        <a href="{{ route('unidadeMedida.index') }}"
-                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
-                            Unidades de Medida
-                        </a>
                     </div>
                 </div>
 

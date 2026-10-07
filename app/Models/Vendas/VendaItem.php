@@ -14,6 +14,15 @@ class VendaItem extends Model
         'produto_id',
         'produto_nome',
         'produto_codigo',
+        'ncm',
+        'cest',
+        'cfop',
+        'unidade',
+        'origem',
+        'csosn',
+        'cst_pis',
+        'cst_cofins',
+        'ean',
         'quantidade',
         'preco_unitario',
         'desconto',
@@ -25,6 +34,7 @@ class VendaItem extends Model
         'preco_unitario' => 'decimal:2',
         'desconto'       => 'decimal:2',
         'total'          => 'decimal:2',
+        'origem'         => 'integer',
     ];
 
     public function venda()

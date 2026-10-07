@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Vendas;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Vendas\VendaRequest;
+use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Vendas\Venda;
 use App\Services\Vendas\VendaService;
 use Illuminate\Http\Request;
@@ -13,6 +14,16 @@ class VendaController extends Controller
     public function __construct(
         protected VendaService $service
     ) {}
+
+    public function pdv(Request $request)
+    {
+        return view('venda.pdv', [
+            'formasPagamento' => FormaPagamento::where('empresa_id', auth()->user()->empresa_id)
+                ->where('ativo', true)
+                ->orderBy('nome')
+                ->get(),
+        ]);
+    }
 
     public function index(Request $request)
     {

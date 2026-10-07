@@ -11,6 +11,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Vendas\VendaRepository;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class VendaService
 {
@@ -37,52 +38,19 @@ class VendaService
 
     public function store(VendaRequest $request)
     {
-        $itens = $this->processarItens($request->itens ?? []);
-
-        if (empty($itens)) {
-            return back()
-                ->withErrors(['itens' => 'Adicione pelo menos um item.'])
-                ->withInput();
+        try {
+            $resultado = $this->persistirVenda($request, $request->situacao ?? 'em_andamento');
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
         }
 
-        $empresaId = auth()->user()->empresa_id;
-        $situacao  = $request->situacao ?? 'em_andamento';
-        $totais    = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
-
-        // Forma à vista = pagamento do valor completo → confirma automaticamente
-        if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
-            $situacao = 'confirmada';
-        }
-
-        $avisoEstoque = $this->montarAvisoEstoque($itens);
-
-        $dados = [
-            'empresa_id'      => $empresaId,
-            'cliente_id'      => $request->cliente_id ?: null,
-            'funcionario_id'  => $this->resolverFuncionarioId($request->funcionario_id, $empresaId),
-            'usuario_id'      => auth()->id(),
-            'numero'          => $this->repository->proximoNumero($empresaId),
-            'data_venda'      => $request->data_venda,
-            'data_entrega'    => $request->data_entrega ?: null,
-            'subtotal'        => $totais['subtotal'],
-            'desconto'        => $totais['desconto'],
-            'acrescimo'       => $totais['acrescimo'],
-            'total'           => $totais['total'],
-            'forma_pagamento' => $request->forma_pagamento,
-            'observacoes'     => $request->observacoes,
-            'situacao'        => $situacao === 'confirmada' ? 'em_andamento' : $situacao,
-        ];
-
-        $venda = $this->repository->store($dados, $itens);
+        $venda = $resultado['venda'];
+        $situacao = $resultado['situacao'];
+        $avisoEstoque = $resultado['aviso_estoque'];
+        $empresaId = (int) auth()->user()->empresa_id;
 
         if ($situacao === 'confirmada') {
-            try {
-                $this->repository->confirmar($venda->load('itens'));
-                $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';
-            } catch (\Exception $ex) {
-                return redirect()->route('venda.show', $venda)
-                    ->with('error', $ex->getMessage());
-            }
+            $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';
             if (ContaReceber::where('venda_id', $venda->id)->exists()) {
                 $mensagem .= ' Conta a receber gerada automaticamente (venda a prazo).';
             } elseif (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
@@ -93,6 +61,7 @@ class VendaService
             if ($avisoEstoque) {
                 $redirect = $redirect->with('warning', $avisoEstoque);
             }
+
             return $redirect;
         }
 
@@ -101,14 +70,88 @@ class VendaService
         if ($avisoEstoque) {
             $redirect = $redirect->with('warning', $avisoEstoque);
         }
+
         return $redirect;
+    }
+
+    /**
+     * Cria e confirma uma venda, retornando o modelo pronto para emissão de NF-e.
+     */
+    public function criarVendaConfirmada(VendaRequest $request): Venda
+    {
+        $resultado = $this->persistirVenda($request, 'confirmada');
+
+        return $resultado['venda']->load(['itens.produto.unidadeMedida', 'cliente']);
+    }
+
+    /**
+     * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
+     */
+    protected function persistirVenda(VendaRequest $request, string $situacaoDesejada): array
+    {
+        $itens = $this->processarItens($request->itens ?? []);
+
+        if (empty($itens)) {
+            throw ValidationException::withMessages([
+                'itens' => 'Adicione pelo menos um item.',
+            ]);
+        }
+
+        $empresaId = (int) auth()->user()->empresa_id;
+        $situacao = $situacaoDesejada;
+        $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
+
+        if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
+            $situacao = 'confirmada';
+        }
+
+        $avisoEstoque = $this->montarAvisoEstoque($itens);
+
+        $dados = [
+            'empresa_id' => $empresaId,
+            'cliente_id' => $request->cliente_id ?: null,
+            'funcionario_id' => $this->resolverFuncionarioId($request->funcionario_id, $empresaId),
+            'usuario_id' => auth()->id(),
+            'numero' => $this->repository->proximoNumero($empresaId),
+            'data_venda' => $request->data_venda,
+            'data_entrega' => $request->data_entrega ?: null,
+            'subtotal' => $totais['subtotal'],
+            'desconto' => $totais['desconto'],
+            'acrescimo' => $totais['acrescimo'],
+            'total' => $totais['total'],
+            'forma_pagamento' => $request->forma_pagamento,
+            'observacoes' => $request->observacoes,
+            'natureza_operacao' => $request->input('natureza_operacao', 'VENDA DE MERCADORIA'),
+            'mod_frete' => (int) $request->input('mod_frete', 9),
+            'ind_final' => $request->filled('ind_final') ? (int) $request->input('ind_final') : null,
+            'inf_ad_fisco' => $request->input('inf_ad_fisco'),
+            'situacao' => $situacao === 'confirmada' ? 'em_andamento' : $situacao,
+        ];
+
+        $venda = $this->repository->store($dados, $itens);
+
+        if ($situacao === 'confirmada') {
+            try {
+                $this->repository->confirmar($venda->load('itens'));
+            } catch (\Exception $ex) {
+                throw ValidationException::withMessages([
+                    'itens' => $ex->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'venda' => $venda->fresh(),
+            'situacao' => $situacao,
+            'aviso_estoque' => $avisoEstoque,
+        ];
     }
 
     public function show(Venda $venda)
     {
         $this->autorizarVenda($venda);
 
-        $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario']);
+        $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario', 'nfe']);
 
         return view('venda.show', ['venda' => $venda]);
     }
@@ -315,7 +358,7 @@ class VendaService
                 continue;
             }
 
-            $produto = Produto::find($item['produto_id']);
+            $produto = Produto::with('unidadeMedida')->find($item['produto_id']);
 
             if (!$produto) {
                 continue;
@@ -334,10 +377,24 @@ class VendaService
             $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
             $total      = max(0, ($quantidade * $precoUnit) - $descItem);
 
+            $somenteDigitos = static fn ($v) => preg_replace('/\D/', '', (string) $v) ?? '';
+            $ncm = substr($somenteDigitos($item['ncm'] ?? $produto->ncm), 0, 8);
+            $cstPis = $somenteDigitos($item['cst_pis'] ?? $produto->cst_pis);
+            $cstCofins = $somenteDigitos($item['cst_cofins'] ?? $produto->cst_cofins);
+
             $resultado[] = [
                 'produto_id'     => $produto->id,
                 'produto_nome'   => $produto->nome,
                 'produto_codigo' => $produto->codigo,
+                'ncm'            => $ncm !== '' ? str_pad($ncm, 8, '0', STR_PAD_LEFT) : null,
+                'cest'           => $somenteDigitos($item['cest'] ?? $produto->cest) ?: null,
+                'cfop'           => $somenteDigitos($item['cfop'] ?? $produto->cfop_padrao) ?: null,
+                'unidade'        => strtoupper(substr(trim((string) ($item['unidade'] ?? $produto->unidadeMedida?->sigla ?? 'UN')), 0, 6)),
+                'origem'         => (int) ($item['origem'] ?? $produto->origem ?? 0),
+                'csosn'          => $somenteDigitos($item['csosn'] ?? $produto->cst_icms) ?: null,
+                'cst_pis'        => $cstPis !== '' ? str_pad($cstPis, 2, '0', STR_PAD_LEFT) : null,
+                'cst_cofins'     => $cstCofins !== '' ? str_pad($cstCofins, 2, '0', STR_PAD_LEFT) : null,
+                'ean'            => $somenteDigitos($item['ean'] ?? $produto->codigo_barras) ?: null,
                 'quantidade'     => $quantidade,
                 'preco_unitario' => $precoUnit,
                 'desconto'       => $descItem,

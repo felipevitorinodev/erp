@@ -7,6 +7,7 @@ use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\Funcionarios\Funcionario;
+use App\Models\Nfe;
 use App\Models\Usuarios\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +34,12 @@ class Venda extends Model
         'total',
         'forma_pagamento',
         'observacoes',
+        'natureza_operacao',
+        'mod_frete',
+        'ind_final',
+        'inf_ad_fisco',
         'situacao',
+        'nfe_numero',
     ];
 
     protected $casts = [
@@ -43,6 +49,8 @@ class Venda extends Model
         'desconto'      => 'decimal:2',
         'acrescimo'     => 'decimal:2',
         'total'         => 'decimal:2',
+        'mod_frete'     => 'integer',
+        'ind_final'     => 'integer',
     ];
 
     public function empresa()
@@ -78,5 +86,15 @@ class Venda extends Model
     public function comissoes()
     {
         return $this->hasMany(Comissao::class);
+    }
+
+    public function nfe()
+    {
+        return $this->hasOne(Nfe::class)->latestOfMany();
+    }
+
+    public function nfes()
+    {
+        return $this->hasMany(Nfe::class);
     }
 }

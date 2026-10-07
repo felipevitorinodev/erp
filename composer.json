@@ -14,7 +14,9 @@
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "laravellegends/pt-br-validator": "^13.0",
-        "nfephp-org/sped-common": "^5.1"
+        "nfephp-org/sped-common": "^5.1",
+        "nfephp-org/sped-da": "^1.1",
+        "nfephp-org/sped-nfe": "^5.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

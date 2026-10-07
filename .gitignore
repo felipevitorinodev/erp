@@ -31,3 +31,4 @@ app/storage/
 public_html/storage
 public_html/hot
 /.vagrant
+storage/app/certificados/

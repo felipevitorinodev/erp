@@ -187,4 +187,91 @@
         </div>
     </div>
 
+    {{-- NF-e --}}
+    <div class="card" style="margin-top:1rem;">
+        <div class="card__header">
+            <span class="card__title">NF-e</span>
+            @if ($venda->nfe)
+                @if ($venda->nfe->situacao === 'autorizada')
+                    <span class="badge badge--success">Autorizada</span>
+                @elseif ($venda->nfe->situacao === 'rejeitada')
+                    <span class="badge badge--error">Rejeitada</span>
+                @elseif ($venda->nfe->situacao === 'cancelada')
+                    <span class="badge badge--neutral">Cancelada</span>
+                @else
+                    <span class="badge badge--warning">Pendente</span>
+                @endif
+            @endif
+        </div>
+        <div class="card__body">
+            @if ($venda->nfe && $venda->nfe->situacao === 'autorizada')
+                <div class="form-grid form-grid--col-2">
+                    <div class="form-group">
+                        <label class="form-label">Protocolo</label>
+                        <span>{{ $venda->nfe->protocolo ?? '—' }}</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Autorização</label>
+                        <span>{{ $venda->nfe->data_autorizacao?->format('d/m/Y H:i') ?? '—' }}</span>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Chave de acesso</label>
+                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; word-break: break-all; display:block;">
+                        {{ $venda->nfe->chave_acesso }}
+                    </span>
+                </div>
+                <div class="filter-actions" style="margin-top:1rem;">
+                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
+                    <a href="{{ route('nfe.danfe', $venda->nfe) }}" target="_blank" class="btn btn--primary btn--sm">DANFE</a>
+                </div>
+            @elseif ($venda->nfe && $venda->nfe->situacao === 'cancelada')
+                <p class="text-muted" style="margin:0 0 0.75rem;">
+                    Esta venda possui NF-e cancelada. Emissão de nova nota para a mesma venda não está disponível nesta versão.
+                </p>
+                <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
+            @elseif ($venda->nfe && in_array($venda->nfe->situacao, ['rejeitada', 'pendente'], true))
+                @if ($venda->nfe->motivo_status)
+                    <div class="alert alert--error" style="margin-bottom:1rem;">
+                        {{ $venda->nfe->motivo_status }}
+                        @if ($venda->nfe->codigo_status)
+                            <span class="text-muted">(Código {{ $venda->nfe->codigo_status }})</span>
+                        @endif
+                    </div>
+                @endif
+                <div class="filter-actions">
+                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
+                    @if ($venda->nfe->situacao === 'rejeitada' && $venda->situacao === 'confirmada')
+                        <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
+                            @csrf
+                            <button type="submit" class="btn btn--primary btn--sm"
+                                data-confirm="Emitir uma nova NF-e para a venda #{{ $venda->numero }}?"
+                                data-confirm-title="Emitir NF-e"
+                                data-confirm-ok="Emitir">
+                                Tentar novamente
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            @elseif ($venda->situacao === 'confirmada')
+                <p class="text-muted" style="margin:0 0 0.75rem;">
+                    A NF-e será enviada diretamente para a SEFAZ.
+                </p>
+                <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
+                    @csrf
+                    <button type="submit" class="btn btn--primary"
+                        data-confirm="Emitir NF-e da venda #{{ $venda->numero }} agora?"
+                        data-confirm-title="Emitir NF-e"
+                        data-confirm-ok="Emitir">
+                        Emitir NF-e
+                    </button>
+                </form>
+            @else
+                <p class="text-muted" style="margin:0;">
+                    Confirme a venda antes de emitir a NF-e.
+                </p>
+            @endif
+        </div>
+    </div>
+
 @endsection

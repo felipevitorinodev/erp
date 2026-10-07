@@ -83,10 +83,77 @@ Route::middleware('auth')->group(function () {
         }
 
         return $query->orderBy('nome')
-            ->select('id', 'nome', 'codigo', 'preco_venda', 'preco_custo', 'estoque_atual')
+            ->with('unidadeMedida:id,sigla')
+            ->select(
+                'id',
+                'nome',
+                'codigo',
+                'preco_venda',
+                'preco_custo',
+                'estoque_atual',
+                'ncm',
+                'cest',
+                'cfop_padrao',
+                'origem',
+                'cst_icms',
+                'cst_pis',
+                'cst_cofins',
+                'unidade_medida_id',
+                'codigo_barras'
+            )
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(function (Produto $produto) {
+                return [
+                    'id' => $produto->id,
+                    'nome' => $produto->nome,
+                    'codigo' => $produto->codigo,
+                    'preco_venda' => $produto->preco_venda,
+                    'preco_custo' => $produto->preco_custo,
+                    'estoque_atual' => $produto->estoque_atual,
+                    'ncm' => $produto->ncm,
+                    'cest' => $produto->cest,
+                    'cfop_padrao' => $produto->cfop_padrao,
+                    'origem' => $produto->origem,
+                    'cst_icms' => $produto->cst_icms,
+                    'cst_pis' => $produto->cst_pis,
+                    'cst_cofins' => $produto->cst_cofins,
+                    'unidade' => $produto->unidadeMedida?->sigla ?: 'UN',
+                    'ean' => $produto->codigo_barras,
+                ];
+            });
     })->name('api.produtos.busca');
+
+    Route::get('/api/produtos/{codigo}/busca-codigo', function (string $codigo) {
+        $empresaId = auth()->user()->empresa_id;
+        $codigo = trim($codigo);
+
+        $produto = Produto::with('unidadeMedida')
+            ->where('empresa_id', $empresaId)
+            ->where('ativo', true)
+            ->where(function ($q) use ($codigo) {
+                $q->where('codigo', $codigo)->orWhere('codigo_barras', $codigo);
+            })
+            ->first();
+
+        if (! $produto) {
+            return response()->json(['encontrado' => false], 404);
+        }
+
+        return response()->json([
+            'encontrado' => true,
+            'produto' => [
+                'id'               => $produto->id,
+                'nome'             => $produto->nome,
+                'codigo'           => $produto->codigo,
+                'codigo_barras'    => $produto->codigo_barras,
+                'preco_venda'      => (float) $produto->preco_venda,
+                'estoque_atual'    => $produto->estoque_atual,
+                'controla_estoque' => $produto->controla_estoque,
+                'unidade'          => $produto->unidadeMedida?->sigla,
+            ],
+        ]);
+    })->name('api.produtos.busca-codigo');
 
     Route::get('/api/grupos/busca', function () {
         $q = trim((string) request('q', ''));
@@ -157,6 +224,21 @@ Route::middleware('auth')->group(function () {
             ->limit($limit)
             ->get();
     })->middleware('perfil:admin')->name('api.empresas.busca');
+
+    Route::get('/api/vendas/ultima', function () {
+        $venda = Venda::where('empresa_id', auth()->user()->empresa_id)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $venda) {
+            return response()->json(['id' => null, 'numero' => null]);
+        }
+
+        return response()->json([
+            'id'     => $venda->id,
+            'numero' => $venda->numero,
+        ]);
+    })->name('api.vendas.ultima');
 
     Route::get('/api/vendas/busca', function () {
         $q = trim((string) request('q', ''));

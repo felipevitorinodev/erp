@@ -41,6 +41,18 @@
     {{-- AÇÕES PRINCIPAIS - Cards grandes e claros --}}
     <p class="home-section-label">O que você quer fazer?</p>
     <div class="main-actions-grid">
+        <a href="{{ route('pdv.index') }}" class="main-action-card main-action-card--green">
+            <div class="main-action-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"></path>
+                </svg>
+            </div>
+            <div class="main-action-card__content">
+                <span class="main-action-card__title">PDV</span>
+                <span class="main-action-card__desc">Venda rápida no balcão</span>
+            </div>
+        </a>
+
         <a href="{{ route('venda.create') }}" class="main-action-card main-action-card--primary">
             <div class="main-action-card__icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
