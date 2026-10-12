@@ -20,6 +20,7 @@ class VendaController extends Controller
         return view('venda.pdv', [
             'formasPagamento' => FormaPagamento::where('empresa_id', auth()->user()->empresa_id)
                 ->where('ativo', true)
+                ->orderBy('tipo')
                 ->orderBy('nome')
                 ->get(),
         ]);

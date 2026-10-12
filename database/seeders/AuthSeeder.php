@@ -6,7 +6,6 @@ use App\Models\Empresas\Empresa;
 use App\Models\Usuarios\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AuthSeeder extends Seeder
 {
@@ -17,28 +16,26 @@ class AuthSeeder extends Seeder
     {
         $empresa = Empresa::first();
 
-        $email = env('SEED_ADMIN_EMAIL', 'admin@visys.app');
-        $name = env('SEED_ADMIN_NAME', 'Administrador');
-        $password = env('SEED_ADMIN_PASSWORD');
+        if (!$empresa) {
+            $this->command?->error('Nenhuma empresa encontrada. Rode EmpresaSeeder antes.');
 
-        if ($password === null || $password === '') {
-            $password = Str::random(16);
-            $this->command?->warn("Senha do administrador gerada (anote agora — não será exibida novamente): {$password}");
+            return;
         }
 
         User::firstOrCreate(
-            ['email' => $email],
+            ['email' => 'admin@dev.com'],
             [
                 'empresa_id' => $empresa->id,
-                'name'       => $name,
-                'password'   => Hash::make($password),
+                'name'       => 'Desenvolvedor',
+                'password'   => Hash::make('dev@123'),
                 'perfil'     => 'admin',
                 'ativo'      => true,
             ]
         );
 
-        // Não altera senha/nome se o usuário já existir — só garante acesso
-        User::where('email', $email)->update([
+        // Não altera senha/nome se o usuário já existir — só garante acesso e o vínculo
+        User::where('email', 'admin@dev.com')->update([
+            'empresa_id' => $empresa->id,
             'perfil' => 'admin',
             'ativo'  => true,
         ]);

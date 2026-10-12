@@ -16,6 +16,8 @@
     var lastKeyTs = 0;
     var rapidChars = 0;
 
+    var PDV_MIN_WIDTH = 1024;
+
     var el = {
         shell: document.getElementById('pdv-shell'),
         wrap: document.getElementById('pdv-wrap'),
@@ -33,7 +35,9 @@
         btnFinalizarValor: document.getElementById('pdv-btn-finalizar-valor'),
         formaHidden: document.getElementById('pdv-hidden-forma-pagamento'),
         formaErro: document.getElementById('pdv-forma-erro'),
+        formaRotulo: document.getElementById('pdv-btn-finalizar-forma'),
         formasGrid: document.getElementById('pdv-formas-grid'),
+        sucessoPagamento: document.getElementById('pdv-sucesso-pagamento'),
         alert: document.getElementById('pdv-alert-erro'),
         alertMsg: document.getElementById('pdv-alert-erro-msg'),
         alertFechar: document.getElementById('pdv-alert-erro-fechar'),
@@ -43,7 +47,59 @@
         linkVer: document.getElementById('pdv-link-ver-venda'),
         clienteHidden: document.getElementById('pdv-hidden-cliente-id'),
         toast: document.getElementById('pdv-toast'),
+        painelExtra: document.getElementById('pdv-painel-extra'),
+        telaPequena: document.getElementById('pdv-tela-pequena'),
+        larguraAtual: document.getElementById('pdv-largura-atual'),
     };
+
+    function telaAdequada() {
+        return window.innerWidth >= PDV_MIN_WIDTH;
+    }
+
+    function syncTelaMinima() {
+        var ok = telaAdequada();
+        if (el.larguraAtual) {
+            el.larguraAtual.textContent = Math.round(window.innerWidth) + ' px';
+        }
+        if (el.telaPequena) {
+            el.telaPequena.hidden = ok;
+        }
+        document.documentElement.classList.toggle('pdv-tela-bloqueada', !ok);
+        document.body.classList.toggle('pdv-tela-bloqueada', !ok);
+        return ok;
+    }
+
+    function syncPainelExtra() {
+        if (!el.painelExtra) return;
+        if (!telaAdequada()) return;
+        el.painelExtra.open = window.innerWidth >= 900;
+    }
+
+    var pdvIniciado = false;
+
+    function iniciarPdv() {
+        if (pdvIniciado || !telaAdequada()) return false;
+        pdvIniciado = true;
+        bindEventos();
+        restaurarFormaPagamento();
+        atalhosTeclado();
+        renderizarCarrinho();
+        syncPainelExtra();
+        focarBusca();
+        return true;
+    }
+
+    syncTelaMinima();
+    window.addEventListener('resize', function () {
+        var ok = syncTelaMinima();
+        if (ok) {
+            if (!pdvIniciado) iniciarPdv();
+            else {
+                syncPainelExtra();
+                focarBusca();
+            }
+        }
+    });
 
     function csrfToken() {
         var meta = document.querySelector('meta[name="csrf-token"]');
@@ -94,11 +150,14 @@
         return /^[A-Za-z0-9\-_.\/]+$/.test(termo);
     }
 
-    function focarBusca() {
+    function focarBusca(opcoes) {
         if (!el.inputBusca) return;
         el.inputBusca.focus();
-        // evita seleção total atrapalhando bipagem contínua
         try {
+            if (opcoes && opcoes.selecionar && el.inputBusca.value) {
+                el.inputBusca.select();
+                return;
+            }
             var len = el.inputBusca.value.length;
             el.inputBusca.setSelectionRange(len, len);
         } catch (e) { /* ignore */ }
@@ -644,6 +703,10 @@
     }
 
     function abrirTelaSucesso(total, data) {
+        if (el.sucessoPagamento) {
+            var formaNome = el.formaHidden && el.formaHidden.value ? el.formaHidden.value : '';
+            el.sucessoPagamento.textContent = formaNome ? ('Pago em ' + formaNome) : 'Pagamento registrado';
+        }
         if (el.sucessoTotal) el.sucessoTotal.textContent = 'Total: ' + formatMoney(total);
         if (el.sucessoNumero) {
             el.sucessoNumero.textContent = data && data.numero != null
@@ -688,6 +751,7 @@
 
     function atalhosTeclado() {
         document.addEventListener('keydown', function (e) {
+            if (!telaAdequada()) return;
             var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
             var isTyping = tag === 'input' || tag === 'textarea' || tag === 'select';
             var sucessoAberto = (el.shell && el.shell.classList.contains('pdv-shell--sucesso'))
@@ -703,13 +767,24 @@
 
             if (e.key === 'F2' || (!isTyping && e.key === '/')) {
                 e.preventDefault();
-                focarBusca();
+                if (e.key === 'F2') {
+                    fecharSugestoes();
+                    focarBusca({ selecionar: true });
+                } else {
+                    focarBusca();
+                }
                 return;
             }
 
             if (e.key === 'F4') {
                 e.preventDefault();
                 finalizarVenda();
+                return;
+            }
+
+            if (e.key === 'F6') {
+                e.preventDefault();
+                cicloFormaPagamento();
                 return;
             }
 
@@ -820,6 +895,62 @@
         });
     }
 
+    function botoesForma() {
+        if (!el.formasGrid) return [];
+        return Array.prototype.slice.call(el.formasGrid.querySelectorAll('.pdv-forma-btn'));
+    }
+
+    function selecionarFormaPagamento(btn, gravar) {
+        if (!btn) return;
+        botoesForma().forEach(function (b) {
+            var ativa = b === btn;
+            b.classList.toggle('pdv-forma-btn--ativa', ativa);
+            b.setAttribute('aria-pressed', ativa ? 'true' : 'false');
+        });
+        var nome = btn.getAttribute('data-forma') || '';
+        var tipo = btn.getAttribute('data-tipo') || '';
+        if (el.formaHidden) el.formaHidden.value = nome;
+        if (el.formaRotulo) el.formaRotulo.textContent = nome ? (nome + (tipo ? ' · ' + tipo : '')) : 'Sem pagamento';
+        if (el.formaErro) el.formaErro.hidden = true;
+        if (typeof btn.scrollIntoView === 'function') {
+            btn.scrollIntoView({ block: 'nearest' });
+        }
+        if (gravar && nome) {
+            try { sessionStorage.setItem('pdv-forma-pagamento', nome); } catch (e) { /* ignore */ }
+        }
+    }
+
+    function restaurarFormaPagamento() {
+        var botoes = botoesForma();
+        if (!botoes.length) return;
+        var salva = '';
+        try { salva = sessionStorage.getItem('pdv-forma-pagamento') || ''; } catch (e) { /* ignore */ }
+        var escolhido = botoes[0];
+        if (salva) {
+            botoes.forEach(function (btn) {
+                if ((btn.getAttribute('data-forma') || '') === salva) escolhido = btn;
+            });
+        }
+        selecionarFormaPagamento(escolhido, false);
+    }
+
+    function cicloFormaPagamento() {
+        var botoes = botoesForma();
+        if (!botoes.length) {
+            mostrarToast('Nenhuma forma de pagamento ativa.');
+            return;
+        }
+        var atual = -1;
+        botoes.forEach(function (btn, i) {
+            if (btn.classList.contains('pdv-forma-btn--ativa')) atual = i;
+        });
+        var proximo = botoes[(atual + 1) % botoes.length];
+        selecionarFormaPagamento(proximo, true);
+        var nome = proximo.getAttribute('data-forma') || '';
+        var tipo = proximo.getAttribute('data-tipo') || '';
+        mostrarToast(nome + (tipo ? ' · ' + tipo : ''));
+    }
+
     function bindEventos() {
         bindScannerNoInput();
 
@@ -832,12 +963,7 @@
         if (el.formasGrid) {
             el.formasGrid.querySelectorAll('.pdv-forma-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
-                    el.formasGrid.querySelectorAll('.pdv-forma-btn').forEach(function (b) {
-                        b.classList.remove('pdv-forma-btn--ativa');
-                    });
-                    btn.classList.add('pdv-forma-btn--ativa');
-                    if (el.formaHidden) el.formaHidden.value = btn.getAttribute('data-forma') || '';
-                    if (el.formaErro) el.formaErro.hidden = true;
+                    selecionarFormaPagamento(btn, true);
                     focarBusca();
                 });
             });
@@ -887,9 +1013,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        bindEventos();
-        atalhosTeclado();
-        renderizarCarrinho();
-        focarBusca();
+        syncTelaMinima();
+        iniciarPdv();
     });
 })();

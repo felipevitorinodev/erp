@@ -69,8 +69,7 @@ class ProdutoRepository
 
     public function update(Produto $produto, array $data)
     {
-        // Estoque atual não deve ser alterado pelo form após cadastro
-        unset($data['estoque_atual']);
+        unset($data['empresa_id'], $data['estoque_atual']);
 
         $produto->update($data);
 

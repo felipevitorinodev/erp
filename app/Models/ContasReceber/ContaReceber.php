@@ -44,6 +44,11 @@ class ContaReceber extends Model
         return $this->belongsTo(Empresa::class);
     }
 
+    public function baixas()
+    {
+        return $this->hasMany(ContaReceberBaixa::class, 'conta_receber_id');
+    }
+
     public function cliente()
     {
         return $this->belongsTo(Cliente::class);

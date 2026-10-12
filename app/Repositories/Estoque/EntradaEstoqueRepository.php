@@ -77,13 +77,14 @@ class EntradaEstoqueRepository
             $entrada->load(['itens.produto', 'fornecedor']);
 
             foreach ($entrada->itens as $item) {
-                if (!$item->produto_id) {
+                $produto = $this->garantirProdutoDoItem($entrada, $item);
+
+                if (!$produto) {
                     continue;
                 }
 
-                $produto = Produto::where('id', $item->produto_id)
+                $produto = Produto::where('id', $produto->id)
                     ->where('empresa_id', $entrada->empresa_id)
-                    ->where('controla_estoque', true)
                     ->lockForUpdate()
                     ->first();
 
@@ -91,11 +92,16 @@ class EntradaEstoqueRepository
                     continue;
                 }
 
+                $produto->update(['preco_custo' => $item->preco_unitario]);
+
+                if (!$produto->controla_estoque) {
+                    continue;
+                }
+
                 $antes = (float) $produto->estoque_atual;
                 $depois = $antes + (float) $item->quantidade;
 
                 $produto->increment('estoque_atual', $item->quantidade);
-                $produto->update(['preco_custo' => $item->preco_unitario]);
 
                 MovimentacaoEstoque::create([
                     'empresa_id'     => $entrada->empresa_id,
@@ -227,6 +233,73 @@ class EntradaEstoqueRepository
 
             return (bool) $entrada->delete();
         });
+    }
+
+    private function garantirProdutoDoItem(EntradaEstoque $entrada, EntradaEstoqueItem $item): ?Produto
+    {
+        if ($item->produto_id) {
+            return Produto::query()
+                ->where('id', $item->produto_id)
+                ->where('empresa_id', $entrada->empresa_id)
+                ->first();
+        }
+
+        $codigo = trim((string) $item->produto_codigo);
+
+        if ($codigo !== '') {
+            $existente = Produto::query()
+                ->where('empresa_id', $entrada->empresa_id)
+                ->where('codigo', $codigo)
+                ->first();
+
+            if ($existente) {
+                $item->update([
+                    'produto_id'     => $existente->id,
+                    'produto_nome'   => $existente->nome,
+                    'produto_codigo' => $existente->codigo,
+                ]);
+
+                return $existente;
+            }
+        } else {
+            $codigo = $this->proximoCodigoAutomatico((int) $entrada->empresa_id);
+        }
+
+        $nome = trim((string) $item->produto_nome);
+
+        $produto = Produto::create([
+            'empresa_id'       => $entrada->empresa_id,
+            'codigo'           => $codigo,
+            'nome'             => $nome !== '' ? $nome : 'Produto sem nome',
+            'preco_custo'      => $item->preco_unitario,
+            'preco_venda'      => 0,
+            'estoque_atual'    => 0,
+            'estoque_minimo'   => 0,
+            'controla_estoque' => true,
+            'tipo'             => 1,
+            'ativo'            => true,
+        ]);
+
+        $item->update([
+            'produto_id'     => $produto->id,
+            'produto_nome'   => $produto->nome,
+            'produto_codigo' => $produto->codigo,
+        ]);
+
+        return $produto;
+    }
+
+    private function proximoCodigoAutomatico(int $empresaId): string
+    {
+        $ultimoCodigo = Produto::query()
+            ->where('empresa_id', $empresaId)
+            ->where('codigo', 'like', 'AUTO%')
+            ->orderByRaw('CAST(SUBSTRING(codigo, 5) AS UNSIGNED) DESC')
+            ->value('codigo');
+
+        $proximoNum = $ultimoCodigo ? ((int) substr($ultimoCodigo, 4)) + 1 : 1;
+
+        return 'AUTO'.str_pad((string) $proximoNum, 5, '0', STR_PAD_LEFT);
     }
 
     private function salvarItens(EntradaEstoque $entrada, array $itens): void

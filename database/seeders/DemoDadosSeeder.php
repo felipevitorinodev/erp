@@ -74,7 +74,7 @@ class DemoDadosSeeder extends Seeder
         $admin = User::where('email', 'admin@dev.com')->first();
         $ids = $admin ? [$admin->id] : User::where('empresa_id', $this->empresaId)->pluck('id')->all();
 
-        $perfis = ['operador', 'operador', 'financeiro', 'operador', 'financeiro', 'operador', 'operador', 'financeiro'];
+        $perfis = ['vendedor', 'vendedor', 'financeiro', 'vendedor', 'financeiro', 'vendedor', 'vendedor', 'financeiro'];
 
         foreach ($perfis as $i => $perfil) {
             $email = "usuario{$i}@demo.visys.local";

@@ -21,7 +21,7 @@
                     <label class="form-label">Situação</label>
                     <select name="situacao" class="form-control">
                         <option value="">— Todas —</option>
-                        @foreach(['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'] as $valor => $label)
+                        @foreach((auth()->user()->pode('vendas.ver_canceladas') ? ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'] : ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada']) as $valor => $label)
                             <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
@@ -87,11 +87,12 @@
                                     <a href="{{ route('venda.show', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
                                         <x-icon name="eye" />
                                     </a>
-                                    @if($venda->situacao !== 'cancelada')
+                                    @if($venda->situacao === 'em_andamento')
                                         <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
                                             <x-icon name="edit" />
                                         </a>
                                     @endif
+                                    @if(auth()->user()->pode('vendas.cancelar') || $venda->situacao === 'em_andamento')
                                     <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -101,6 +102,7 @@
                                             <x-icon name="trash" />
                                         </button>
                                     </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

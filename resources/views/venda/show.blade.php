@@ -34,7 +34,7 @@
             </a>
         @endif
 
-        @if($venda->situacao !== 'cancelada')
+        @if($venda->situacao !== 'cancelada' && ($venda->situacao !== 'confirmada' || auth()->user()->pode('vendas.cancelar')))
             <form method="POST" action="{{ route('venda.cancelar', $venda) }}">
                 @csrf
                 <button type="submit" class="btn btn--danger btn--sm btn--icon" title="Cancelar" aria-label="Cancelar"
@@ -187,6 +187,7 @@
         </div>
     </div>
 
+    @if (auth()->user()->pode('nfe'))
     {{-- NF-e --}}
     <div class="card" style="margin-top:1rem;">
         <div class="card__header">
@@ -227,9 +228,22 @@
                 </div>
             @elseif ($venda->nfe && $venda->nfe->situacao === 'cancelada')
                 <p class="text-muted" style="margin:0 0 0.75rem;">
-                    Esta venda possui NF-e cancelada. Emissão de nova nota para a mesma venda não está disponível nesta versão.
+                    A NF-e anterior foi cancelada. Você pode emitir uma nova nota para esta venda.
                 </p>
-                <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
+                <div class="filter-actions">
+                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e cancelada</a>
+                    @if ($venda->situacao === 'confirmada')
+                        <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
+                            @csrf
+                            <button type="submit" class="btn btn--primary btn--sm"
+                                data-confirm="Emitir uma nova NF-e para a venda #{{ $venda->numero }}?"
+                                data-confirm-title="Emitir NF-e"
+                                data-confirm-ok="Emitir">
+                                Emitir nova NF-e
+                            </button>
+                        </form>
+                    @endif
+                </div>
             @elseif ($venda->nfe && in_array($venda->nfe->situacao, ['rejeitada', 'pendente'], true))
                 @if ($venda->nfe->motivo_status)
                     <div class="alert alert--error" style="margin-bottom:1rem;">
@@ -273,5 +287,6 @@
             @endif
         </div>
     </div>
+    @endif
 
 @endsection

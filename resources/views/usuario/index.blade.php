@@ -51,13 +51,7 @@
                                 <td data-label="Nome">{{ $usuario->name }}</td>
                                 <td data-label="E-mail">{{ $usuario->email }}</td>
                                 <td data-label="Perfil">
-                                    @if($usuario->perfil === 'admin')
-                                        <span class="badge badge--info">Admin</span>
-                                    @elseif($usuario->perfil === 'financeiro')
-                                        <span class="badge badge--warning">Financeiro</span>
-                                    @else
-                                        <span class="badge badge--success">Operador</span>
-                                    @endif
+                                    <span class="badge badge--info">{{ $usuario->nomeDoPerfil() }}</span>
                                 </td>
                                 <td data-label="Situação">
                                     @if($usuario->ativo)

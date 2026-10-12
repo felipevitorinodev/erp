@@ -4,7 +4,9 @@
 @section('page_title', 'Empresas')
 
 @section('page_actions')
-    <a href="{{ route('empresa.create') }}" class="btn btn--primary btn--sm">+ Nova Empresa</a>
+    @if (! auth()->user()->empresa_id)
+        <a href="{{ route('empresa.create') }}" class="btn btn--primary btn--sm">+ Nova Empresa</a>
+    @endif
 @endsection
 
 @section('content')

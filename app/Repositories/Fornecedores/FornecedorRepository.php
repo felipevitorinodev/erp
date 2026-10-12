@@ -32,6 +32,8 @@ class FornecedorRepository
 
     public function update(Fornecedor $fornecedor, array $data)
     {
+        unset($data['empresa_id']);
+
         $fornecedor->update($data);
 
         return $fornecedor;

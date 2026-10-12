@@ -167,7 +167,7 @@ Route::middleware('auth')->group(function () {
                 'forma_pagamento'  => request('forma_pagamento', ''),
             ],
         ]);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.vendas');
+    })->middleware('permissao:relatorios')->name('relatorio.vendas');
 
     Route::get('/relatorios/produtos-mais-vendidos', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -193,7 +193,7 @@ Route::middleware('auth')->group(function () {
                 'busca'       => request('busca', ''),
             ],
         ]);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.produtos-mais-vendidos');
+    })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos');
 
     Route::get('/relatorios/contas-receber', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -240,7 +240,7 @@ Route::middleware('auth')->group(function () {
                 'busca'         => request('busca', ''),
             ],
         ]);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-receber');
 
     Route::get('/relatorios/contas-pagar', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -287,7 +287,7 @@ Route::middleware('auth')->group(function () {
                 'busca'        => request('busca', ''),
             ],
         ]);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar');
 
     Route::get('/relatorios/estoque', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -316,7 +316,7 @@ Route::middleware('auth')->group(function () {
                 'estoque'        => request('estoque', ''),
             ],
         ]);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.estoque');
+    })->middleware('permissao:relatorios')->name('relatorio.estoque');
 
     // ---- CSV exports ----
 
@@ -355,7 +355,7 @@ Route::middleware('auth')->group(function () {
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.vendas.csv');
+    })->middleware('permissao:relatorios')->name('relatorio.vendas.csv');
 
     Route::get('/relatorios/produtos-mais-vendidos/csv', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -378,7 +378,7 @@ Route::middleware('auth')->group(function () {
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.produtos-mais-vendidos.csv');
+    })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos.csv');
 
     Route::get('/relatorios/contas-receber/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -411,7 +411,7 @@ Route::middleware('auth')->group(function () {
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber.csv');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-receber.csv');
 
     Route::get('/relatorios/contas-pagar/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -444,7 +444,7 @@ Route::middleware('auth')->group(function () {
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar.csv');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar.csv');
 
     Route::get('/relatorios/estoque/csv', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -475,7 +475,7 @@ Route::middleware('auth')->group(function () {
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('perfil:admin,financeiro')->name('relatorio.estoque.csv');
+    })->middleware('permissao:relatorios')->name('relatorio.estoque.csv');
 
     Route::get('/relatorios/vendas/pdf', function () use ($periodoPadrao, $aplicarFiltrosVendas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -534,7 +534,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-vendas-' . date('Y-m-d') . '.pdf');
-    })->middleware('perfil:admin,financeiro')->name('relatorio.vendas.pdf');
+    })->middleware('permissao:relatorios')->name('relatorio.vendas.pdf');
 
     Route::get('/relatorios/produtos-mais-vendidos/pdf', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -579,7 +579,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'portrait');
 
         return $pdf->stream('relatorio-produtos-mais-vendidos-' . date('Y-m-d') . '.pdf');
-    })->middleware('perfil:admin,financeiro')->name('relatorio.produtos-mais-vendidos.pdf');
+    })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos.pdf');
 
     Route::get('/relatorios/contas-receber/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -651,7 +651,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-contas-receber-' . date('Y-m-d') . '.pdf');
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-receber.pdf');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-receber.pdf');
 
     Route::get('/relatorios/contas-pagar/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -723,7 +723,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-contas-pagar-' . date('Y-m-d') . '.pdf');
-    })->middleware('perfil:admin,financeiro')->name('relatorio.contas-pagar.pdf');
+    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar.pdf');
 
     Route::get('/relatorios/estoque/pdf', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -784,6 +784,6 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'portrait');
 
         return $pdf->stream('relatorio-estoque-' . date('Y-m-d') . '.pdf');
-    })->middleware('perfil:admin,financeiro')->name('relatorio.estoque.pdf');
+    })->middleware('permissao:relatorios')->name('relatorio.estoque.pdf');
 
 });

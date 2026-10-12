@@ -16,7 +16,9 @@ use App\Models\Grupos\Grupo;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
+use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
+use App\Services\Usuarios\PerfilService;
 use App\Models\Vendas\Venda;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +44,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->registrarBindingsPorEmpresa();
+
+        Empresa::created(function (Empresa $empresa) {
+            app(PerfilService::class)->garantir($empresa);
+        });
     }
 
     /**
@@ -72,6 +78,10 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('formaPagamento', $porEmpresa(FormaPagamento::class));
         Route::bind('categoriaFinanceira', $porEmpresa(CategoriaFinanceira::class));
 
+        Route::bind('perfilAcesso', function ($value) {
+            return Perfil::where('empresa_id', auth()->user()->empresa_id ?? 0)->findOrFail($value);
+        });
+
         Route::bind('usuario', function ($value) {
             $query = User::query();
 
@@ -83,7 +93,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Route::bind('empresa', function ($value) {
-            if ((auth()->user()->perfil ?? '') !== 'admin') {
+            $user = auth()->user();
+
+            if (!$user->pode('configuracoes')) {
+                abort(404);
+            }
+
+            if ((int) $value !== (int) ($user->empresa_id ?? 0)) {
                 abort(404);
             }
 

@@ -44,6 +44,11 @@ class ContaPagar extends Model
         return $this->belongsTo(Empresa::class);
     }
 
+    public function baixas()
+    {
+        return $this->hasMany(ContaPagarBaixa::class, 'conta_pagar_id');
+    }
+
     public function fornecedor()
     {
         return $this->belongsTo(Fornecedor::class);

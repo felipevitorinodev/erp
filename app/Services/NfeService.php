@@ -145,9 +145,9 @@ class NfeService
         if (Nfe::query()
             ->where('empresa_id', $venda->empresa_id)
             ->where('venda_id', $venda->id)
-            ->whereIn('situacao', ['pendente', 'cancelada'])
+            ->where('situacao', 'pendente')
             ->exists()) {
-            return back()->with('error', 'Esta venda já possui uma NF-e em andamento ou cancelada.');
+            return back()->with('error', 'Esta venda já possui uma NF-e em andamento.');
         }
 
         $empresa = Empresa::query()->findOrFail($venda->empresa_id);

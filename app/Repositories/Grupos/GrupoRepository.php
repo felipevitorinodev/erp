@@ -49,6 +49,8 @@ class GrupoRepository
 
     public function update(Grupo $grupo, array $dados)
     {
+        unset($dados['empresa_id']);
+
         $grupo->update($dados);
 
         return $grupo;

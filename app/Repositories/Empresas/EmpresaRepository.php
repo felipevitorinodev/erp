@@ -13,7 +13,8 @@ class EmpresaRepository
 
     public function index(?Request $request = null)
     {
-        $query = $this->empresa::query()->orderBy('razao_social');
+        $empresaId = (int) (auth()->user()->empresa_id ?? 0);
+        $query = $this->empresa::query()->whereKey($empresaId)->orderBy('razao_social');
 
         if ($request && $request->filled('busca')) {
             $busca = $request->busca;
@@ -46,7 +47,8 @@ class EmpresaRepository
 
     public function destroy($id)
     {
-        $empresa = $this->empresa->findOrFail($id);
+        $empresaId = (int) (auth()->user()->empresa_id ?? 0);
+        $empresa = $this->empresa->whereKey($empresaId)->findOrFail($id);
 
         return $empresa->delete();
     }

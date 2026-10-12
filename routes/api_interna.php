@@ -202,7 +202,7 @@ Route::middleware('auth')->group(function () {
     })->name('api.unidades-medida.busca');
 
     Route::get('/api/empresas/busca', function () {
-        if ((auth()->user()->perfil ?? '') !== 'admin') {
+        if (!auth()->user()->pode('configuracoes')) {
             abort(403);
         }
 
@@ -223,7 +223,7 @@ Route::middleware('auth')->group(function () {
             ->select('id', 'razao_social', 'nome_fantasia', 'cnpj')
             ->limit($limit)
             ->get();
-    })->middleware('perfil:admin')->name('api.empresas.busca');
+    })->middleware('permissao:configuracoes')->name('api.empresas.busca');
 
     Route::get('/api/vendas/ultima', function () {
         $venda = Venda::where('empresa_id', auth()->user()->empresa_id)
@@ -318,7 +318,7 @@ Route::middleware('auth')->group(function () {
             'nome' => $grupo->nome,
             'message' => 'Grupo criado com sucesso!',
         ]);
-    })->name('api.grupos.store');
+    })->middleware('permissao:produtos')->name('api.grupos.store');
 
     Route::post('/api/unidades-medida/store', function () {
         $data = request()->validate([
@@ -343,7 +343,7 @@ Route::middleware('auth')->group(function () {
             'sigla' => $unidade->sigla,
             'message' => 'Unidade de medida criada com sucesso!',
         ]);
-    })->name('api.unidades-medida.store');
+    })->middleware('permissao:produtos')->name('api.unidades-medida.store');
 
     Route::post('/api/fornecedores/store', function () {
         $data = request()->validate([
@@ -368,7 +368,7 @@ Route::middleware('auth')->group(function () {
             'nome' => $fornecedor->nome,
             'message' => 'Fornecedor criado com sucesso!',
         ]);
-    })->name('api.fornecedores.store');
+    })->middleware('permissao:fornecedores')->name('api.fornecedores.store');
 
     Route::post('/api/clientes/store', function () {
         $data = request()->validate([
@@ -397,6 +397,6 @@ Route::middleware('auth')->group(function () {
             'nome' => $cliente->nome,
             'message' => 'Cliente criado com sucesso!',
         ]);
-    })->name('api.clientes.store');
+    })->middleware('permissao:clientes,clientes.balcao')->name('api.clientes.store');
 
 });

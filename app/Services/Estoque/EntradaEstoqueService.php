@@ -476,10 +476,6 @@ class EntradaEstoqueService
                     continue;
                 }
 
-                // Atualiza preço de custo do produto existente
-                $produto->preco_custo = $precoUnit;
-                $produto->save();
-
                 $resultado[] = [
                     'produto_id'     => $produto->id,
                     'produto_nome'   => $produto->nome,
@@ -490,54 +486,20 @@ class EntradaEstoqueService
                     'total'          => $total,
                 ];
             } else {
-                // Cria novo produto automaticamente
-                $nomeProduto = trim($item['produto_nome'] ?? 'Produto sem nome');
+                $nomeProduto = trim($item['produto_nome'] ?? '');
                 $codigoProduto = trim($item['produto_codigo'] ?? '');
-                
-                // Gera código automático se não informado
-                if (empty($codigoProduto)) {
-                    $ultimoCodigo = Produto::where('empresa_id', $empresaId)
-                        ->where('codigo', 'like', 'AUTO%')
-                        ->orderByRaw("CAST(SUBSTRING(codigo, 5) AS UNSIGNED) DESC")
-                        ->value('codigo');
-                    
-                    $proximoNum = 1;
-                    if ($ultimoCodigo) {
-                        $proximoNum = ((int) substr($ultimoCodigo, 4)) + 1;
-                    }
-                    $codigoProduto = 'AUTO' . str_pad($proximoNum, 5, '0', STR_PAD_LEFT);
-                }
+                $produtoExistente = null;
 
-                // Verifica se já existe produto com esse código
-                $produtoExistente = Produto::where('empresa_id', $empresaId)
-                    ->where('codigo', $codigoProduto)
-                    ->first();
-
-                if ($produtoExistente) {
-                    // Atualiza o produto existente
-                    $produtoExistente->preco_custo = $precoUnit;
-                    $produtoExistente->save();
-                    $produto = $produtoExistente;
-                } else {
-                    // Cria novo produto
-                    $produto = Produto::create([
-                        'empresa_id'       => $empresaId,
-                        'codigo'           => $codigoProduto,
-                        'nome'             => $nomeProduto,
-                        'preco_custo'      => $precoUnit,
-                        'preco_venda'      => $precoUnit * 1.3, // Margem padrão de 30%
-                        'estoque_atual'    => 0, // Será atualizado na confirmação
-                        'estoque_minimo'   => 0,
-                        'controla_estoque' => true,
-                        'tipo'             => 1, // Produto
-                        'ativo'            => true,
-                    ]);
+                if ($codigoProduto !== '') {
+                    $produtoExistente = Produto::where('empresa_id', $empresaId)
+                        ->where('codigo', $codigoProduto)
+                        ->first();
                 }
 
                 $resultado[] = [
-                    'produto_id'     => $produto->id,
-                    'produto_nome'   => $produto->nome,
-                    'produto_codigo' => $produto->codigo,
+                    'produto_id'     => $produtoExistente?->id,
+                    'produto_nome'   => $produtoExistente?->nome ?: ($nomeProduto !== '' ? $nomeProduto : 'Produto sem nome'),
+                    'produto_codigo' => $produtoExistente?->codigo ?: ($codigoProduto !== '' ? $codigoProduto : null),
                     'quantidade'     => $quantidade,
                     'preco_unitario' => $precoUnit,
                     'desconto'       => $descItem,

@@ -339,23 +339,32 @@
 (function () {
     var toggle = document.getElementById('btn-sidebar-toggle');
     var overlay = document.getElementById('sidebar-overlay');
+    var sidebar = document.querySelector('.sidebar');
     if (!toggle || !overlay) return;
 
     function abrir() {
+        document.documentElement.classList.add('sidebar-open');
         document.body.classList.add('sidebar-open');
         overlay.hidden = false;
         toggle.setAttribute('aria-expanded', 'true');
         toggle.setAttribute('aria-label', 'Fechar menu');
+        if (sidebar) sidebar.setAttribute('aria-hidden', 'false');
     }
 
     function fechar() {
+        document.documentElement.classList.remove('sidebar-open');
         document.body.classList.remove('sidebar-open');
         overlay.hidden = true;
         toggle.setAttribute('aria-expanded', 'false');
         toggle.setAttribute('aria-label', 'Abrir menu');
+        if (sidebar) sidebar.setAttribute('aria-hidden', 'true');
     }
 
-    function alternar() {
+    function alternar(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         if (document.body.classList.contains('sidebar-open')) {
             fechar();
         } else {
@@ -379,6 +388,10 @@
     window.addEventListener('resize', function () {
         if (window.innerWidth > 900) fechar();
     });
+
+    if (window.innerWidth <= 900 && sidebar) {
+        sidebar.setAttribute('aria-hidden', 'true');
+    }
 })();
 
 // Labels para tabelas em modo card (mobile)

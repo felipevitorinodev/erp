@@ -22,11 +22,15 @@ class FormaPagamentoRepository
 
     public function store(array $data)
     {
+        $data['empresa_id'] = auth()->user()->empresa_id;
+
         return FormaPagamento::create($data);
     }
 
     public function update(FormaPagamento $formaPagamento, array $data)
     {
+        unset($data['empresa_id']);
+
         $formaPagamento->update($data);
 
         return $formaPagamento;

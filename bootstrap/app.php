@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->alias([
             'perfil' => \App\Http\Middleware\CheckPerfil::class,
+            'permissao' => \App\Http\Middleware\CheckPermissao::class,
         ]);
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
     })

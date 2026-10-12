@@ -10,9 +10,14 @@
         $contasReceberVencidasVal = $contasReceberVencidas ?? 0;
         $contasPagarVencidasVal = $contasPagarVencidas ?? 0;
         $estoqueCriticoVal = $estoqueCritico ?? 0;
-        $podeFinanceiro = in_array(auth()->user()->perfil ?? '', ['admin', 'financeiro'], true);
-        $podeAdmin = (auth()->user()->perfil ?? '') === 'admin';
-        $podeOperacional = in_array(auth()->user()->perfil ?? '', ['admin', 'operador'], true);
+        $podeFinanceiro = auth()->user()->pode('financeiro');
+        $podeEstoque = auth()->user()->pode('estoque');
+        $podeRelatorios = auth()->user()->pode('relatorios');
+        $podeOrcamentos = auth()->user()->pode('orcamentos');
+        $podeProdutos = auth()->user()->pode('produtos');
+        $podeClientes = auth()->user()->pode('clientes');
+        $podeFornecedores = auth()->user()->pode('fornecedores');
+        $podeVendas = auth()->user()->pode('vendas');
 
         $faturamentoTexto = $faturamentoHoje ?? 'R$ 0,00';
         if (is_numeric($faturamentoTexto)) {
@@ -41,6 +46,7 @@
     {{-- AÇÕES PRINCIPAIS - Cards grandes e claros --}}
     <p class="home-section-label">O que você quer fazer?</p>
     <div class="main-actions-grid">
+        @if($podeVendas)
         <a href="{{ route('pdv.index') }}" class="main-action-card main-action-card--green">
             <div class="main-action-card__icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -66,7 +72,9 @@
                 <span class="main-action-card__desc">Registrar uma venda</span>
             </div>
         </a>
+        @endif
 
+        @if($podeEstoque)
         <a href="{{ route('entrada-estoque.index') }}" class="main-action-card main-action-card--green">
             <div class="main-action-card__icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -80,6 +88,7 @@
                 <span class="main-action-card__desc">Registrar compra / NF-e</span>
             </div>
         </a>
+        @endif
 
         @if($podeFinanceiro)
         <a href="{{ route('conta-receber.create') }}" class="main-action-card main-action-card--blue">
@@ -111,7 +120,7 @@
     </div>
 
     {{-- ALERTAS - Apenas se houver pendências --}}
-    @if($contasReceberVencidasVal > 0 || $contasPagarVencidasVal > 0 || $estoqueCriticoVal > 0)
+    @if($podeRelatorios && ($contasReceberVencidasVal > 0 || $contasPagarVencidasVal > 0 || $estoqueCriticoVal > 0))
     <p class="home-section-label">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px; color: var(--color-accent);">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -145,15 +154,17 @@
     {{-- RESUMO DO DIA --}}
     <p class="home-section-label">Resumo do dia</p>
     <div class="stats-grid">
-        <a href="{{ route('venda.index') }}?data_inicio={{ date('Y-m-d') }}&data_fim={{ date('Y-m-d') }}" class="stat-card">
+        @if($podeVendas || $podeRelatorios)
+        <a href="{{ $podeVendas ? route('venda.index', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) : route('relatorio.vendas', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) }}" class="stat-card">
             <span class="stat-card__label">Vendas hoje</span>
             <span class="stat-card__value">{{ $vendasHojeVal }}</span>
         </a>
 
-        <a href="{{ route('relatorio.vendas') }}?data_inicio={{ date('Y-m-d') }}&data_fim={{ date('Y-m-d') }}" class="stat-card">
+        <a href="{{ $podeRelatorios ? route('relatorio.vendas', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) : route('venda.index', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) }}" class="stat-card">
             <span class="stat-card__label">Faturado hoje</span>
             <span class="stat-card__value">{{ $faturamentoTexto }}</span>
         </a>
+        @endif
 
         @if($podeFinanceiro)
         <a href="{{ route('relatorio.contas-receber', [
@@ -170,26 +181,36 @@
     {{-- ACESSO RÁPIDO - Simplificado --}}
     <p class="home-section-label">Consultas</p>
     <div class="quick-links-grid">
+        @if($podeVendas)
         <a href="{{ route('venda.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.64 16H19a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
             Vendas
         </a>
+        @endif
+        @if($podeOrcamentos)
         <a href="{{ route('orcamento.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20"></rect><path d="M9 12l2 2 4-4"></path></svg>
             Orçamentos
         </a>
+        @endif
+        @if($podeProdutos)
         <a href="{{ route('produto.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
             Produtos
         </a>
+        @endif
+        @if($podeClientes)
         <a href="{{ route('cliente.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path></svg>
             Clientes
         </a>
+        @endif
+        @if($podeFornecedores)
         <a href="{{ route('fornecedor.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18M3 15h18M8 3v18M16 3v18"></path></svg>
             Fornecedores
         </a>
+        @endif
         @if($podeFinanceiro)
         <a href="{{ route('conta-receber.index') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
@@ -204,10 +225,12 @@
             Fluxo de Caixa
         </a>
         @endif
+        @if($podeRelatorios)
         <a href="{{ route('relatorio.vendas') }}" class="quick-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="20" x2="6" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="18" y1="20" x2="18" y2="14"></line></svg>
             Relatórios
         </a>
+        @endif
     </div>
 
 @endsection

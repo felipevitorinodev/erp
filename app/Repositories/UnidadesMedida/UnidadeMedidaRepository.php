@@ -31,6 +31,8 @@ class UnidadeMedidaRepository
 
     public function update(UnidadeMedida $unidadeMedida, array $data)
     {
+        unset($data['empresa_id']);
+
         $unidadeMedida->update($data);
 
         return $unidadeMedida;

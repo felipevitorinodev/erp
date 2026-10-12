@@ -5,6 +5,7 @@ namespace App\Services\Comissoes;
 use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasPagar\ContaPagar;
+use App\Models\ContasPagar\ContaPagarBaixa;
 use App\Models\Funcionarios\Funcionario;
 use App\Repositories\Comissoes\ComissaoRepository;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class ComissaoService
         $vendedor = $comissao->funcionario->nome ?? 'Vendedor';
         $vendaNumero = $comissao->venda->numero ?? $comissao->venda_id;
 
-        ContaPagar::create([
+        $conta = ContaPagar::create([
             'empresa_id'      => $comissao->empresa_id,
             'descricao'       => 'Comissão venda #' . $vendaNumero . ' — ' . $vendedor,
             'valor'           => $comissao->valor,
@@ -88,6 +89,14 @@ class ComissaoService
             'categoria_id'    => $this->categoriaPadraoService->idDespesaComissoes((int) $comissao->empresa_id),
             'situacao'        => 'paga',
             'observacoes'     => 'comissao_id:' . $comissao->id,
+        ]);
+
+        ContaPagarBaixa::create([
+            'empresa_id' => $conta->empresa_id,
+            'conta_pagar_id' => $conta->id,
+            'valor' => $comissao->valor,
+            'data_pagamento' => $hoje,
+            'forma_pagamento' => null,
         ]);
     }
 

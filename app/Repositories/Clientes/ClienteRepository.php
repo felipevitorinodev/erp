@@ -41,6 +41,8 @@ class ClienteRepository
 
     public function update(Cliente $cliente, array $dados)
     {
+        unset($dados['empresa_id']);
+
         $cliente->update($dados);
 
         return $cliente;

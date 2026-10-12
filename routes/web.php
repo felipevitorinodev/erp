@@ -17,6 +17,7 @@ use App\Http\Controllers\Grupos\GrupoController;
 use App\Http\Controllers\Orcamentos\OrcamentoController;
 use App\Http\Controllers\Produtos\ProdutoController;
 use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
+use App\Http\Controllers\Usuarios\PerfilController;
 use App\Http\Controllers\Usuarios\UsuarioController;
 use App\Http\Controllers\NfeController;
 use App\Http\Controllers\Vendas\VendaController;
@@ -24,6 +25,7 @@ use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -63,7 +65,7 @@ Route::middleware('auth')->group(function () {
         $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
             ->whereBetween('data_vencimento', [$hoje, $em7Dias])
             ->whereIn('situacao', ['aberta', 'parcial'])
-            ->sum('valor');
+            ->sum(DB::raw('valor - COALESCE(valor_pago, 0)'));
 
         $estoqueCritico = Produto::where('empresa_id', $empresaId)
             ->where('controla_estoque', true)
@@ -81,7 +83,7 @@ Route::middleware('auth')->group(function () {
         ]);
     });
 
-    Route::prefix('empresa')->middleware('perfil:admin')->group(function () {
+    Route::prefix('empresa')->middleware('permissao:configuracoes')->group(function () {
         Route::get('/', [EmpresaController::class, 'index'])->name('empresa.index');
         Route::get('/novo', [EmpresaController::class, 'create'])->name('empresa.create');
         Route::post('/salvar', [EmpresaController::class, 'store'])->name('empresa.store');
@@ -90,7 +92,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{empresa}/excluir', [EmpresaController::class, 'destroy'])->name('empresa.destroy');
     });
 
-    Route::prefix('usuario')->middleware('perfil:admin')->group(function () {
+    Route::prefix('usuario')->middleware('permissao:configuracoes')->group(function () {
         Route::get('/', [UsuarioController::class, 'index'])->name('usuario.index');
         Route::get('/novo', [UsuarioController::class, 'create'])->name('usuario.create');
         Route::post('/salvar', [UsuarioController::class, 'store'])->name('usuario.store');
@@ -99,7 +101,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('{usuario}/excluir', [UsuarioController::class, 'destroy'])->name('usuario.destroy');
     });
 
-    Route::prefix('cliente')->group(function () {
+    Route::prefix('permissoes')->middleware('permissao:configuracoes')->group(function () {
+        Route::get('/', [PerfilController::class, 'index'])->name('permissao.index');
+        Route::get('/nova', [PerfilController::class, 'create'])->name('permissao.create');
+        Route::post('/salvar', [PerfilController::class, 'store'])->name('permissao.store');
+        Route::get('{perfilAcesso}/editar', [PerfilController::class, 'edit'])->name('permissao.edit');
+        Route::put('{perfilAcesso}/editar/salvar', [PerfilController::class, 'update'])->name('permissao.update');
+        Route::delete('{perfilAcesso}/excluir', [PerfilController::class, 'destroy'])->name('permissao.destroy');
+    });
+
+    Route::prefix('cliente')->middleware('permissao:clientes')->group(function () {
         Route::get('/', [ClienteController::class, 'index'])->name('cliente.index');
         Route::get('/novo', [ClienteController::class, 'create'])->name('cliente.create');
         Route::post('/salvar', [ClienteController::class, 'store'])->name('cliente.store');
@@ -108,7 +119,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{cliente}/excluir', [ClienteController::class, 'destroy'])->name('cliente.destroy');
     });
 
-    Route::prefix('fornecedor')->group(function () {
+    Route::prefix('fornecedor')->middleware('permissao:fornecedores')->group(function () {
         Route::get('/', [FornecedorController::class, 'index'])->name('fornecedor.index');
         Route::get('/novo', [FornecedorController::class, 'create'])->name('fornecedor.create');
         Route::post('/salvar', [FornecedorController::class, 'store'])->name('fornecedor.store');
@@ -117,7 +128,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{fornecedor}/excluir', [FornecedorController::class, 'destroy'])->name('fornecedor.destroy');
     });
 
-    Route::prefix('funcionario')->middleware('perfil:admin,operador')->group(function () {
+    Route::prefix('funcionario')->middleware('permissao:funcionarios')->group(function () {
         Route::get('/', [FuncionarioController::class, 'index'])->name('funcionario.index');
         Route::get('/novo', [FuncionarioController::class, 'create'])->name('funcionario.create');
         Route::post('/salvar', [FuncionarioController::class, 'store'])->name('funcionario.store');
@@ -126,7 +137,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{funcionario}/excluir', [FuncionarioController::class, 'destroy'])->name('funcionario.destroy');
     });
 
-    Route::prefix('grupo')->group(function () {
+    Route::prefix('grupo')->middleware('permissao:produtos')->group(function () {
         Route::get('/', [GrupoController::class, 'index'])->name('grupo.index');
         Route::get('/novo', [GrupoController::class, 'create'])->name('grupo.create');
         Route::post('/salvar', [GrupoController::class, 'store'])->name('grupo.store');
@@ -135,7 +146,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{grupo}/excluir', [GrupoController::class, 'destroy'])->name('grupo.destroy');
     });
 
-    Route::prefix('unidadeMedida')->group(function () {
+    Route::prefix('unidadeMedida')->middleware('permissao:produtos')->group(function () {
         Route::get('/', [UnidadeMedidaController::class, 'index'])->name('unidadeMedida.index');
         Route::get('/novo', [UnidadeMedidaController::class, 'create'])->name('unidadeMedida.create');
         Route::post('/salvar', [UnidadeMedidaController::class, 'store'])->name('unidadeMedida.store');
@@ -144,7 +155,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{unidadeMedida}/excluir', [UnidadeMedidaController::class, 'destroy'])->name('unidadeMedida.destroy');
     });
 
-    Route::prefix('formaPagamento')->middleware('perfil:admin')->group(function () {
+    Route::prefix('formaPagamento')->middleware('permissao:formas_pagamento')->group(function () {
         Route::get('/', [FormaPagamentoController::class, 'index'])->name('formaPagamento.index');
         Route::get('/novo', [FormaPagamentoController::class, 'create'])->name('formaPagamento.create');
         Route::post('/salvar', [FormaPagamentoController::class, 'store'])->name('formaPagamento.store');
@@ -153,7 +164,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{formaPagamento}/excluir', [FormaPagamentoController::class, 'destroy'])->name('formaPagamento.destroy');
     });
 
-    Route::prefix('produto')->group(function () {
+    Route::prefix('produto')->middleware('permissao:produtos')->group(function () {
         Route::get('/', [ProdutoController::class, 'index'])->name('produto.index');
         Route::get('/novo', [ProdutoController::class, 'create'])->name('produto.create');
         Route::post('/salvar', [ProdutoController::class, 'store'])->name('produto.store');
@@ -162,14 +173,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('{produto}/excluir', [ProdutoController::class, 'destroy'])->name('produto.destroy');
     });
 
-    Route::prefix('comissao')->middleware('perfil:admin,operador')->group(function () {
+    Route::prefix('comissao')->middleware('permissao:comissoes')->group(function () {
         Route::get('/', [ComissaoController::class, 'index'])->name('comissao.index');
         Route::post('{comissao}/pagar', [ComissaoController::class, 'pagar'])->name('comissao.pagar');
     });
 
-    Route::get('/pdv', [VendaController::class, 'pdv'])->name('pdv.index');
+    Route::get('/pdv', [VendaController::class, 'pdv'])->middleware('permissao:vendas')->name('pdv.index');
 
-    Route::prefix('venda')->group(function () {
+    Route::prefix('venda')->middleware('permissao:vendas')->group(function () {
         Route::get('/', [VendaController::class, 'index'])->name('venda.index');
         Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
         Route::post('/salvar', [VendaController::class, 'store'])->name('venda.store');
@@ -182,7 +193,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
     });
 
-    Route::prefix('nfe')->group(function () {
+    Route::prefix('nfe')->middleware('permissao:nfe')->group(function () {
         Route::get('/', [NfeController::class, 'index'])->name('nfe.index');
         Route::get('/nova', [NfeController::class, 'create'])->name('nfe.create');
         Route::post('/salvar', [NfeController::class, 'store'])->name('nfe.store');
@@ -192,7 +203,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{nfe}/danfe', [NfeController::class, 'danfe'])->name('nfe.danfe');
     });
 
-    Route::prefix('orcamento')->group(function () {
+    Route::prefix('orcamento')->middleware('permissao:orcamentos')->group(function () {
         Route::get('/', [OrcamentoController::class, 'index'])->name('orcamento.index');
         Route::get('/novo', [OrcamentoController::class, 'create'])->name('orcamento.create');
         Route::post('/salvar', [OrcamentoController::class, 'store'])->name('orcamento.store');
@@ -206,7 +217,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{orcamento}/excluir', [OrcamentoController::class, 'destroy'])->name('orcamento.destroy');
     });
 
-    Route::prefix('entrada-estoque')->group(function () {
+    Route::prefix('entrada-estoque')->middleware('permissao:estoque')->group(function () {
         Route::get('/', [EntradaEstoqueController::class, 'index'])->name('entrada-estoque.index');
         Route::get('/nova', [EntradaEstoqueController::class, 'create'])->name('entrada-estoque.create');
         Route::post('/salvar', [EntradaEstoqueController::class, 'store'])->name('entrada-estoque.store');
@@ -220,13 +231,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('{entradaEstoque}/excluir', [EntradaEstoqueController::class, 'destroy'])->name('entrada-estoque.destroy');
     });
 
-    Route::prefix('estoque')->group(function () {
+    Route::prefix('estoque')->middleware('permissao:estoque')->group(function () {
         Route::get('/ajuste', [AjusteEstoqueController::class, 'create'])->name('estoque.ajuste.create');
         Route::post('/ajuste', [AjusteEstoqueController::class, 'store'])->name('estoque.ajuste.store');
         Route::get('/historico', [AjusteEstoqueController::class, 'historico'])->name('estoque.historico');
     });
 
-    Route::prefix('categoria-financeira')->middleware('perfil:admin,financeiro')->group(function () {
+    Route::prefix('categoria-financeira')->middleware('permissao:financeiro')->group(function () {
         Route::get('/', [CategoriaFinanceiraController::class, 'index'])->name('categoria-financeira.index');
         Route::get('/nova', [CategoriaFinanceiraController::class, 'create'])->name('categoria-financeira.create');
         Route::post('/salvar', [CategoriaFinanceiraController::class, 'store'])->name('categoria-financeira.store');
@@ -235,7 +246,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{categoriaFinanceira}/excluir', [CategoriaFinanceiraController::class, 'destroy'])->name('categoria-financeira.destroy');
     });
 
-    Route::prefix('conta-receber')->middleware('perfil:admin,financeiro')->group(function () {
+    Route::prefix('conta-receber')->middleware('permissao:financeiro')->group(function () {
         Route::get('/', [ContaReceberController::class, 'index'])->name('conta-receber.index');
         Route::get('/nova', [ContaReceberController::class, 'create'])->name('conta-receber.create');
         Route::post('/salvar', [ContaReceberController::class, 'store'])->name('conta-receber.store');
@@ -247,7 +258,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('{contaReceber}/excluir', [ContaReceberController::class, 'destroy'])->name('conta-receber.destroy');
     });
 
-    Route::prefix('conta-pagar')->middleware('perfil:admin,financeiro')->group(function () {
+    Route::prefix('conta-pagar')->middleware('permissao:financeiro')->group(function () {
         Route::get('/', [ContaPagarController::class, 'index'])->name('conta-pagar.index');
         Route::get('/nova', [ContaPagarController::class, 'create'])->name('conta-pagar.create');
         Route::post('/salvar', [ContaPagarController::class, 'store'])->name('conta-pagar.store');
@@ -260,10 +271,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/fluxo-de-caixa', [FluxoCaixaController::class, 'index'])
-        ->middleware('perfil:admin,financeiro')
+        ->middleware('permissao:financeiro')
         ->name('fluxo-de-caixa.index');
     Route::get('/fluxo-de-caixa/csv', [FluxoCaixaController::class, 'csv'])
-        ->middleware('perfil:admin,financeiro')
+        ->middleware('permissao:financeiro')
         ->name('fluxo-de-caixa.csv');
 
 });

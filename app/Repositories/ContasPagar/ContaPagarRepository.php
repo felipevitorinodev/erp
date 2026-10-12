@@ -3,7 +3,9 @@
 namespace App\Repositories\ContasPagar;
 
 use App\Models\ContasPagar\ContaPagar;
+use App\Models\ContasPagar\ContaPagarBaixa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ContaPagarRepository
 {
@@ -52,11 +54,36 @@ class ContaPagarRepository
         return $conta;
     }
 
-    public function pagar(ContaPagar $conta, array $dados): ContaPagar
+    public function pagar(ContaPagar $conta, float $valorBaixa, string $dataPagamento, ?string $formaPagamento): ContaPagar
     {
-        $conta->update($dados);
+        return DB::transaction(function () use ($conta, $valorBaixa, $dataPagamento, $formaPagamento) {
+            $conta = ContaPagar::where('id', $conta->id)->lockForUpdate()->firstOrFail();
 
-        return $conta;
+            $saldo = round((float) $conta->valor - (float) $conta->valor_pago, 2);
+            if ($valorBaixa <= 0 || $valorBaixa > $saldo) {
+                throw new \RuntimeException('O valor pago não pode exceder o saldo restante.');
+            }
+
+            $novoValorPago = round((float) $conta->valor_pago + $valorBaixa, 2);
+            $situacao = $novoValorPago >= round((float) $conta->valor, 2) ? 'paga' : 'parcial';
+
+            $conta->update([
+                'valor_pago' => $novoValorPago,
+                'situacao' => $situacao,
+                'forma_pagamento' => $formaPagamento ?: $conta->forma_pagamento,
+                'data_pagamento' => $dataPagamento,
+            ]);
+
+            ContaPagarBaixa::create([
+                'empresa_id' => $conta->empresa_id,
+                'conta_pagar_id' => $conta->id,
+                'valor' => $valorBaixa,
+                'data_pagamento' => $dataPagamento,
+                'forma_pagamento' => $formaPagamento ?: $conta->forma_pagamento,
+            ]);
+
+            return $conta;
+        });
     }
 
     public function cancelar(ContaPagar $conta): ContaPagar

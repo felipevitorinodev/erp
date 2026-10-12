@@ -78,10 +78,20 @@
         <aside class="sidebar">
             <nav class="sidebar__nav">
                 @php
-                    $perfil = auth()->user()->perfil ?? '';
-                    $podeFinanceiro = in_array($perfil, ['admin', 'financeiro'], true);
-                    $podeOperacional = in_array($perfil, ['admin', 'operador'], true);
-                    $ehAdmin = $perfil === 'admin';
+                    $usuarioMenu = auth()->user();
+                    $podeVendas = $usuarioMenu->pode('vendas');
+                    $podeOrcamentos = $usuarioMenu->pode('orcamentos');
+                    $podeComissoes = $usuarioMenu->pode('comissoes');
+                    $podeNfe = $usuarioMenu->pode('nfe');
+                    $podeEstoque = $usuarioMenu->pode('estoque');
+                    $podeProdutos = $usuarioMenu->pode('produtos');
+                    $podeFinanceiro = $usuarioMenu->pode('financeiro');
+                    $podeFormas = $usuarioMenu->pode('formas_pagamento');
+                    $podeClientes = $usuarioMenu->pode('clientes');
+                    $podeFornecedores = $usuarioMenu->pode('fornecedores');
+                    $podeFuncionarios = $usuarioMenu->pode('funcionarios');
+                    $podeRelatorios = $usuarioMenu->pode('relatorios');
+                    $podeConfiguracoes = $usuarioMenu->pode('configuracoes');
                 @endphp
 
                 {{-- Início --}}
@@ -96,6 +106,7 @@
                     </a>
                 </div>
 
+                @if ($podeVendas || $podeOrcamentos || $podeComissoes)
                 {{-- Vendas --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -109,6 +120,7 @@
                         <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
+                        @if ($podeVendas)
                         <a href="{{ route('pdv.index') }}"
                             class="sidebar__link {{ request()->routeIs('pdv.*') ? 'sidebar__link--active' : '' }}">
                             PDV
@@ -117,11 +129,14 @@
                             class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
                             Vendas
                         </a>
-                        <a href="{{ route('orcamento.index') }}"
-                            class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
-                            Orçamentos
-                        </a>
-                        @if ($podeOperacional)
+                        @endif
+                        @if ($podeOrcamentos)
+                            <a href="{{ route('orcamento.index') }}"
+                                class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
+                                Orçamentos
+                            </a>
+                        @endif
+                        @if ($podeComissoes)
                             <a href="{{ route('comissao.index') }}"
                                 class="sidebar__link {{ request()->routeIs('comissao.*') ? 'sidebar__link--active' : '' }}">
                                 Comissões
@@ -129,7 +144,9 @@
                         @endif
                     </div>
                 </div>
+                @endif
 
+                @if ($podeNfe)
                 {{-- Nota Fiscal --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -152,6 +169,9 @@
                     </div>
                 </div>
 
+                @endif
+
+                @if ($podeEstoque)
                 {{-- Estoque --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -175,13 +195,18 @@
                             class="sidebar__link {{ request()->routeIs('estoque.ajuste.*') ? 'sidebar__link--active' : '' }}">
                             Ajuste Manual
                         </a>
+                        @if ($podeRelatorios)
                         <a href="{{ route('relatorio.estoque') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
                             Posição Atual
                         </a>
+                        @endif
                     </div>
                 </div>
 
+                @endif
+
+                @if ($podeProdutos)
                 {{-- Produtos --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -209,6 +234,8 @@
                         </a>
                     </div>
                 </div>
+
+                @endif
 
                 {{-- Financeiro --}}
                 @if ($podeFinanceiro)
@@ -239,7 +266,7 @@
                                 class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
                                 Categorias
                             </a>
-                            @if ($ehAdmin)
+                            @if ($podeFormas)
                                 <a href="{{ route('formaPagamento.index') }}"
                                     class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
                                     Formas de Pagamento
@@ -249,6 +276,7 @@
                     </div>
                 @endif
 
+                @if ($podeClientes || $podeFornecedores || $podeFuncionarios)
                 {{-- Cadastros --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -263,15 +291,19 @@
                         <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
+                        @if ($podeClientes)
                         <a href="{{ route('cliente.index') }}"
                             class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
                             Clientes
                         </a>
+                        @endif
+                        @if ($podeFornecedores)
                         <a href="{{ route('fornecedor.index') }}"
                             class="sidebar__link {{ request()->routeIs('fornecedor.*') ? 'sidebar__link--active' : '' }}">
                             Fornecedores
                         </a>
-                        @if ($podeOperacional)
+                        @endif
+                        @if ($podeFuncionarios)
                             <a href="{{ route('funcionario.index') }}"
                                 class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
                                 Funcionários
@@ -280,6 +312,9 @@
                     </div>
                 </div>
 
+                @endif
+
+                @if ($podeRelatorios)
                 {{-- Relatórios --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -314,8 +349,10 @@
                     </div>
                 </div>
 
-                {{-- Configurações (Admin) --}}
-                @if ($ehAdmin)
+                @endif
+
+                {{-- Configurações --}}
+                @if ($podeConfiguracoes)
                     <div class="sidebar__group" data-group>
                         <div class="sidebar__group-toggle" data-toggle>
                             <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -336,6 +373,10 @@
                             <a href="{{ route('empresa.index') }}"
                                 class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
                                 Empresa
+                            </a>
+                            <a href="{{ route('permissao.index') }}"
+                                class="sidebar__link {{ request()->routeIs('permissao.*') ? 'sidebar__link--active' : '' }}">
+                                Permissões
                             </a>
                         </div>
                     </div>

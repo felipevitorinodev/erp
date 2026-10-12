@@ -3,10 +3,12 @@
 namespace App\Repositories\ContasReceber;
 
 use App\Models\ContasReceber\ContaReceber;
+use App\Models\ContasReceber\ContaReceberBaixa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Vendas\Venda;
 use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ContaReceberRepository
 {
@@ -55,11 +57,36 @@ class ContaReceberRepository
         return $conta;
     }
 
-    public function receber(ContaReceber $conta, array $dados): ContaReceber
+    public function receber(ContaReceber $conta, float $valorBaixa, string $dataPagamento, ?string $formaPagamento): ContaReceber
     {
-        $conta->update($dados);
+        return DB::transaction(function () use ($conta, $valorBaixa, $dataPagamento, $formaPagamento) {
+            $conta = ContaReceber::where('id', $conta->id)->lockForUpdate()->firstOrFail();
 
-        return $conta;
+            $saldo = round((float) $conta->valor - (float) $conta->valor_pago, 2);
+            if ($valorBaixa <= 0 || $valorBaixa > $saldo) {
+                throw new \RuntimeException('O valor pago não pode exceder o saldo restante.');
+            }
+
+            $novoValorPago = round((float) $conta->valor_pago + $valorBaixa, 2);
+            $situacao = $novoValorPago >= round((float) $conta->valor, 2) ? 'paga' : 'parcial';
+
+            $conta->update([
+                'valor_pago' => $novoValorPago,
+                'situacao' => $situacao,
+                'forma_pagamento' => $formaPagamento ?: $conta->forma_pagamento,
+                'data_pagamento' => $dataPagamento,
+            ]);
+
+            ContaReceberBaixa::create([
+                'empresa_id' => $conta->empresa_id,
+                'conta_receber_id' => $conta->id,
+                'valor' => $valorBaixa,
+                'data_pagamento' => $dataPagamento,
+                'forma_pagamento' => $formaPagamento ?: $conta->forma_pagamento,
+            ]);
+
+            return $conta;
+        });
     }
 
     public function cancelar(ContaReceber $conta): ContaReceber

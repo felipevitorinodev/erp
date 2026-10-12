@@ -15,6 +15,42 @@
 <script>document.body.classList.add('pdv-page');</script>
 
     <div class="pdv-shell" id="pdv-shell">
+    <div class="pdv-tela-pequena" id="pdv-tela-pequena" hidden>
+        <div class="pdv-tela-pequena__card">
+            <div class="pdv-tela-pequena__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                    <path d="M8 21h8"></path>
+                    <path d="M12 17v4"></path>
+                </svg>
+            </div>
+            <h2 class="pdv-tela-pequena__titulo">Tela muito pequena para o PDV</h2>
+            <p class="pdv-tela-pequena__texto">
+                O ponto de venda precisa de um monitor de computador com pelo menos
+                <strong>1024&nbsp;px</strong> de largura para funcionar corretamente.
+            </p>
+            <p class="pdv-tela-pequena__meta">Largura atual: <strong id="pdv-largura-atual">—</strong></p>
+            <div class="pdv-tela-pequena__acoes">
+                <a href="{{ route('venda.index') }}" class="btn btn--primary pdv-tela-pequena__btn">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M19 12H5"></path>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Voltar para Vendas
+                </a>
+                <a href="{{ route('venda.create') }}" class="btn btn--ghost pdv-tela-pequena__btn pdv-tela-pequena__btn--sec">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    Abrir venda pelo formulário
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="pdv-wrap" id="pdv-wrap">
         <div class="pdv-alert-erro alert alert--error" id="pdv-alert-erro" role="alert">
             <span id="pdv-alert-erro-msg"></span>
@@ -40,7 +76,7 @@
                 <div class="pdv-atalhos" aria-label="Atalhos do teclado">
                     <span class="pdv-atalho"><kbd class="pdv-kbd">Enter</kbd> adicionar</span>
                     <span class="pdv-atalho pdv-atalho--desktop"><kbd class="pdv-kbd">↑</kbd><kbd class="pdv-kbd">↓</kbd> navegar</span>
-                    <span class="pdv-atalho"><kbd class="pdv-kbd">F2</kbd> busca</span>
+                    <span class="pdv-atalho"><kbd class="pdv-kbd">F2</kbd> buscar</span>
                     <span class="pdv-atalho"><kbd class="pdv-kbd">F4</kbd> finalizar</span>
                     <span class="pdv-atalho pdv-atalho--desktop"><kbd class="pdv-kbd">Esc</kbd> limpar</span>
                 </div>
@@ -62,24 +98,30 @@
 
         <aside class="pdv-direita">
             <div class="pdv-painel">
-                <div class="pdv-cliente form-group">
-                    <label class="form-label" for="pdv-input-cliente">Cliente <span class="pdv-label-opcional">opcional</span></label>
-                    <div class="autocomplete-wrap">
-                        <input type="text" id="pdv-input-cliente" class="form-control pdv-input-soft"
-                               placeholder="Consumidor Final" autocomplete="off">
-                        <input type="hidden" id="pdv-hidden-cliente-id" value="">
-                    </div>
-                </div>
-
-                <div class="pdv-totais">
+                <div class="pdv-totais pdv-totais--resumo">
                     <div class="pdv-totais__linha">
                         <span>Subtotal</span>
                         <strong id="pdv-display-subtotal">R$ 0,00</strong>
                     </div>
+                    <div class="pdv-totais__total">
+                        <span class="pdv-totais__total-label">Total</span>
+                        <strong class="pdv-total-grande" id="pdv-display-total">R$ 0,00</strong>
+                    </div>
+                </div>
 
-                    <details class="pdv-ajustes">
-                        <summary class="pdv-ajustes__summary">Desconto / Acréscimo</summary>
-                        <div class="pdv-ajustes__body">
+                <details class="pdv-ajustes pdv-painel-extra" id="pdv-painel-extra">
+                    <summary class="pdv-ajustes__summary">Cliente e desconto</summary>
+                    <div class="pdv-painel-extra__body">
+                        <div class="pdv-cliente form-group">
+                            <label class="form-label" for="pdv-input-cliente">Cliente <span class="pdv-label-opcional">opcional</span></label>
+                            <div class="autocomplete-wrap">
+                                <input type="text" id="pdv-input-cliente" class="form-control pdv-input-soft"
+                                       placeholder="Consumidor Final" autocomplete="off">
+                                <input type="hidden" id="pdv-hidden-cliente-id" value="">
+                            </div>
+                        </div>
+
+                        <div class="pdv-ajustes-grid">
                             <div class="form-group">
                                 <label class="form-label" for="pdv-desconto">Desconto (R$)</label>
                                 <input type="tel" id="pdv-desconto" class="form-control input-numeric text-right pdv-input-soft"
@@ -91,25 +133,31 @@
                                        inputmode="numeric" data-decimals="2" value="0,00">
                             </div>
                         </div>
-                    </details>
 
-                    <div class="pdv-totais__total">
-                        <span class="pdv-totais__total-label">Total</span>
-                        <strong class="pdv-total-grande" id="pdv-display-total">R$ 0,00</strong>
                     </div>
-                </div>
+                </details>
 
-                <div class="pdv-formas">
-                    <label class="form-label">Pagamento</label>
-                    <div class="pdv-formas-grid" id="pdv-formas-grid">
-                        @foreach($formasPagamento as $i => $forma)
-                            <button type="button"
-                                    class="pdv-forma-btn{{ $i === 0 ? ' pdv-forma-btn--ativa' : '' }}"
-                                    data-forma="{{ $forma->nome }}">
-                                {{ $forma->nome }}
-                            </button>
-                        @endforeach
+                <div class="pdv-pagamento">
+                    <div class="pdv-pagamento__topo">
+                        <label class="form-label">Pagamento</label>
+                        <span class="pdv-pagamento__atalho">trocar <kbd class="pdv-kbd">F6</kbd></span>
                     </div>
+                    @if($formasPagamento->isEmpty())
+                        <p class="pdv-pagamento__vazio">Nenhuma forma de pagamento ativa. Peça ao administrador para cadastrar.</p>
+                    @else
+                        <div class="pdv-formas-grid" id="pdv-formas-grid" role="group" aria-label="Forma de pagamento">
+                            @foreach($formasPagamento as $i => $forma)
+                                <button type="button"
+                                        class="pdv-forma-btn{{ $forma->isPrazo() ? ' pdv-forma-btn--prazo' : '' }}{{ $i === 0 ? ' pdv-forma-btn--ativa' : '' }}"
+                                        data-forma="{{ $forma->nome }}"
+                                        data-tipo="{{ $forma->isPrazo() ? 'A prazo' : 'À vista' }}"
+                                        aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
+                                    <span class="pdv-forma-btn__nome">{{ $forma->nome }}</span>
+                                    <span class="pdv-forma-btn__tipo">{{ $forma->isPrazo() ? 'A prazo' : 'À vista' }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                     <input type="hidden" id="pdv-hidden-forma-pagamento"
                            value="{{ $formasPagamento->first()->nome ?? '' }}">
                     <span class="form-error" id="pdv-forma-erro" hidden>Selecione a forma de pagamento.</span>
@@ -117,7 +165,10 @@
 
                 <div class="pdv-btn-finalizar-fixed">
                     <button type="button" class="pdv-btn-finalizar" id="pdv-btn-finalizar">
-                        <span class="pdv-btn-finalizar__label">Finalizar Venda</span>
+                        <span class="pdv-btn-finalizar__textos">
+                            <span class="pdv-btn-finalizar__label">Finalizar Venda</span>
+                            <span class="pdv-btn-finalizar__forma" id="pdv-btn-finalizar-forma">{{ $formasPagamento->first()->nome ?? 'Sem pagamento' }}</span>
+                        </span>
                         <span class="pdv-btn-finalizar__valor" id="pdv-btn-finalizar-valor">R$ 0,00</span>
                         <kbd class="pdv-kbd pdv-kbd--on-dark pdv-btn-finalizar__kbd">F4</kbd>
                     </button>
@@ -134,7 +185,7 @@
                     <path class="pdv-sucesso__check" fill="none" d="M14.5 27.2l7.2 7.2 15.8-16"/>
                 </svg>
             </div>
-            <p class="pdv-sucesso__badge">Pagamento registrado</p>
+            <p class="pdv-sucesso__badge" id="pdv-sucesso-pagamento">Pagamento registrado</p>
             <h2 class="pdv-sucesso__titulo">Venda Confirmada!</h2>
             <p class="pdv-sucesso__valor" id="pdv-sucesso-total">Total: R$ 0,00</p>
             <p class="pdv-sucesso__numero" id="pdv-sucesso-numero">Nº —</p>
@@ -166,5 +217,5 @@
         dataHoje: @json(date('Y-m-d')),
     };
 </script>
-<script src="{{ asset('js/pdv.js') }}?v=5"></script>
+<script src="{{ asset('js/pdv.js') }}?v=9"></script>
 @endpush

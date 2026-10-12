@@ -51,7 +51,7 @@ class ContaPagarService
     public function show(ContaPagar $contaPagar)
     {
         $this->garantirEmpresa($contaPagar);
-        $contaPagar->load(['fornecedor', 'categoria', 'entradaEstoque']);
+        $contaPagar->load(['fornecedor', 'categoria', 'entradaEstoque', 'baixas']);
 
         return view('conta-pagar.show', ['conta' => $contaPagar]);
     }
@@ -89,6 +89,19 @@ class ContaPagarService
         }
 
         $dados = $this->montarDados($request);
+        $valor = round((float) $dados['valor'], 2);
+        $pago = round((float) $contaPagar->valor_pago, 2);
+
+        if ($pago > 0 && $valor < $pago) {
+            return back()
+                ->withErrors(['valor' => 'O valor da conta não pode ser menor que o valor já pago.'])
+                ->withInput();
+        }
+
+        if ($pago > 0) {
+            $dados['situacao'] = $valor <= $pago ? 'paga' : 'parcial';
+        }
+
         $this->repository->update($contaPagar, $dados);
 
         return redirect()->route('conta-pagar.show', $contaPagar)
@@ -125,19 +138,18 @@ class ContaPagarService
                 ->withInput();
         }
 
-        $novoValorPago = round((float) $contaPagar->valor_pago + $valorInformado, 2);
-        $valorTotal    = round((float) $contaPagar->valor, 2);
-        $situacao      = $novoValorPago >= $valorTotal ? 'paga' : 'parcial';
-
-        // Sempre grava data_pagamento (parcial e paga) — o fluxo de caixa depende disso
-        $dados = [
-            'valor_pago'      => $novoValorPago,
-            'situacao'        => $situacao,
-            'forma_pagamento' => $request->forma_pagamento ?: $contaPagar->forma_pagamento,
-            'data_pagamento'  => $request->data_pagamento,
-        ];
-
-        $this->repository->pagar($contaPagar, $dados);
+        try {
+            $this->repository->pagar(
+                $contaPagar,
+                $valorInformado,
+                $request->data_pagamento,
+                $request->forma_pagamento ?: $contaPagar->forma_pagamento
+            );
+        } catch (\RuntimeException $ex) {
+            return back()
+                ->withErrors(['valor_pago' => $ex->getMessage()])
+                ->withInput();
+        }
 
         return redirect()->route('conta-pagar.show', $contaPagar)
             ->with('success', 'Pagamento registrado com sucesso.');
@@ -152,9 +164,9 @@ class ContaPagarService
                 ->with('error', 'Conta já está cancelada.');
         }
 
-        if ($contaPagar->situacao === 'paga') {
+        if (in_array($contaPagar->situacao, ['paga', 'parcial'], true)) {
             return redirect()->route('conta-pagar.show', $contaPagar)
-                ->with('error', 'Conta paga não pode ser cancelada.');
+                ->with('error', 'Conta com pagamento não pode ser cancelada.');
         }
 
         $this->repository->cancelar($contaPagar);

@@ -150,6 +150,7 @@ class VendaService
     public function show(Venda $venda)
     {
         $this->autorizarVenda($venda);
+        $this->ocultarCanceladaDoVendedor($venda);
 
         $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario', 'nfe']);
 
@@ -159,6 +160,7 @@ class VendaService
     public function pdf(Venda $venda)
     {
         $this->autorizarVenda($venda);
+        $this->ocultarCanceladaDoVendedor($venda);
 
         $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario']);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('venda.pdf', ['venda' => $venda])->setPaper('a4', 'portrait');
@@ -174,6 +176,11 @@ class VendaService
                 ->with('error', 'Venda cancelada não pode ser editada.');
         }
 
+        if ($venda->situacao === 'confirmada') {
+            return redirect()->route('venda.show', $venda)
+                ->with('error', 'Venda confirmada não pode ser editada. Cancele a venda se precisar desfazer a operação.');
+        }
+
         $venda->load(['itens.produto', 'cliente', 'funcionario']);
 
         return view('venda.edit', ['venda' => $venda]);
@@ -186,6 +193,11 @@ class VendaService
         if ($venda->situacao === 'cancelada') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda cancelada não pode ser editada.');
+        }
+
+        if ($venda->situacao === 'confirmada') {
+            return redirect()->route('venda.show', $venda)
+                ->with('error', 'Venda confirmada não pode ser editada. Cancele a venda se precisar desfazer a operação.');
         }
 
         $itens = $this->processarItens($request->itens ?? []);
@@ -285,6 +297,10 @@ class VendaService
     {
         $this->autorizarVenda($venda);
 
+        if ($bloqueio = $this->bloquearVendaFechadaParaVendedor($venda)) {
+            return $bloqueio;
+        }
+
         if ($venda->situacao === 'cancelada') {
             return redirect()->route('venda.show', $venda)
                 ->with('error', 'Venda já está cancelada.');
@@ -304,6 +320,10 @@ class VendaService
     public function destroy(Venda $venda)
     {
         $this->autorizarVenda($venda);
+
+        if ($bloqueio = $this->bloquearVendaFechadaParaVendedor($venda)) {
+            return $bloqueio;
+        }
 
         $numero = $venda->numero;
         $venda->load('itens');
@@ -413,6 +433,27 @@ class VendaService
         $total = max(0, round($subtotal - $desconto + $acrescimo, 2));
 
         return compact('subtotal', 'desconto', 'acrescimo', 'total');
+    }
+
+    private function ocultarCanceladaDoVendedor(Venda $venda): void
+    {
+        if (!auth()->user()->pode('vendas.ver_canceladas') && $venda->situacao === 'cancelada') {
+            abort(403);
+        }
+    }
+
+    private function bloquearVendaFechadaParaVendedor(Venda $venda): ?\Illuminate\Http\RedirectResponse
+    {
+        if (auth()->user()->pode('vendas.cancelar') || $venda->situacao === 'em_andamento') {
+            return null;
+        }
+
+        if ($venda->situacao === 'confirmada') {
+            return redirect()->route('venda.show', $venda)
+                ->with('error', 'Venda fechada só pode ser consultada.');
+        }
+
+        abort(403);
     }
 
     private function autorizarVenda(Venda $venda): void

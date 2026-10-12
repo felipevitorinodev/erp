@@ -10,7 +10,7 @@ class UsuarioRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (auth()->user()->perfil ?? '') === 'admin';
+        return (bool) auth()->user()?->pode('configuracoes');
     }
 
     public function rules(): array
@@ -29,7 +29,15 @@ class UsuarioRequest extends FormRequest
             'password' => $this->isMethod('post')
                 ? 'required|string|min:6|confirmed'
                 : 'nullable|string|min:6|confirmed',
-            'perfil'   => 'required|in:admin,operador,financeiro',
+            'perfil'   => [
+                'required',
+                'string',
+                Rule::exists('perfis', 'slug')->where(
+                    fn ($query) => $query
+                        ->where('empresa_id', auth()->user()->empresa_id)
+                        ->where('ativo', true)
+                ),
+            ],
             'ativo'    => 'nullable|boolean',
         ];
     }

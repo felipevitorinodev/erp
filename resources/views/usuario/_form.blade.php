@@ -41,9 +41,9 @@
         <div class="form-group">
             <label class="form-label form-label--required">Perfil</label>
             <select name="perfil" class="form-control @error('perfil') is-invalid @enderror">
-                @foreach(['admin' => 'Admin', 'operador' => 'Operador', 'financeiro' => 'Financeiro'] as $valor => $label)
-                    <option value="{{ $valor }}" {{ old('perfil', $usuario->perfil ?? 'operador') === $valor ? 'selected' : '' }}>
-                        {{ $label }}
+                @foreach(\App\Models\Usuarios\Perfil::where('empresa_id', auth()->user()->empresa_id)->where('ativo', true)->orderBy('nome')->get() as $perfilOpcao)
+                    <option value="{{ $perfilOpcao->slug }}" {{ old('perfil', $usuario->perfil ?? 'vendedor') === $perfilOpcao->slug ? 'selected' : '' }}>
+                        {{ $perfilOpcao->nome }}
                     </option>
                 @endforeach
             </select>

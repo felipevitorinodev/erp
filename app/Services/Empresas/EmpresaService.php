@@ -29,16 +29,30 @@ class EmpresaService
         ]);
     }
 
-    public function create() {
+    public function create()
+    {
+        if (auth()->user()->empresa_id) {
+            return redirect()->route('empresa.index');
+        }
+
         return view('empresa.create');
     }
 
     public function store($request)
     {
-    $this->empresaRepository->store($request->validated());
+        $user = auth()->user();
 
-    return redirect()->route('empresa.index')
-        ->with('success', 'Empresa cadastrada com sucesso.');
+        if ($user->empresa_id) {
+            return redirect()->route('empresa.index')
+                ->with('error', 'Você já possui uma empresa vinculada.');
+        }
+
+        $empresa = $this->empresaRepository->store($request->validated());
+        $user->empresa_id = $empresa->id;
+        $user->save();
+
+        return redirect()->route('empresa.index')
+            ->with('success', 'Empresa cadastrada com sucesso.');
     }   
 
     public function edit(Empresa $empresa)

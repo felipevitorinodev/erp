@@ -34,7 +34,11 @@ class VendaRepository
                 });
             }
             if ($request->filled('situacao')) {
-                $query->where('situacao', $request->situacao);
+                $situacao = $request->situacao;
+                $veCanceladas = auth()->user()->pode('vendas.ver_canceladas');
+                if ($veCanceladas || in_array($situacao, ['confirmada', 'em_andamento'], true)) {
+                    $query->where('situacao', $situacao);
+                }
             }
             if ($request->filled('data_inicio')) {
                 $query->whereDate('data_venda', '>=', $request->data_inicio);
@@ -42,6 +46,10 @@ class VendaRepository
             if ($request->filled('data_fim')) {
                 $query->whereDate('data_venda', '<=', $request->data_fim);
             }
+        }
+
+        if (!auth()->user()->pode('vendas.ver_canceladas')) {
+            $query->whereIn('situacao', ['confirmada', 'em_andamento']);
         }
 
         return $query->paginate(20);

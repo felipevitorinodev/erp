@@ -17,6 +17,7 @@
             <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
                 <x-icon name="edit" />
             </a>
+            @if ($conta->situacao !== 'parcial')
             <form method="POST" action="{{ route('conta-receber.cancelar', $conta) }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn--danger btn--sm" data-confirm="Cancelar esta conta?"
@@ -24,6 +25,7 @@
                     Cancelar
                 </button>
             </form>
+            @endif
         @endif
 
 
@@ -120,6 +122,34 @@
             @endif
         </div>
     </div>
+
+    @if ($conta->baixas->isNotEmpty())
+        <div class="card" style="margin-top:1rem;">
+            <div class="card__header">
+                <span class="card__title">Recebimentos</span>
+            </div>
+            <div class="card__body" style="padding:0;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th class="col-num">Valor</th>
+                            <th>Forma</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($conta->baixas->sortBy('data_pagamento') as $baixa)
+                            <tr>
+                                <td>{{ $baixa->data_pagamento->format('d/m/Y') }}</td>
+                                <td class="col-num">R$ {{ number_format($baixa->valor, 2, ',', '.') }}</td>
+                                <td>{{ $baixa->forma_pagamento ?: '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
         <div class="modal-overlay" id="modal-receber" hidden>
