@@ -42,6 +42,10 @@ class VendaService
         try {
             $resultado = $this->persistirVenda($request, $request->situacao ?? 'em_andamento');
         } catch (ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Dados inválidos.', 'errors' => $e->errors()], 422);
+            }
+
             return back()->withErrors($e->errors())->withInput();
         }
 
@@ -49,6 +53,14 @@ class VendaService
         $situacao = $resultado['situacao'];
         $avisoEstoque = $resultado['aviso_estoque'];
         $empresaId = (int) auth()->user()->empresa_id;
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id'       => $venda->id,
+                'numero'   => $venda->numero,
+                'situacao' => $venda->situacao,
+            ], 201);
+        }
 
         if ($situacao === 'confirmada') {
             $mensagem = 'Venda #' . $venda->numero . ' cadastrada e confirmada com sucesso.';

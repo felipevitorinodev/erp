@@ -489,6 +489,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function formatInput(val) {
         return (parseFloat(val) || 0).toFixed(2).replace('.', ',');
     }
+    function esc(val) {
+        var div = document.createElement('div');
+        div.textContent = val == null ? '' : String(val);
+        return div.innerHTML.replace(/"/g, '&quot;');
+    }
     function digits(val, max) {
         var d = String(val || '').replace(/\D/g, '');
         return max ? d.slice(0, max) : d;
@@ -660,11 +665,11 @@ document.addEventListener('DOMContentLoaded', function () {
         itens.forEach(function (it, idx) {
             var tr = document.createElement('tr');
             tr.innerHTML =
-                '<td data-label="Produto"><strong>' + it.nome + '</strong>' +
-                    '<div class="text-muted" style="font-size:11px;">' + (it.codigo || '-') + ' · ' + it.unidade + '</div></td>' +
-                '<td data-label="Fiscal"><span class="badge badge--neutral">NCM ' + it.ncm + '</span> ' +
-                    '<span class="badge badge--neutral">CFOP ' + it.cfop + '</span> ' +
-                    '<span class="badge badge--neutral">CSOSN ' + it.csosn + '</span></td>' +
+                '<td data-label="Produto"><strong>' + esc(it.nome) + '</strong>' +
+                    '<div class="text-muted" style="font-size:11px;">' + esc(it.codigo || '-') + ' · ' + esc(it.unidade) + '</div></td>' +
+                '<td data-label="Fiscal"><span class="badge badge--neutral">NCM ' + esc(it.ncm) + '</span> ' +
+                    '<span class="badge badge--neutral">CFOP ' + esc(it.cfop) + '</span> ' +
+                    '<span class="badge badge--neutral">CSOSN ' + esc(it.csosn) + '</span></td>' +
                 '<td data-label="Qtd" class="col-num">' + formatInput(it.quantidade) + '</td>' +
                 '<td data-label="Total" class="col-num">' + formatBR(totalItem(it)) + '</td>' +
                 '<td data-label="Ações" class="col-actions">' +
@@ -821,10 +826,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     dropItem.style.display = 'block';
                     dropItem.innerHTML = data.map(function (p, i) {
                         return '<div class="autocomplete-item" data-i="' + i + '">' +
-                            '<div class="ac-item-main"><span class="ac-item-nome">' + p.nome + '</span>' +
+                            '<div class="ac-item-main"><span class="ac-item-nome">' + esc(p.nome) + '</span>' +
                             '<span class="ac-item-preco">' + formatBR(p.preco_venda) + '</span></div>' +
-                            '<div class="ac-item-meta"><span class="ac-item-codigo">' + (p.codigo || '-') +
-                            (p.ncm ? ' · NCM ' + p.ncm : ' · Sem NCM') + '</span></div></div>';
+                            '<div class="ac-item-meta"><span class="ac-item-codigo">' + esc(p.codigo || '-') +
+                            (p.ncm ? ' · NCM ' + esc(p.ncm) : ' · Sem NCM') + '</span></div></div>';
                     }).join('');
                     dropItem.querySelectorAll('.autocomplete-item').forEach(function (el) {
                         el.addEventListener('click', function () {

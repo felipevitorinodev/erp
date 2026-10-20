@@ -647,7 +647,7 @@
             itens: carrinho.map(function (item) {
                 return {
                     produto_id: item.produtoId,
-                    quantidade: formatBR(item.quantidade),
+                    quantidade: (Number(item.quantidade) || 0).toFixed(3).replace('.', ','),
                     preco_unitario: formatBR(item.precoUnitario),
                     desconto: formatBR(item.desconto || 0),
                 };
@@ -670,11 +670,13 @@
             body: toFormBody(payload),
         })
             .then(function (response) {
-                if (response.type === 'opaqueredirect' || response.status === 302 || response.status === 301 || response.status === 0) {
-                    return mostrarSucesso(totais.total);
-                }
                 if (response.status === 201 || response.status === 200) {
-                    return mostrarSucesso(totais.total);
+                    return response.json()
+                        .then(function (data) { abrirTelaSucesso(totais.total, data || {}); })
+                        .catch(function () { mostrarErro('Venda enviada, mas a resposta do servidor não foi reconhecida. Confira a lista de vendas antes de tentar novamente.'); });
+                }
+                if (response.type === 'opaqueredirect' || response.status === 401 || response.status === 419) {
+                    return mostrarErro('Sua sessão expirou. Recarregue a página e faça login novamente; a venda não foi registrada.');
                 }
                 if (response.status === 422) {
                     return response.json().then(function (data) {
@@ -733,20 +735,6 @@
         var main = document.querySelector('.main');
         if (main) main.scrollTop = 0;
         if (el.btnNova) setTimeout(function () { el.btnNova.focus(); }, 100);
-    }
-
-    function mostrarSucesso(total) {
-        return fetch(urls.vendasUltima, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            credentials: 'same-origin',
-        })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                abrirTelaSucesso(total, data || {});
-            })
-            .catch(function () {
-                abrirTelaSucesso(total, {});
-            });
     }
 
     function atalhosTeclado() {

@@ -123,4 +123,27 @@ class VendaIntegridadeTest extends TestCase
 
         $this->assertSame(0, Venda::count());
     }
+
+    public function test_pdv_recebe_json_com_a_venda_criada(): void
+    {
+        $this->postJson(route('venda.store'), [
+            'data_venda' => now()->toDateString(),
+            'itens' => [
+                ['produto_id' => $this->produto->id, 'quantidade' => '1,500', 'preco_unitario' => '10,00'],
+            ],
+        ])->assertCreated()->assertJsonStructure(['id', 'numero', 'situacao']);
+
+        $this->assertEquals(1.5, (float) Venda::firstOrFail()->itens()->first()->quantidade);
+    }
+
+    public function test_pdv_recebe_422_quando_a_venda_falha(): void
+    {
+        $this->postJson(route('venda.store'), [
+            'data_venda' => now()->toDateString(),
+            'desconto' => '50,00',
+            'itens' => [
+                ['produto_id' => $this->produto->id, 'quantidade' => '1', 'preco_unitario' => '10,00'],
+            ],
+        ])->assertStatus(422)->assertJsonValidationErrors('desconto');
+    }
 }

@@ -819,6 +819,15 @@ document.addEventListener('submit', function (e) {
     }
 }, true);
 
+// Ao voltar pelo histórico (bfcache) o formulário continuaria marcado como enviado, com os botões travados
+window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll('form[data-submitted]').forEach(function (form) {
+        delete form.dataset.submitted;
+        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (b) { b.disabled = false; });
+    });
+});
+
 // Toast auto-dismiss + ViaCEP + mascaras
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.toast').forEach(function (toast) {

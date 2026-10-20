@@ -151,9 +151,10 @@
             } else {
                 var msg = result.data.message || result.data.error || 'Erro ao salvar. Verifique os dados.';
                 if (result.data.errors) {
-                    msg = Object.values(result.data.errors).flat().join('<br>');
+                    msg = Object.values(result.data.errors).flat().join('\n');
                 }
-                erroEl.innerHTML = msg;
+                erroEl.style.whiteSpace = 'pre-line';
+                erroEl.textContent = msg;
                 erroEl.hidden = false;
             }
         })
