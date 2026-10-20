@@ -45,19 +45,21 @@ class OrcamentoService
                 ->withInput();
         }
 
-        $empresaId = auth()->user()->empresa_id;
+        $totais = $this->calcularTotais($itens, $request);
+
+        if ($totais === null) {
+            return back()
+                ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
+                ->withInput();
+        }
 
         $orcamento = $this->repository->store([
-            'empresa_id'      => $empresaId,
+            'empresa_id'      => auth()->user()->empresa_id,
             'cliente_id'      => $request->cliente_id ?: null,
             'usuario_id'      => auth()->id(),
-            'numero'          => $this->repository->proximoNumero($empresaId),
             'data_orcamento'  => $request->data_orcamento,
             'data_entrega'    => $request->data_entrega ?: null,
-            'subtotal'        => $this->parseMoeda($request->subtotal),
-            'desconto'        => $this->parseMoeda($request->desconto),
-            'acrescimo'       => $this->parseMoeda($request->acrescimo),
-            'total'           => $this->parseMoeda($request->total),
+            ...$totais,
             'forma_pagamento' => $request->forma_pagamento,
             'observacoes'     => $request->observacoes,
             'situacao'        => 'pendente',
@@ -115,18 +117,26 @@ class OrcamentoService
                 ->withInput();
         }
 
-        $this->repository->update($orcamento, [
-            'cliente_id'      => $request->cliente_id ?: null,
-            'data_orcamento'  => $request->data_orcamento,
-            'data_entrega'    => $request->data_entrega ?: null,
-            'subtotal'        => $this->parseMoeda($request->subtotal),
-            'desconto'        => $this->parseMoeda($request->desconto),
-            'acrescimo'       => $this->parseMoeda($request->acrescimo),
-            'total'           => $this->parseMoeda($request->total),
-            'forma_pagamento' => $request->forma_pagamento,
-            'observacoes'     => $request->observacoes,
-            'situacao'        => 'pendente',
-        ], $itens);
+        $totais = $this->calcularTotais($itens, $request);
+
+        if ($totais === null) {
+            return back()
+                ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
+                ->withInput();
+        }
+
+        try {
+            $this->repository->update($orcamento, [
+                'cliente_id'      => $request->cliente_id ?: null,
+                'data_orcamento'  => $request->data_orcamento,
+                'data_entrega'    => $request->data_entrega ?: null,
+                ...$totais,
+                'forma_pagamento' => $request->forma_pagamento,
+                'observacoes'     => $request->observacoes,
+            ], $itens);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+        }
 
         return redirect()->route('orcamento.show', $orcamento)
             ->with('success', 'Orçamento #' . $orcamento->numero . ' atualizado com sucesso.');
@@ -141,10 +151,11 @@ class OrcamentoService
                 ->with('error', 'Somente orçamentos pendentes podem ser aprovados.');
         }
 
-        $orcamento->load('itens');
-
         try {
             $venda = DB::transaction(function () use ($orcamento) {
+            $orcamento = $this->repository->travarPendente($orcamento);
+            $orcamento->load('itens');
+
             $itens = [];
             foreach ($orcamento->itens as $item) {
                 $itens[] = [
@@ -205,7 +216,11 @@ class OrcamentoService
                 ->with('error', 'Somente orçamentos pendentes podem ser recusados.');
         }
 
-        $this->repository->recusar($orcamento);
+        try {
+            $this->repository->recusar($orcamento);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+        }
 
         return redirect()->route('orcamento.show', $orcamento)
             ->with('success', 'Orçamento #' . $orcamento->numero . ' recusado.');
@@ -225,7 +240,11 @@ class OrcamentoService
                 ->with('error', 'Orçamento aprovado não pode ser cancelado.');
         }
 
-        $this->repository->cancelar($orcamento);
+        try {
+            $this->repository->cancelar($orcamento);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+        }
 
         return redirect()->route('orcamento.show', $orcamento)
             ->with('success', 'Orçamento #' . $orcamento->numero . ' cancelado.');
@@ -236,7 +255,12 @@ class OrcamentoService
         $this->garantirEmpresa($orcamento);
 
         $numero = $orcamento->numero;
-        $this->repository->destroy($orcamento->id);
+
+        try {
+            $this->repository->destroy($orcamento->id);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+        }
 
         return redirect()->route('orcamento.index')
             ->with('success', 'Orçamento #' . $numero . ' excluído com sucesso.');
@@ -268,13 +292,13 @@ class OrcamentoService
                 continue;
             }
 
-            $quantidade = $this->parseMoeda($item['quantidade'] ?? 0);
+            $quantidade = $this->parseQuantidade($item['quantidade'] ?? 0);
             if ($quantidade <= 0) {
                 continue;
             }
-            $precoUnit  = $this->parseMoeda($item['preco_unitario'] ?? 0);
+            $precoUnit  = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
             $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
-            $total      = max(0, ($quantidade * $precoUnit) - $descItem);
+            $total      = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             $resultado[] = [
                 'produto_id'     => $produto->id,
@@ -288,5 +312,26 @@ class OrcamentoService
         }
 
         return $resultado;
+    }
+
+    /**
+     * Totais sempre recalculados a partir dos itens; retorna null se o desconto exceder o subtotal.
+     */
+    protected function calcularTotais(array $itens, Request $request): ?array
+    {
+        $subtotal  = round(array_sum(array_column($itens, 'total')), 2);
+        $desconto  = $this->parseMoeda($request->desconto);
+        $acrescimo = $this->parseMoeda($request->acrescimo);
+
+        if ($desconto < 0 || $acrescimo < 0 || $desconto > $subtotal) {
+            return null;
+        }
+
+        return [
+            'subtotal'  => $subtotal,
+            'desconto'  => $desconto,
+            'acrescimo' => $acrescimo,
+            'total'     => round($subtotal - $desconto + $acrescimo, 2),
+        ];
     }
 }

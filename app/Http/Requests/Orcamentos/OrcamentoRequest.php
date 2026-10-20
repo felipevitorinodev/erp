@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Orcamentos;
 
+use App\Models\Clientes\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class OrcamentoRequest extends FormRequest
 {
@@ -18,10 +20,27 @@ class OrcamentoRequest extends FormRequest
             'data_orcamento' => 'required|date',
             'itens'      => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable',
-            'itens.*.quantidade' => 'required|numeric|min:0.01',
+            'itens.*.quantidade' => 'required|numeric|min:0.001',
             'itens.*.preco_unitario' => 'required|numeric|min:0',
             'itens.*.desconto' => 'nullable|numeric|min:0',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if (!$this->filled('cliente_id')) {
+                return;
+            }
+
+            $ok = Cliente::where('id', $this->input('cliente_id'))
+                ->where('empresa_id', auth()->user()->empresa_id)
+                ->exists();
+
+            if (!$ok) {
+                $validator->errors()->add('cliente_id', 'Cliente inválido para esta empresa.');
+            }
+        });
     }
 
     public function messages(): array

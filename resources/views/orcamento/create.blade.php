@@ -237,6 +237,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return num.toFixed(2).replace('.', ',');
     }
 
+    function esc(val) {
+        var div = document.createElement('div');
+        div.textContent = val == null ? '' : String(val);
+        return div.innerHTML.replace(/"/g, '&quot;');
+    }
+
     // Atualizar contadores e totais
     function atualizarTotais() {
         var subtotal = 0;
@@ -270,10 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var total = quantidade * preco;
 
         var html = 
-            '<div class="venda-item" data-produto-id="' + produto.id + '" data-preco="' + preco.toFixed(2) + '">' +
+            '<div class="venda-item" data-produto-id="' + esc(produto.id) + '" data-preco="' + preco.toFixed(2) + '">' +
                 '<div class="venda-item__info">' +
-                    '<div class="venda-item__nome">' + produto.nome + '</div>' +
-                    '<div class="venda-item__codigo">Cód: ' + (produto.codigo || '-') + '</div>' +
+                    '<div class="venda-item__nome">' + esc(produto.nome) + '</div>' +
+                    '<div class="venda-item__codigo">Cód: ' + esc(produto.codigo || '-') + '</div>' +
                 '</div>' +
                 '<div class="venda-item__qtd">' +
                     '<input type="tel" class="venda-item__qtd-input input-numeric" data-decimals="2" inputmode="numeric" ' +
@@ -290,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         '</svg>' +
                     '</button>' +
                 '</div>' +
-                '<input type="hidden" name="itens[' + idx + '][produto_id]" value="' + produto.id + '">' +
+                '<input type="hidden" name="itens[' + idx + '][produto_id]" value="' + esc(produto.id) + '">' +
                 '<input type="hidden" name="itens[' + idx + '][preco_unitario]" class="input-preco-hidden" value="' + preco.toFixed(2) + '">' +
                 '<input type="hidden" name="itens[' + idx + '][desconto]" value="0">' +
             '</div>';
@@ -398,11 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
             var preco = formatBR(item.preco_venda || 0);
             return '<div class="autocomplete-item" data-index="' + i + '">' +
                 '<div class="ac-item-main">' +
-                    '<span class="ac-item-nome">' + item.nome + '</span>' +
+                    '<span class="ac-item-nome">' + esc(item.nome) + '</span>' +
                     '<span class="ac-item-preco">' + preco + '</span>' +
                 '</div>' +
                 '<div class="ac-item-meta">' +
-                    '<span class="ac-item-codigo">' + (item.codigo || '-') + '</span>' +
+                    '<span class="ac-item-codigo">' + esc(item.codigo || '-') + '</span>' +
                 '</div>' +
             '</div>';
         }).join('');

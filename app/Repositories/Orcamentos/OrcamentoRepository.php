@@ -2,9 +2,11 @@
 
 namespace App\Repositories\Orcamentos;
 
+use App\Models\Empresas\Empresa;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Orcamentos\OrcamentoItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrcamentoRepository
 {
@@ -45,7 +47,11 @@ class OrcamentoRepository
 
     public function proximoNumero(int $empresaId): string
     {
-        $ultimo = Orcamento::where('empresa_id', $empresaId)->max('numero');
+        Empresa::whereKey($empresaId)->lockForUpdate()->first();
+
+        $ultimo = Orcamento::withTrashed()
+            ->where('empresa_id', $empresaId)
+            ->max(DB::raw('CAST(numero AS UNSIGNED)'));
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 
         return str_pad($proximo, 6, '0', STR_PAD_LEFT);
@@ -53,41 +59,76 @@ class OrcamentoRepository
 
     public function store(array $dados, array $itens): Orcamento
     {
-        $orcamento = Orcamento::create($dados);
-        $this->salvarItens($orcamento, $itens);
+        return DB::transaction(function () use ($dados, $itens) {
+            $dados['numero'] = $this->proximoNumero((int) $dados['empresa_id']);
 
-        return $orcamento;
+            $orcamento = Orcamento::create($dados);
+            $this->salvarItens($orcamento, $itens);
+
+            return $orcamento;
+        });
     }
 
     public function update(Orcamento $orcamento, array $dados, array $itens): Orcamento
     {
-        $orcamento->update($dados);
-        $orcamento->itens()->delete();
-        $this->salvarItens($orcamento, $itens);
+        return DB::transaction(function () use ($orcamento, $dados, $itens) {
+            $orcamento = $this->travarPendente($orcamento);
 
-        return $orcamento;
+            $orcamento->update($dados);
+            $orcamento->itens()->delete();
+            $this->salvarItens($orcamento, $itens);
+
+            return $orcamento;
+        });
     }
 
     public function cancelar(Orcamento $orcamento): Orcamento
     {
-        $orcamento->update(['situacao' => 'cancelado']);
+        return DB::transaction(function () use ($orcamento) {
+            $orcamento = $this->travarPendente($orcamento, ['pendente', 'recusado']);
+            $orcamento->update(['situacao' => 'cancelado']);
 
-        return $orcamento;
+            return $orcamento;
+        });
     }
 
     public function recusar(Orcamento $orcamento): Orcamento
     {
-        $orcamento->update(['situacao' => 'recusado']);
+        return DB::transaction(function () use ($orcamento) {
+            $orcamento = $this->travarPendente($orcamento);
+            $orcamento->update(['situacao' => 'recusado']);
 
-        return $orcamento;
+            return $orcamento;
+        });
+    }
+
+    /**
+     * Relê o orçamento com lock e garante que ainda está numa situação que permite a operação.
+     */
+    public function travarPendente(Orcamento $orcamento, array $situacoes = ['pendente']): Orcamento
+    {
+        $atual = Orcamento::whereKey($orcamento->id)->lockForUpdate()->firstOrFail();
+
+        if (!in_array($atual->situacao, $situacoes, true)) {
+            throw new \RuntimeException('Este orçamento já foi processado (situação atual: ' . $atual->situacao . ').');
+        }
+
+        return $atual;
     }
 
     public function destroy(int $id): bool
     {
-        $orcamento = Orcamento::where('empresa_id', auth()->user()->empresa_id)
-            ->findOrFail($id);
+        return DB::transaction(function () use ($id) {
+            $orcamento = Orcamento::where('empresa_id', auth()->user()->empresa_id)
+                ->lockForUpdate()
+                ->findOrFail($id);
 
-        return (bool) $orcamento->delete();
+            if ($orcamento->situacao === 'aprovado') {
+                throw new \RuntimeException('Orçamento aprovado não pode ser excluído: ele gerou uma venda.');
+            }
+
+            return (bool) $orcamento->delete();
+        });
     }
 
     private function salvarItens(Orcamento $orcamento, array $itens): void
