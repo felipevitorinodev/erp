@@ -81,6 +81,7 @@
                     $usuarioMenu = auth()->user();
                     $podeVendas = $usuarioMenu->pode('vendas');
                     $podeOrcamentos = $usuarioMenu->pode('orcamentos');
+                    $podeOrdensServico = $usuarioMenu->pode('ordens_servico');
                     $podeComissoes = $usuarioMenu->pode('comissoes');
                     $podeNfe = $usuarioMenu->pode('nfe');
                     $podeEstoque = $usuarioMenu->pode('estoque');
@@ -106,7 +107,7 @@
                     </a>
                 </div>
 
-                @if ($podeVendas || $podeOrcamentos || $podeComissoes)
+                @if ($podeVendas || $podeOrcamentos || $podeOrdensServico || $podeComissoes)
                 {{-- Vendas --}}
                 <div class="sidebar__group" data-group>
                     <div class="sidebar__group-toggle" data-toggle>
@@ -134,6 +135,12 @@
                             <a href="{{ route('orcamento.index') }}"
                                 class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
                                 Orçamentos
+                            </a>
+                        @endif
+                        @if ($podeOrdensServico)
+                            <a href="{{ route('ordem-servico.index') }}"
+                                class="sidebar__link {{ request()->routeIs('ordem-servico.*') ? 'sidebar__link--active' : '' }}">
+                                Ordens de Serviço
                             </a>
                         @endif
                         @if ($podeComissoes)

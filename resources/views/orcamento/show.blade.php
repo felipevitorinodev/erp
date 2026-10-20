@@ -24,9 +24,22 @@
                     data-confirm-ok="Aprovar e gerar venda"
                     data-confirm-variant="success">
                     <x-icon name="check" />
-                    Aprovar
+                    Gerar venda
                 </button>
             </form>
+
+            @if (auth()->user()->pode('ordens_servico'))
+                <form method="POST" action="{{ route('orcamento.gerar-os', $orcamento) }}">
+                    @csrf
+                    <button type="submit" class="btn btn--outline btn--sm"
+                        data-confirm="Converter o orçamento #{{ $orcamento->numero }} em ordem de serviço? Os itens e totais serão copiados e a venda sai depois, ao faturar a OS."
+                        data-confirm-title="Gerar ordem de serviço"
+                        data-confirm-ok="Gerar OS"
+                        data-confirm-variant="success">
+                        Gerar OS
+                    </button>
+                </form>
+            @endif
 
             <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
                 <x-icon name="edit" />
@@ -123,6 +136,14 @@
                     <label class="form-label">Venda gerada</label>
                     <span>
                         <a href="{{ route('venda.show', $orcamento->venda) }}">#{{ $orcamento->venda->numero }}</a>
+                    </span>
+                </div>
+            @endif
+            @if ($orcamento->ordem_servico_id && $orcamento->ordemServico)
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Ordem de serviço gerada</label>
+                    <span>
+                        <a href="{{ route('ordem-servico.show', $orcamento->ordemServico) }}">OS #{{ $orcamento->ordemServico->numero }}</a>
                     </span>
                 </div>
             @endif

@@ -6,6 +6,7 @@ use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Produtos\Produto;
 use App\Repositories\Orcamentos\OrcamentoRepository;
+use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Vendas\VendaRepository;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ class OrcamentoService
 
     public function __construct(
         protected OrcamentoRepository $repository,
-        protected VendaRepository $vendaRepository
+        protected VendaRepository $vendaRepository,
+        protected OrdemServicoRepository $ordemServicoRepository
     ) {}
 
     public function index(Request $request)
@@ -72,7 +74,7 @@ class OrcamentoService
     public function show(Orcamento $orcamento)
     {
         $this->garantirEmpresa($orcamento);
-        $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
+        $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda', 'ordemServico']);
 
         return view('orcamento.show', ['orcamento' => $orcamento]);
     }
@@ -205,6 +207,66 @@ class OrcamentoService
 
         return redirect()->route('venda.show', $venda)
             ->with('success', 'Orçamento #' . $orcamento->numero . ' aprovado. Venda #' . $venda->numero . ' gerada.');
+    }
+
+    /**
+     * Converte o orçamento pendente numa ordem de serviço aberta com os mesmos itens e totais.
+     * O orçamento fica "aprovado" apontando para a OS; a venda sai depois, ao faturar a OS.
+     */
+    public function gerarOrdemServico(Orcamento $orcamento)
+    {
+        $this->garantirEmpresa($orcamento);
+
+        if ($orcamento->situacao !== 'pendente') {
+            return redirect()->route('orcamento.show', $orcamento)
+                ->with('error', 'Somente orçamentos pendentes podem virar ordem de serviço.');
+        }
+
+        try {
+            $os = DB::transaction(function () use ($orcamento) {
+                $orcamento = $this->repository->travarPendente($orcamento);
+                $orcamento->load('itens');
+
+                $itens = $orcamento->itens->map(fn ($item) => [
+                    'produto_id'     => $item->produto_id,
+                    'produto_nome'   => $item->produto_nome,
+                    'produto_codigo' => $item->produto_codigo,
+                    'quantidade'     => $item->quantidade,
+                    'preco_unitario' => $item->preco_unitario,
+                    'desconto'       => $item->desconto,
+                    'total'          => $item->total,
+                ])->all();
+
+                $os = $this->ordemServicoRepository->store([
+                    'empresa_id'      => $orcamento->empresa_id,
+                    'cliente_id'      => $orcamento->cliente_id,
+                    'usuario_id'      => auth()->id(),
+                    'orcamento_id'    => $orcamento->id,
+                    'data_abertura'   => now()->toDateString(),
+                    'data_previsao'   => $orcamento->data_entrega,
+                    'subtotal'        => $orcamento->subtotal,
+                    'desconto'        => $orcamento->desconto,
+                    'acrescimo'       => $orcamento->acrescimo,
+                    'total'           => $orcamento->total,
+                    'forma_pagamento' => $orcamento->forma_pagamento,
+                    'observacoes'     => $orcamento->observacoes,
+                    'situacao'        => 'aberta',
+                ], $itens);
+
+                $orcamento->update([
+                    'situacao'         => 'aprovado',
+                    'ordem_servico_id' => $os->id,
+                ]);
+
+                return $os;
+            });
+        } catch (\RuntimeException $e) {
+            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('ordem-servico.edit', $os)
+            ->with('success', 'Orçamento #' . $orcamento->numero . ' convertido na OS #' . $os->numero
+                . '. Preencha os dados do equipamento.');
     }
 
     public function recusar(Orcamento $orcamento)

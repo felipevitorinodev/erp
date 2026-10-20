@@ -49,6 +49,11 @@ class OrcamentoController extends Controller
         return $this->service->aprovar($orcamento);
     }
 
+    public function gerarOrdemServico(Orcamento $orcamento)
+    {
+        return $this->service->gerarOrdemServico($orcamento);
+    }
+
     public function recusar(Orcamento $orcamento)
     {
         return $this->service->recusar($orcamento);

@@ -48,3 +48,25 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 3. Cadastrar produto com nome `<img src=x onerror=alert(1)>` e buscá-lo na tela de orçamento: o texto aparece literal.
 
 Testes automatizados: `tests/Feature/EstoqueOrcamentoIntegridadeTest.php` (total recalculado, aprovação dupla).
+
+## Orçamento → venda ou ordem de serviço (pedido de 20/10)
+- O botão "Aprovar" passou a se chamar **"Gerar venda"** (mesma rota `orcamento.aprovar`, mesmo comportamento).
+- Novo botão **"Gerar OS"** (só para quem tem a permissão `ordens_servico`): copia cliente, itens, totais, forma de pagamento, observações e a previsão de entrega para uma OS aberta; o orçamento fica `aprovado` com `ordem_servico_id`. Não gera venda nem mexe em estoque — isso acontece ao faturar a OS. Em duas abas, só a primeira converte (mesmo lock de `travarPendente`). Depois de converter, abre a edição da OS para preencher o equipamento.
+- Rota nova: `POST orcamento/{orcamento}/gerar-os` (`orcamento.gerar-os`), middleware `permissao:orcamentos` + `permissao:ordens_servico`.
+- Coluna nova `orcamentos.ordem_servico_id` (nullable, FK com `nullOnDelete`) na migration `2026_10_21_000002`.
+
+## Ordens de serviço (módulo novo)
+Assistência técnica genérica: cliente, técnico (funcionário), abertura/previsão/conclusão, equipamento, marca, modelo, nº de série, acessórios, defeito relatado, diagnóstico, serviço executado/laudo, garantia, peças e serviços (produtos `tipo` 1 ou 2), desconto/acréscimo, forma de pagamento.
+
+- **Fluxo:** Aberta → Em execução → Aguardando peça → Concluída (troca livre entre essas quatro pela tela) → **Faturar** gera a venda e marca "Faturada". Cancelada é final.
+- **Faturar** segue a mesma regra da aprovação de orçamento: venda com `data_venda` = hoje; forma à vista confirma a venda (baixa estoque só de produto com `controla_estoque`, gera recebimento); a prazo deixa a venda em andamento. Exige ao menos um item. A venda leva "OS #número – equipamento" nas observações.
+- A OS pode ser aberta só com o defeito (itens opcionais até o faturamento). Totais sempre recalculados no servidor.
+- OS faturada não pode ser editada, cancelada nem excluída.
+- PDF da OS (comprovante com campos de assinatura do cliente e do técnico).
+- Permissão nova `ordens_servico` ("Ordens de serviço", grupo Vendas). Entra no perfil padrão `financeiro`; a migration também a adiciona a todo perfil salvo que já tinha `orcamentos` (o `down()` remove).
+- Rotas (prefixo `ordem-servico`, nomes `ordem-servico.*`): `index`, `create` (`/nova`), `store`, `show` (`{os}/ver`), `edit`, `update`, `situacao` (POST), `faturar` (POST), `cancelar` (POST), `destroy` (DELETE), `pdf`.
+- Tabelas novas `ordens_servico` e `ordem_servico_itens` (migration `2026_10_21_000002`).
+
+❓ A venda gerada pela OS não leva o técnico como vendedor (`funcionario_id` vazio), então **não gera comissão**. Se o técnico deve comissionar, é só passar `funcionario_id` no `faturar()`.
+
+Testes: `tests/Feature/OrdemServicoTest.php` (10 testes: abertura, totais, faturar à vista/a prazo/sem itens/duas vezes, bloqueio após encerrar, situação, orçamento → OS, isolamento e permissão, telas e PDF).

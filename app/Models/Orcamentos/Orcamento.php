@@ -4,6 +4,7 @@ namespace App\Models\Orcamentos;
 
 use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
+use App\Models\OrdensServico\OrdemServico;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ class Orcamento extends Model
         'cliente_id',
         'usuario_id',
         'venda_id',
+        'ordem_servico_id',
         'numero',
         'data_orcamento',
         'data_entrega',
@@ -61,6 +63,11 @@ class Orcamento extends Model
     public function venda()
     {
         return $this->belongsTo(Venda::class);
+    }
+
+    public function ordemServico()
+    {
+        return $this->belongsTo(OrdemServico::class);
     }
 
     public function itens()

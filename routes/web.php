@@ -15,6 +15,7 @@ use App\Http\Controllers\FormasPagamento\FormaPagamentoController;
 use App\Http\Controllers\Funcionarios\FuncionarioController;
 use App\Http\Controllers\Grupos\GrupoController;
 use App\Http\Controllers\Orcamentos\OrcamentoController;
+use App\Http\Controllers\OrdensServico\OrdemServicoController;
 use App\Http\Controllers\Produtos\ProdutoController;
 use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
 use App\Http\Controllers\Usuarios\PerfilController;
@@ -217,9 +218,26 @@ Route::middleware('auth')->group(function () {
         Route::get('{orcamento}/editar', [OrcamentoController::class, 'edit'])->name('orcamento.edit');
         Route::put('{orcamento}/editar/salvar', [OrcamentoController::class, 'update'])->name('orcamento.update');
         Route::post('{orcamento}/aprovar', [OrcamentoController::class, 'aprovar'])->name('orcamento.aprovar');
+        Route::post('{orcamento}/gerar-os', [OrcamentoController::class, 'gerarOrdemServico'])
+            ->middleware('permissao:ordens_servico')
+            ->name('orcamento.gerar-os');
         Route::post('{orcamento}/recusar', [OrcamentoController::class, 'recusar'])->name('orcamento.recusar');
         Route::post('{orcamento}/cancelar', [OrcamentoController::class, 'cancelar'])->name('orcamento.cancelar');
         Route::delete('{orcamento}/excluir', [OrcamentoController::class, 'destroy'])->name('orcamento.destroy');
+    });
+
+    Route::prefix('ordem-servico')->middleware('permissao:ordens_servico')->group(function () {
+        Route::get('/', [OrdemServicoController::class, 'index'])->name('ordem-servico.index');
+        Route::get('/nova', [OrdemServicoController::class, 'create'])->name('ordem-servico.create');
+        Route::post('/salvar', [OrdemServicoController::class, 'store'])->name('ordem-servico.store');
+        Route::get('{ordemServico}/pdf', [OrdemServicoController::class, 'pdf'])->name('ordem-servico.pdf');
+        Route::get('{ordemServico}/ver', [OrdemServicoController::class, 'show'])->name('ordem-servico.show');
+        Route::get('{ordemServico}/editar', [OrdemServicoController::class, 'edit'])->name('ordem-servico.edit');
+        Route::put('{ordemServico}/editar/salvar', [OrdemServicoController::class, 'update'])->name('ordem-servico.update');
+        Route::post('{ordemServico}/situacao', [OrdemServicoController::class, 'situacao'])->name('ordem-servico.situacao');
+        Route::post('{ordemServico}/faturar', [OrdemServicoController::class, 'faturar'])->name('ordem-servico.faturar');
+        Route::post('{ordemServico}/cancelar', [OrdemServicoController::class, 'cancelar'])->name('ordem-servico.cancelar');
+        Route::delete('{ordemServico}/excluir', [OrdemServicoController::class, 'destroy'])->name('ordem-servico.destroy');
     });
 
     Route::prefix('entrada-estoque')->middleware('permissao:estoque')->group(function () {

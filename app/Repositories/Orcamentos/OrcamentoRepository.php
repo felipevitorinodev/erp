@@ -124,7 +124,7 @@ class OrcamentoRepository
                 ->findOrFail($id);
 
             if ($orcamento->situacao === 'aprovado') {
-                throw new \RuntimeException('Orçamento aprovado não pode ser excluído: ele gerou uma venda.');
+                throw new \RuntimeException('Orçamento aprovado não pode ser excluído: ele gerou uma venda ou ordem de serviço.');
             }
 
             return (bool) $orcamento->delete();
