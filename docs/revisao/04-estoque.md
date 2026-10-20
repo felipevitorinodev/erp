@@ -47,7 +47,7 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 - **Dados existentes:** `SELECT p.id FROM produtos p JOIN grupos g ON g.id=p.grupo_id WHERE g.empresa_id <> p.empresa_id` (idem unidade/fornecedor).
 
 ### ⏳ 🟠 9. Pendências
-- Conta a pagar da entrada usa a soma dos itens, não o `vNF` (sem IPI, ST, frete, seguro, outras despesas). Ver pergunta 1.
+- ✅ Conta a pagar da entrada importada agora usa o **valor da nota** (`vNF`, com IPI, ST, frete, seguro e outras despesas): nova coluna nullable `entradas_estoque.valor_nota` (migration `2026_10_20_000005`), preenchida a partir do XML em `EntradaEstoqueService::store()` e usada em `EntradaEstoqueRepository::confirmar()`. Entradas manuais (e as importadas antes desta mudança, sem backfill) continuam usando o total dos itens. A tela da entrada mostra "Valor da NF-e (conta a pagar)" quando difere do total. O custo do produto/estoque não mudou (sem rateio de IPI/frete).
 - Itens do XML são casados pelo **código do fornecedor** (`cProd`) contra o código interno do produto; pode dar entrada no produto errado. Recomendo casar primeiro por EAN e criar vínculo fornecedor+cProd → produto (exige tabela nova).
 - Editar entrada em rascunho perde nome/código de itens ainda não vinculados (o formulário de edição não reenvia esses campos ocultos).
 - O XML fica duas vezes na sessão (`_xml_raw` e `xml_content`) e a pré-visualização já cria o fornecedor, mesmo que a importação seja abandonada.
@@ -58,7 +58,7 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 - `preco_custo` é gravado com o preço bruto, sem rateio do desconto.
 
 ### ❓ Perguntas
-1. A conta a pagar de uma entrada importada deve ser o `vNF` da nota (com IPI/ST/frete) ou o total dos produtos?
+1. ~~A conta a pagar de uma entrada importada deve ser o `vNF`?~~ **Respondida: valor da nota** (ver pendências, item resolvido).
 2. Há clientes que importam notas emitidas para outro CNPJ do mesmo grupo (filial, CPF do sócio)? Se sim, o bloqueio do item 4 precisa de uma exceção.
 
 ## Como testar manualmente

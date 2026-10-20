@@ -36,7 +36,7 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 - `OrcamentoRepository::destroy()` recusa `aprovado`.
 
 ### ⏳ / ❓ Pendências e perguntas
-- ❓ A venda gerada usa `data_orcamento` como `data_venda`. Não deveria ser a data da aprovação?
+- ✅ A venda gerada usava `data_orcamento` como `data_venda`. **Respondida:** agora usa a data da aprovação (`OrcamentoService::aprovar()`). A venda também grava `forma_pagamento_id` (módulo 03, item 9); se a forma do orçamento não existir mais, a venda é gerada "em andamento" (como antes) e só pode ser confirmada depois de corrigir a forma.
 - ❓ O orçamento não guarda vendedor (`funcionario_id`), então vendas vindas de orçamento nunca geram comissão. É intencional?
 - `validade_dias` aparece na tela mas não é salvo.
 - A mensagem de erro da aprovação mostra `$ex->getMessage()` de qualquer exceção (pode expor erro SQL).

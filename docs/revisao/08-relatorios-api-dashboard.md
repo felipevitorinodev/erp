@@ -40,8 +40,8 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 - Retorna a última venda da empresa, não a do operador; com dois caixas pode mostrar o número da venda do outro. Tratado no módulo 09 (PDV).
 
 ### ❓ Perguntas
-1. Com o filtro de situação "Todas", os totais dos relatórios de contas **somam também as canceladas**. Deve excluir as canceladas dos totais?
-2. **Fuso horário:** `config/app.php` usa `UTC`. Depois das 21h (horário de Brasília) o PDV grava `data_venda` do dia seguinte, e "vencidos"/"hoje" no dashboard ficam adiantados. A correção é `'timezone' => 'America/Sao_Paulo'`, mas os `created_at` já gravados em UTC passariam a ser exibidos 3h adiantados. Posso trocar?
+1. ~~Excluir as canceladas dos totais?~~ **Respondida: sim.** Os totais (geral e por categoria, tela e PDF) de contas a receber/pagar ignoram canceladas, exceto quando o filtro de situação é "Cancelada". As canceladas continuam listadas. O CSV não tem totais.
+2. ~~Fuso horário?~~ **Respondida: sim.** `config/app.php` usa `env('APP_TIMEZONE', 'America/Sao_Paulo')` e o `.env.example` traz `APP_TIMEZONE=America/Sao_Paulo`. **Efeito colateral:** `created_at`/`updated_at` e horários de baixa já gravados em UTC passam a ser exibidos como se fossem horário de Brasília (3h adiantados). Datas puras (`data_venda`, `data_vencimento`) não mudam. Se o `.env` de produção definir `APP_TIMEZONE`, ele prevalece.
 
 ## Como testar manualmente
 1. Perfil com só "Relatórios": menu não mostra contas e a URL `/relatorios/contas-receber` retorna 403.

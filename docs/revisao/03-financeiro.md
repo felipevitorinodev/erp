@@ -43,10 +43,16 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 ### ✅ 🟡 8. Fluxo de caixa com data inválida gerava erro 500
 - **Arquivo:** `FluxoCaixaController::montarPeriodo()` — valida `data_inicio`/`data_fim`.
 
-### ⏳ 🔴 9. Geração de conta a receber depende do **nome** da forma de pagamento
-- **Arquivos:** `ContaReceberRepository::gerarDaVendaConfirmada()`, `FormaPagamento::buscarPorNome()`, `FluxoCaixaController::entradasDeVendasAvista()`.
-- **Problema:** se a forma foi renomeada, desativada, excluída ou digitada diferente, a venda a prazo é confirmada **sem conta a receber** e o fluxo de caixa a conta como recebida à vista. Também não há unicidade de `(empresa_id, nome)` em `formas_pagamento`.
-- **Por que não corrigi:** a correção segura é gravar `forma_pagamento_id` na venda (migration + backfill + mudança no PDV/forms) ou bloquear a confirmação com forma desconhecida, o que muda o comportamento do PDV. Ver pergunta 1.
+### ✅ 🔴 9. Geração de conta a receber dependia do **nome** da forma de pagamento
+- **Arquivos:** `ContaReceberRepository::gerarDaVendaConfirmada()`, `VendaRepository::store()/update()`, `Venda`, `FluxoCaixaController::entradasDeVendasAvista()`, migration `2026_10_20_000004_add_forma_pagamento_id_to_vendas_table`.
+- **Problema:** se a forma foi renomeada, desativada, excluída ou digitada diferente, a venda a prazo era confirmada **sem conta a receber** e o fluxo de caixa a contava como recebida à vista.
+- **Correção (decisão do usuário: as duas opções):**
+  - A venda grava `forma_pagamento_id` (nullable, FK `nullOnDelete`) além do nome, que continua gravado (NF-e e telas usam o nome; contrato AJAX/forms inalterado). O ID é resolvido no repositório ao criar/editar, inclusive na venda gerada por orçamento.
+  - Na confirmação, a forma é lida pelo ID (mesmo que depois renomeada/desativada/excluída); sem ID, pelo nome. Se o nome foi informado e não há forma ativa com esse nome, **a confirmação é recusada** com mensagem.
+  - Venda **sem** forma informada continua sendo confirmada sem conta a receber (comportamento anterior mantido).
+  - Fluxo de caixa usa o tipo da forma vinculada quando existe.
+- **Backfill:** casa o nome (sem diferenciar maiúsculas) dentro da empresa, preferindo formas ativas e não excluídas. Vendas sem correspondência ficam com `forma_pagamento_id` null. Conferir depois de migrar: `SELECT id, numero, forma_pagamento FROM vendas WHERE forma_pagamento <> '' AND forma_pagamento_id IS NULL AND situacao = 'em_andamento'` — essas vendas só confirmam após corrigir a forma.
+- **Risco:** o PDV passa a receber erro ao confirmar com forma inexistente (antes confirmava silenciosamente). Não há unicidade de `(empresa_id, nome)` em `formas_pagamento`; com nomes duplicados, vale a primeira ativa.
 
 ### ⏳ 🟠 10. Pagamento de comissão identificado por texto em `observacoes`
 - `ComissaoService::gerarContaPagarDaComissao()` usa `observacoes = 'comissao_id:N'` como chave de idempotência. Recomendo coluna `comissao_id` (unique) em `contas_pagar` com backfill.
@@ -64,7 +70,7 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 - Dinheiro manipulado como `float` com `round(…, 2)`; funciona, mas `bcmath`/centavos seria mais robusto.
 
 ### ❓ Perguntas
-1. Para a forma de pagamento: prefere (a) gravar `forma_pagamento_id` na venda, ou (b) bloquear a confirmação quando a forma informada não existir/estiver inativa?
+1. ~~Para a forma de pagamento: gravar `forma_pagamento_id` ou bloquear a confirmação?~~ **Respondida: ambas** (item 9).
 2. Comissão pode ser paga antes de o cliente pagar a venda? Hoje é permitido.
 
 ## Como testar manualmente

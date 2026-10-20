@@ -12,10 +12,10 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 | `APP_DEBUG=false` | não verificável | `.env.example` traz `true`. Com `true` em produção, a página de erro expõe SQL, caminhos e variáveis. |
 | `APP_KEY` definido e **estável** | não verificável | A senha do certificado A1 é gravada com `Crypt::encryptString` (`Empresa::certificado_senha`). **Trocar o `APP_KEY` invalida todas as senhas de certificado** — guardar a chave com backup. |
 | `APP_URL` com o domínio real (https) | não verificável | Usado nos links de redefinição de senha. |
-| `APP_TIMEZONE` / `config/app.php` | pendente | Está em `UTC`; vendas após 21h (Brasília) ficam com a data do dia seguinte. Ver pergunta no módulo 08. |
+| `APP_TIMEZONE` / `config/app.php` | ok | Padrão `America/Sao_Paulo`. Horários já gravados em UTC passam a aparecer 3h adiantados (módulo 08). |
 | `LOG_LEVEL` | pendente | `.env.example` traz `debug`; usar `warning` ou `error` em produção. |
 | `SESSION_SECURE_COOKIE=true` | pendente | Sem padrão no `config/session.php`; definir no `.env` de produção (HTTPS). |
-| `trustProxies(at: '*')` | pendente | Restringir aos IPs do proxy e definir hosts confiáveis (módulo 06, item 8). |
+| `trustProxies(at: '*')` | pendente | Restringir aos IPs do proxy e definir hosts confiáveis (módulo 06, item 8). Proxy/domínio ainda não definidos pelo cliente. |
 | `MAIL_MAILER` | não verificável | `.env.example` traz `log`; a recuperação de senha precisa de SMTP real. |
 
 ## Deploy
@@ -25,7 +25,7 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 | `php artisan config:cache` | não verificável | Nenhum `env()` fora de `config/` encontrado no código alterado. |
 | `php artisan route:cache` | pendente (testar) | As rotas de `api_interna.php` e `relatorios.php` são closures; o Laravel 13 serializa closures, mas convém rodar `route:cache` em homologação antes. |
 | `php artisan view:cache` | ok | Sem impedimentos encontrados. |
-| Migrations pendentes | pendente | Aplicar com `php artisan migrate` (nunca `fresh`): `2026_10_20_000001` (controle SEFAZ + unique de numeração da NF-e — **aborta se já houver número duplicado**), `2026_10_20_000002` (CPF/CNPJ de cliente por empresa), `2026_10_20_000003` (índices). Todas verificadas com `--pretend`; nenhuma foi aplicada no banco local. Fazer backup antes. |
+| Migrations pendentes | pendente | Aplicar com `php artisan migrate` (nunca `fresh`): `2026_10_20_000001` (controle SEFAZ + unique de numeração da NF-e — **aborta se já houver número duplicado**), `2026_10_20_000002` (CPF/CNPJ de cliente por empresa), `2026_10_20_000003` (índices), `2026_10_20_000004` (`vendas.forma_pagamento_id` com backfill pelo nome — conferir as vendas em andamento que ficarem sem ID, módulo 03 item 9), `2026_10_20_000005` (`entradas_estoque.valor_nota`). Todas verificadas com `--pretend`; nenhuma foi aplicada no banco local. Fazer backup antes. |
 | Filas | ok | `QUEUE_CONNECTION=database`, mas não há jobs; nada precisa de worker hoje. A emissão de NF-e é síncrona (pendente no módulo 01). |
 | Scheduler | ok | `routes/console.php` não agenda nada; não precisa de cron. |
 
@@ -53,7 +53,7 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 
 | Item | Situação | Observação |
 |---|---|---|
-| Suíte passando | ok | 61 testes, 225 asserções (antes: 21/22, com o `ExampleTest` falhando). |
+| Suíte passando | ok | 68 testes, 239 asserções (antes: 21/22, com o `ExampleTest` falhando). |
 | Cobertura dos fluxos críticos | parcial | Cobertos: numeração/reuso/concorrência de NF-e, totais do XML, IDOR de NF-e e empresa; cancelamento de venda e estoque; baixas e cancelamento de contas; entrada de estoque; orçamento; login/permissões; isolamento de cadastros; relatórios; contrato JSON do PDV. **Não cobertos:** comunicação real com a SEFAZ (precisa de certificado e homologação), cancelamento de NF-e na SEFAZ, DANFE, importação de XML ponta a ponta. |
 | Teste manual em homologação SEFAZ | pendente | Roteiro em `01-nfe.md`. Obrigatório antes do primeiro cliente emitir em produção. |
 
@@ -61,9 +61,9 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 
 1. Inutilização de numeração, carta de correção e contingência de NF-e (módulo 01).
 2. Emissão de NF-e síncrona dentro da requisição (timeout do PHP vs. SEFAZ lenta).
-3. Forma de pagamento identificada pelo **nome** em vendas/contas (módulo 03, item 9).
+3. Forma de pagamento ainda identificada pelo **nome** nas contas a receber e no `tPag` da NF-e (a venda já tem `forma_pagamento_id`, módulo 03 item 9).
 4. Comissão identificada por texto em `observacoes` (módulo 03).
-5. Conta a pagar de entrada importada sem IPI/ST/frete (módulo 04).
+5. Custo do produto na entrada sem rateio de IPI/ST/frete (a conta a pagar já usa o `vNF`, módulo 04).
 6. Casamento de produto do XML pelo código do fornecedor (módulo 04).
 7. Permissões por perfil nos endpoints AJAX e `preco_custo` exposto ao vendedor (módulo 08).
 8. Relatórios carregando tudo em memória (módulo 08).
@@ -75,9 +75,9 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 ## Perguntas em aberto (consolidadas)
 
 1. **NF-e:** CPF `00000000000` para consumidor final em modelo 55, `enderDest` omitido, sequência compartilhada entre homologação/produção/séries e `tPag` mapeado pelo nome da forma — ver `01-nfe.md`.
-2. **Financeiro:** gravar `forma_pagamento_id` na venda ou bloquear confirmação com forma desconhecida? Comissão pode ser paga antes de o cliente pagar?
-3. **Estoque:** conta a pagar da entrada importada deve usar o `vNF`? Há importação de notas destinadas a outro CNPJ do grupo?
-4. **Orçamentos:** `data_venda` deve ser a data da aprovação? Orçamento deveria ter vendedor (comissão)?
-5. **Auth:** a aplicação roda atrás de proxy? Qual domínio? Vendedor deve ver o faturamento no dashboard?
+2. **Financeiro:** comissão pode ser paga antes de o cliente pagar? (Forma de pagamento: respondida — `forma_pagamento_id` + bloqueio.)
+3. **Estoque:** há importação de notas destinadas a outro CNPJ do grupo? (`vNF` na conta a pagar: respondida e aplicada.)
+4. **Orçamentos:** orçamento deveria ter vendedor (comissão)? (`data_venda` = data da aprovação: respondida e aplicada.)
+5. **Auth:** a aplicação roda atrás de proxy? Qual domínio? (**ainda sem resposta** — bloqueia o item `trustProxies`.) Vendedor deve ver o faturamento no dashboard?
 6. **Cadastros:** a tela "Nova empresa" deve existir para os clientes?
-7. **Relatórios:** excluir contas canceladas dos totais? Posso trocar o fuso para `America/Sao_Paulo`?
+7. **Relatórios:** respondidas e aplicadas (canceladas fora dos totais; fuso `America/Sao_Paulo`).
