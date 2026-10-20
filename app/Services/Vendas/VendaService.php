@@ -11,6 +11,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Vendas\VendaRepository;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class VendaService
@@ -88,6 +89,16 @@ class VendaService
      * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
      */
     protected function persistirVenda(VendaRequest $request, string $situacaoDesejada): array
+    {
+        // Criação e confirmação precisam ser atômicas: se a confirmação falhar, a venda não pode ficar gravada
+        // (o usuário reenviaria o formulário e duplicaria a venda).
+        return DB::transaction(fn () => $this->gravarVenda($request, $situacaoDesejada));
+    }
+
+    /**
+     * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
+     */
+    private function gravarVenda(VendaRequest $request, string $situacaoDesejada): array
     {
         $itens = $this->processarItens($request->itens ?? []);
 
@@ -395,7 +406,7 @@ class VendaService
             }
             $precoUnit  = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
-            $total      = max(0, ($quantidade * $precoUnit) - $descItem);
+            $total      = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             $somenteDigitos = static fn ($v) => preg_replace('/\D/', '', (string) $v) ?? '';
             $ncm = substr($somenteDigitos($item['ncm'] ?? $produto->ncm), 0, 8);
@@ -430,6 +441,13 @@ class VendaService
         $subtotal = round(array_sum(array_column($itens, 'total')), 2);
         $desconto = $this->parseMoeda($descontoRaw);
         $acrescimo = $this->parseMoeda($acrescimoRaw);
+
+        if ($desconto > $subtotal) {
+            throw ValidationException::withMessages([
+                'desconto' => 'O desconto não pode ser maior que o subtotal dos itens.',
+            ]);
+        }
+
         $total = max(0, round($subtotal - $desconto + $acrescimo, 2));
 
         return compact('subtotal', 'desconto', 'acrescimo', 'total');

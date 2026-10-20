@@ -11,7 +11,7 @@ trait ConversorMoeda
 
     protected function parseQuantidade(mixed $valor): float
     {
-        return $this->parseDecimal($valor, 2);
+        return $this->parseDecimal($valor, 3);
     }
 
     protected function parseDecimal(mixed $valor, int $casas = 2): float

@@ -5,6 +5,8 @@ namespace App\Repositories\Vendas;
 use App\Repositories\ContasReceber\ContaReceberRepository;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
+use App\Models\Empresas\Empresa;
+use App\Models\Nfe;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Estoque\MovimentacaoEstoque;
 use App\Models\Produtos\Produto;
@@ -62,10 +64,16 @@ class VendaRepository
             ->findOrFail($id);
     }
 
+    /**
+     * Deve ser chamado dentro de uma transação: a trava na empresa serializa a numeração.
+     */
     public function proximoNumero(int $empresaId): string
     {
-        $ultimo = Venda::where('empresa_id', $empresaId)
-            ->max('numero');
+        Empresa::whereKey($empresaId)->lockForUpdate()->first();
+
+        $ultimo = Venda::withTrashed()
+            ->where('empresa_id', $empresaId)
+            ->max(DB::raw('CAST(numero AS UNSIGNED)'));
 
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 
@@ -126,6 +134,26 @@ class VendaRepository
     public function cancelar(Venda $venda, string $situacao = 'cancelada'): Venda
     {
         return DB::transaction(function () use ($venda, $situacao) {
+            $venda = Venda::where('id', $venda->id)->lockForUpdate()->firstOrFail();
+
+            if ($venda->situacao === 'cancelada') {
+                throw new \Exception('Venda já está cancelada.');
+            }
+
+            $nfeAtiva = Nfe::where('venda_id', $venda->id)
+                ->whereIn('situacao', ['autorizada', 'pendente'])
+                ->value('situacao');
+
+            if ($nfeAtiva === 'autorizada') {
+                throw new \Exception('Não é possível cancelar: a venda possui NF-e autorizada. Cancele a NF-e primeiro.');
+            }
+
+            if ($nfeAtiva === 'pendente') {
+                throw new \Exception('Não é possível cancelar: a venda possui NF-e pendente. Use "Consultar SEFAZ" na NF-e antes.');
+            }
+
+            $venda->load('itens');
+
             if ($venda->situacao === 'confirmada') {
                 $temRecebido = ContaReceber::where('venda_id', $venda->id)
                     ->whereIn('situacao', ['paga', 'parcial'])
