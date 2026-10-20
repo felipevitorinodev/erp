@@ -156,16 +156,18 @@ class VendaRepository
 
             if ($venda->situacao === 'confirmada') {
                 $temRecebido = ContaReceber::where('venda_id', $venda->id)
-                    ->whereIn('situacao', ['paga', 'parcial'])
-                    ->exists();
+                    ->lockForUpdate()
+                    ->get()
+                    ->contains(fn ($conta) => in_array($conta->situacao, ['paga', 'parcial'], true));
 
                 if ($temRecebido) {
                     throw new \Exception('Não é possível cancelar: existe conta a receber já paga ou parcial vinculada a esta venda.');
                 }
 
                 $temComissaoPaga = Comissao::where('venda_id', $venda->id)
-                    ->where('situacao', 'paga')
-                    ->exists();
+                    ->lockForUpdate()
+                    ->get()
+                    ->contains('situacao', 'paga');
 
                 if ($temComissaoPaga) {
                     throw new \Exception('Não é possível cancelar: existe comissão já paga vinculada a esta venda.');
@@ -174,7 +176,7 @@ class VendaRepository
                 $this->estornarEstoque($venda);
 
                 ContaReceber::where('venda_id', $venda->id)
-                    ->whereIn('situacao', ['aberta', 'parcial'])
+                    ->where('situacao', 'aberta')
                     ->update(['situacao' => 'cancelada']);
             }
 

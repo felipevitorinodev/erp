@@ -52,15 +52,36 @@ class ContaReceberRepository
 
     public function update(ContaReceber $conta, array $dados): ContaReceber
     {
-        $conta->update($dados);
+        return DB::transaction(function () use ($conta, $dados) {
+            $conta = ContaReceber::where('id', $conta->id)->lockForUpdate()->firstOrFail();
 
-        return $conta;
+            if (in_array($conta->situacao, ['paga', 'cancelada'], true)) {
+                throw new \RuntimeException('Conta paga ou cancelada não pode ser editada.');
+            }
+
+            $pago = round((float) $conta->valor_pago, 2);
+            if ($pago > 0 && isset($dados['valor'])) {
+                $valor = round((float) $dados['valor'], 2);
+                if ($valor < $pago) {
+                    throw new \RuntimeException('O valor da conta não pode ser menor que o valor já recebido.');
+                }
+                $dados['situacao'] = $valor <= $pago ? 'paga' : 'parcial';
+            }
+
+            $conta->update($dados);
+
+            return $conta;
+        });
     }
 
     public function receber(ContaReceber $conta, float $valorBaixa, string $dataPagamento, ?string $formaPagamento): ContaReceber
     {
         return DB::transaction(function () use ($conta, $valorBaixa, $dataPagamento, $formaPagamento) {
             $conta = ContaReceber::where('id', $conta->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($conta->situacao, ['paga', 'cancelada'], true)) {
+                throw new \RuntimeException('Não é possível receber em conta paga ou cancelada.');
+            }
 
             $saldo = round((float) $conta->valor - (float) $conta->valor_pago, 2);
             if ($valorBaixa <= 0 || $valorBaixa > $saldo) {
@@ -91,9 +112,17 @@ class ContaReceberRepository
 
     public function cancelar(ContaReceber $conta): ContaReceber
     {
-        $conta->update(['situacao' => 'cancelada']);
+        return DB::transaction(function () use ($conta) {
+            $conta = ContaReceber::where('id', $conta->id)->lockForUpdate()->firstOrFail();
 
-        return $conta;
+            if ($conta->situacao !== 'aberta' || (float) $conta->valor_pago > 0) {
+                throw new \RuntimeException('Somente conta em aberto e sem recebimento pode ser cancelada.');
+            }
+
+            $conta->update(['situacao' => 'cancelada']);
+
+            return $conta;
+        });
     }
 
     public function destroy(int $id): bool

@@ -39,6 +39,9 @@ class CategoriaFinanceiraRepository
 
     public function update(CategoriaFinanceira $categoriaFinanceira, array $data)
     {
+        // Contas já lançadas dependem do tipo (receita/despesa) da categoria.
+        unset($data['tipo']);
+
         $categoriaFinanceira->update($data);
 
         return $categoriaFinanceira;

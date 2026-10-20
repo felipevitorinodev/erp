@@ -79,6 +79,11 @@ class FluxoCaixaController extends Controller
     {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
+        $request->validate([
+            'data_inicio' => 'nullable|date',
+            'data_fim'    => 'nullable|date',
+        ]);
+
         $dataInicio = $request->filled('data_inicio')
             ? Carbon::parse($request->data_inicio)->startOfDay()
             : now()->startOfMonth()->startOfDay();

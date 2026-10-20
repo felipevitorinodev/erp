@@ -8,6 +8,7 @@ use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasPagar\ContaPagarBaixa;
 use App\Models\Funcionarios\Funcionario;
 use App\Repositories\Comissoes\ComissaoRepository;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,6 +58,10 @@ class ComissaoService
                 $this->repository->marcarPaga($comissao);
                 $this->gerarContaPagarDaComissao($comissao);
             });
+        } catch (QueryException $ex) {
+            report($ex);
+
+            return redirect()->back()->with('error', 'Não foi possível registrar o pagamento da comissão.');
         } catch (\Exception $ex) {
             return redirect()->back()->with('error', $ex->getMessage());
         }

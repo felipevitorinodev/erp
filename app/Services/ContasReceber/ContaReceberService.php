@@ -38,6 +38,12 @@ class ContaReceberService
     public function store(ContaReceberRequest $request)
     {
         $dados = $this->montarDados($request);
+
+        if ($dados['venda_id'] && ContaReceber::where('venda_id', $dados['venda_id'])->where('situacao', '!=', 'cancelada')->exists()) {
+            return back()
+                ->withErrors(['venda_id' => 'Esta venda já possui conta a receber.'])
+                ->withInput();
+        }
         $dados['empresa_id'] = auth()->user()->empresa_id;
         $dados['valor_pago'] = 0;
         $dados['situacao']   = 'aberta';
@@ -89,20 +95,16 @@ class ContaReceberService
         }
 
         $dados = $this->montarDados($request);
-        $valor = round((float) $dados['valor'], 2);
-        $pago = round((float) $contaReceber->valor_pago, 2);
+        // O vínculo com a venda é definido na criação; editar a conta não pode desfazê-lo.
+        unset($dados['venda_id']);
 
-        if ($pago > 0 && $valor < $pago) {
+        try {
+            $this->repository->update($contaReceber, $dados);
+        } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor' => 'O valor da conta não pode ser menor que o valor já recebido.'])
+                ->withErrors(['valor' => $ex->getMessage()])
                 ->withInput();
         }
-
-        if ($pago > 0) {
-            $dados['situacao'] = $valor <= $pago ? 'paga' : 'parcial';
-        }
-
-        $this->repository->update($contaReceber, $dados);
 
         return redirect()->route('conta-receber.show', $contaReceber)
             ->with('success', 'Conta a receber atualizada com sucesso.');
@@ -138,6 +140,14 @@ class ContaReceberService
                 ->withInput();
         }
 
+        $request->validate([
+            'data_pagamento'  => 'required|date|before_or_equal:today',
+            'forma_pagamento' => 'nullable|string|max:100',
+        ], [
+            'data_pagamento.date' => 'Informe uma data de pagamento válida.',
+            'data_pagamento.before_or_equal' => 'A data de pagamento não pode ser futura.',
+        ]);
+
         try {
             $this->repository->receber(
                 $contaReceber,
@@ -169,7 +179,12 @@ class ContaReceberService
                 ->with('error', 'Conta com recebimento não pode ser cancelada.');
         }
 
-        $this->repository->cancelar($contaReceber);
+        try {
+            $this->repository->cancelar($contaReceber);
+        } catch (\RuntimeException $ex) {
+            return redirect()->route('conta-receber.show', $contaReceber)
+                ->with('error', $ex->getMessage());
+        }
 
         return redirect()->route('conta-receber.show', $contaReceber)
             ->with('success', 'Conta a receber cancelada.');

@@ -89,20 +89,14 @@ class ContaPagarService
         }
 
         $dados = $this->montarDados($request);
-        $valor = round((float) $dados['valor'], 2);
-        $pago = round((float) $contaPagar->valor_pago, 2);
 
-        if ($pago > 0 && $valor < $pago) {
+        try {
+            $this->repository->update($contaPagar, $dados);
+        } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor' => 'O valor da conta não pode ser menor que o valor já pago.'])
+                ->withErrors(['valor' => $ex->getMessage()])
                 ->withInput();
         }
-
-        if ($pago > 0) {
-            $dados['situacao'] = $valor <= $pago ? 'paga' : 'parcial';
-        }
-
-        $this->repository->update($contaPagar, $dados);
 
         return redirect()->route('conta-pagar.show', $contaPagar)
             ->with('success', 'Conta a pagar atualizada com sucesso.');
@@ -138,6 +132,14 @@ class ContaPagarService
                 ->withInput();
         }
 
+        $request->validate([
+            'data_pagamento'  => 'required|date|before_or_equal:today',
+            'forma_pagamento' => 'nullable|string|max:100',
+        ], [
+            'data_pagamento.date' => 'Informe uma data de pagamento válida.',
+            'data_pagamento.before_or_equal' => 'A data de pagamento não pode ser futura.',
+        ]);
+
         try {
             $this->repository->pagar(
                 $contaPagar,
@@ -169,7 +171,12 @@ class ContaPagarService
                 ->with('error', 'Conta com pagamento não pode ser cancelada.');
         }
 
-        $this->repository->cancelar($contaPagar);
+        try {
+            $this->repository->cancelar($contaPagar);
+        } catch (\RuntimeException $ex) {
+            return redirect()->route('conta-pagar.show', $contaPagar)
+                ->with('error', $ex->getMessage());
+        }
 
         return redirect()->route('conta-pagar.show', $contaPagar)
             ->with('success', 'Conta a pagar cancelada.');
