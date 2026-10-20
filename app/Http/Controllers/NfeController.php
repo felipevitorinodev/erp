@@ -29,6 +29,21 @@ class NfeController extends Controller
         return $this->nfeService->store($request);
     }
 
+    public function editarRascunho(Venda $venda)
+    {
+        return $this->nfeService->editarRascunho($venda);
+    }
+
+    public function atualizarRascunho(NfeCreateRequest $request, Venda $venda)
+    {
+        return $this->nfeService->store($request, $venda);
+    }
+
+    public function excluirRascunho(Venda $venda)
+    {
+        return $this->nfeService->excluirRascunho($venda);
+    }
+
     public function emitir(Venda $venda)
     {
         return $this->nfeService->emitir($venda);

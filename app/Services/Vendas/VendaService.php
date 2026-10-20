@@ -98,6 +98,70 @@ class VendaService
     }
 
     /**
+     * Grava (ou atualiza) o rascunho de NF-e: venda em andamento, sem estoque, sem conta e sem confirmação automática.
+     */
+    public function salvarRascunhoNfe(VendaRequest $request, ?Venda $rascunho = null): Venda
+    {
+        $itens = $this->processarItens($request->itens ?? []);
+
+        if (empty($itens)) {
+            throw ValidationException::withMessages(['itens' => 'Adicione pelo menos um item.']);
+        }
+
+        $empresaId = (int) auth()->user()->empresa_id;
+        $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
+
+        $dados = [
+            'cliente_id' => $request->cliente_id ?: null,
+            'funcionario_id' => $this->resolverFuncionarioId($request->funcionario_id, $empresaId),
+            'data_venda' => $request->data_venda,
+            'subtotal' => $totais['subtotal'],
+            'desconto' => $totais['desconto'],
+            'acrescimo' => $totais['acrescimo'],
+            'total' => $totais['total'],
+            'forma_pagamento' => $request->forma_pagamento,
+            'observacoes' => $request->observacoes,
+            'natureza_operacao' => $request->input('natureza_operacao') ?: 'VENDA DE MERCADORIA',
+            'mod_frete' => (int) $request->input('mod_frete', 9),
+            'ind_final' => $request->filled('ind_final') ? (int) $request->input('ind_final') : null,
+            'inf_ad_fisco' => $request->input('inf_ad_fisco'),
+        ];
+
+        return DB::transaction(function () use ($rascunho, $dados, $itens, $empresaId) {
+            if ($rascunho) {
+                $rascunho = Venda::whereKey($rascunho->id)->lockForUpdate()->firstOrFail();
+
+                if (!$rascunho->isRascunhoNfe()) {
+                    throw ValidationException::withMessages(['itens' => 'Este rascunho já foi emitido ou cancelado.']);
+                }
+
+                $this->repository->update($rascunho, $dados, $itens);
+
+                return $rascunho->fresh(['itens.produto.unidadeMedida', 'cliente']);
+            }
+
+            return $this->repository->store($dados + [
+                'empresa_id' => $empresaId,
+                'usuario_id' => auth()->id(),
+                'numero' => $this->repository->proximoNumero($empresaId),
+                'situacao' => 'em_andamento',
+                'nfe_rascunho' => true,
+            ], $itens)->load(['itens.produto.unidadeMedida', 'cliente']);
+        });
+    }
+
+    /**
+     * Confirma a venda do rascunho (estoque, conta a receber, comissão) para a emissão.
+     */
+    public function confirmarRascunhoNfe(Venda $rascunho): Venda
+    {
+        $venda = $this->repository->confirmar($rascunho->fresh('itens'));
+        $venda->update(['nfe_rascunho' => false]);
+
+        return $venda;
+    }
+
+    /**
      * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
      */
     protected function persistirVenda(VendaRequest $request, string $situacaoDesejada): array

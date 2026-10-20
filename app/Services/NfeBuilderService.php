@@ -20,9 +20,9 @@ class NfeBuilderService
 {
     private const SCHEME = 'PL_010_V1.30';
 
-    private const CSOSN_SEM_CALCULO = ['102', '103', '300', '400'];
+    public const CSOSN_SEM_CALCULO = ['102', '103', '300', '400'];
 
-    private const CST_SEM_INCIDENCIA = ['04', '05', '06', '07', '08', '09'];
+    public const CST_SEM_INCIDENCIA = ['04', '05', '06', '07', '08', '09'];
 
     private Tools $tools;
 

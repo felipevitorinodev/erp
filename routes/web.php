@@ -197,6 +197,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [NfeController::class, 'index'])->name('nfe.index');
         Route::get('/nova', [NfeController::class, 'create'])->name('nfe.create');
         Route::post('/salvar', [NfeController::class, 'store'])->name('nfe.store');
+        Route::get('rascunho/{venda}/editar', [NfeController::class, 'editarRascunho'])->name('nfe.rascunho.edit');
+        Route::put('rascunho/{venda}', [NfeController::class, 'atualizarRascunho'])->name('nfe.rascunho.update');
+        Route::delete('rascunho/{venda}', [NfeController::class, 'excluirRascunho'])->name('nfe.rascunho.destroy');
         Route::post('{venda}/emitir', [NfeController::class, 'emitir'])->name('nfe.emitir');
         Route::get('{nfe}/ver', [NfeController::class, 'show'])->name('nfe.show');
         Route::post('{nfe}/cancelar', [NfeController::class, 'cancelar'])->name('nfe.cancelar');

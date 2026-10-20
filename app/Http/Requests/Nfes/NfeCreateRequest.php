@@ -8,24 +8,33 @@ class NfeCreateRequest extends VendaRequest
 {
     public function rules(): array
     {
+        // Rascunho aceita dados fiscais incompletos; o formato continua validado quando informado.
+        $obrigatorio = $this->ehRascunho() ? 'nullable' : 'required';
+
         $regras = parent::rules();
-        $regras['forma_pagamento'] = 'required|string|max:100';
+        $regras['acao'] = 'nullable|in:rascunho,emitir';
+        $regras['forma_pagamento'] = $obrigatorio.'|string|max:100';
         $regras['situacao'] = 'nullable|in:confirmada';
-        $regras['natureza_operacao'] = 'required|string|max:60';
+        $regras['natureza_operacao'] = $obrigatorio.'|string|max:60';
         $regras['mod_frete'] = 'required|integer|in:0,1,2,3,4,9';
         $regras['ind_final'] = 'nullable|integer|in:0,1';
         $regras['inf_ad_fisco'] = 'nullable|string|max:2000';
-        $regras['itens.*.ncm'] = 'required|digits:8';
-        $regras['itens.*.cfop'] = 'required|digits:4';
-        $regras['itens.*.csosn'] = 'required|digits:3';
-        $regras['itens.*.cst_pis'] = 'required|digits:2';
-        $regras['itens.*.cst_cofins'] = 'required|digits:2';
-        $regras['itens.*.origem'] = 'required|integer|between:0,8';
-        $regras['itens.*.unidade'] = 'required|string|max:6';
+        $regras['itens.*.ncm'] = $obrigatorio.'|digits:8';
+        $regras['itens.*.cfop'] = $obrigatorio.'|digits:4';
+        $regras['itens.*.csosn'] = $obrigatorio.'|digits:3';
+        $regras['itens.*.cst_pis'] = $obrigatorio.'|digits:2';
+        $regras['itens.*.cst_cofins'] = $obrigatorio.'|digits:2';
+        $regras['itens.*.origem'] = $obrigatorio.'|integer|between:0,8';
+        $regras['itens.*.unidade'] = $obrigatorio.'|string|max:6';
         $regras['itens.*.cest'] = 'nullable|digits_between:7,9';
         $regras['itens.*.ean'] = 'nullable|string|max:14';
 
         return $regras;
+    }
+
+    public function ehRascunho(): bool
+    {
+        return $this->input('acao') === 'rascunho';
     }
 
     public function messages(): array

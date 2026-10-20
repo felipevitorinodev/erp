@@ -282,6 +282,11 @@
                         Emitir NF-e
                     </button>
                 </form>
+            @elseif ($venda->isRascunhoNfe() && auth()->user()->pode('nfe'))
+                <p class="text-muted" style="margin:0 0 0.75rem;">
+                    Esta venda é um rascunho de NF-e: o estoque só será baixado na emissão.
+                </p>
+                <a href="{{ route('nfe.rascunho.edit', $venda) }}" class="btn btn--primary btn--sm">Continuar rascunho da NF-e</a>
             @else
                 <p class="text-muted" style="margin:0;">
                     Confirme a venda antes de emitir a NF-e.

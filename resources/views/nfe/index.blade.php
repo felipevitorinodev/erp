@@ -9,6 +9,45 @@
 
 @section('content')
 
+    @if ($rascunhos->isNotEmpty())
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card__header">
+                <span class="card__title">Rascunhos <span class="badge badge--neutral">{{ $rascunhos->count() }}</span></span>
+                <small class="text-muted">Ainda não emitidos: sem número de NF-e e sem movimentar estoque.</small>
+            </div>
+            <div class="card__body" style="padding: 0;">
+                <div class="table-wrap">
+                    <table class="table table--cards">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">Venda</th>
+                                <th>Destinatário</th>
+                                <th>Atualizado</th>
+                                <th class="col-num">Total</th>
+                                <th>Situação</th>
+                                <th class="col-actions">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($rascunhos as $rascunho)
+                                <tr>
+                                    <td data-label="Venda" class="text-muted">#{{ $rascunho->numero }}</td>
+                                    <td data-label="Destinatário">{{ $rascunho->cliente->nome ?? 'Consumidor Final' }}</td>
+                                    <td data-label="Atualizado">{{ $rascunho->updated_at?->format('d/m/Y H:i') }}</td>
+                                    <td data-label="Total" class="col-num">R$ {{ number_format((float) $rascunho->total, 2, ',', '.') }}</td>
+                                    <td data-label="Situação"><span class="badge badge--info">Rascunho</span></td>
+                                    <td class="col-actions" data-label="Ações">
+                                        <a href="{{ route('nfe.rascunho.edit', $rascunho) }}" class="btn btn--ghost btn--sm">Continuar</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="card">
         <div class="card__header">
             <span class="card__title">Listagem de NF-e</span>

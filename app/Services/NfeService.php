@@ -3,12 +3,16 @@
 namespace App\Services;
 
 use App\Http\Requests\Nfes\NfeCreateRequest;
+use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
+use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfe;
+use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Vendas\VendaService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +26,8 @@ class NfeService
 {
     public function __construct(
         protected EmpresaService $empresaService,
-        protected VendaService $vendaService
+        protected VendaService $vendaService,
+        protected NfePendenciasService $pendenciasService
     ) {}
 
     public function index(Request $request)
@@ -35,12 +40,21 @@ class NfeService
             ->orderByDesc('id')
             ->paginate(30);
 
+        $rascunhos = Venda::query()
+            ->where('empresa_id', $empresaId)
+            ->where('nfe_rascunho', true)
+            ->where('situacao', 'em_andamento')
+            ->with('cliente')
+            ->orderByDesc('id')
+            ->get();
+
         return view('nfe.index', [
             'nfes' => $nfes,
+            'rascunhos' => $rascunhos,
         ]);
     }
 
-    public function create()
+    public function create(?Venda $rascunho = null)
     {
         $empresa = Empresa::query()->findOrFail((int) auth()->user()->empresa_id);
         $alertas = $this->alertasConfiguracao($empresa);
@@ -53,17 +67,123 @@ class NfeService
             }
         }
 
+        $rascunho?->load(['itens', 'cliente', 'funcionario']);
+
+        $clienteId = old('cliente_id', $rascunho?->cliente_id);
+        $funcionarioId = old('funcionario_id', $rascunho?->funcionario_id);
+
         return view('nfe.create', [
             'empresa' => $empresa,
             'alertas' => $alertas,
             'avisoCertificado' => $avisoCertificado,
             'podeEmitir' => $alertas === [],
+            'rascunho' => $rascunho,
+            'itensIniciais' => $this->itensIniciais($rascunho),
+            'clienteInicial' => $clienteId
+                ? Cliente::where('empresa_id', $empresa->id)->find($clienteId, ['id', 'nome', 'cpf', 'cnpj'])
+                : null,
+            'funcionarioInicial' => $funcionarioId
+                ? Funcionario::where('empresa_id', $empresa->id)->find($funcionarioId, ['id', 'nome'])
+                : null,
         ]);
     }
 
-    public function store(NfeCreateRequest $request)
+    /**
+     * Itens para reabrir a tela: os reenviados após erro de validação ou os do rascunho.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function itensIniciais(?Venda $rascunho): array
     {
+        $numero = static fn ($v) => (float) (str_contains((string) $v, ',')
+            ? str_replace(['.', ','], ['', '.'], (string) $v)
+            : $v);
+
+        $enviados = old('itens');
+
+        if (is_array($enviados)) {
+            $produtos = Produto::where('empresa_id', (int) auth()->user()->empresa_id)
+                ->whereIn('id', array_filter(array_column($enviados, 'produto_id')))
+                ->get(['id', 'nome', 'codigo'])
+                ->keyBy('id');
+
+            return collect($enviados)
+                ->filter(fn ($item) => isset($item['produto_id']) && $produtos->has((int) $item['produto_id']))
+                ->map(fn ($item) => [
+                    'produto_id' => (int) $item['produto_id'],
+                    'nome' => $produtos[(int) $item['produto_id']]->nome,
+                    'codigo' => $produtos[(int) $item['produto_id']]->codigo,
+                    'unidade' => $item['unidade'] ?? 'UN',
+                    'ean' => $item['ean'] ?? '',
+                    'quantidade' => $numero($item['quantidade'] ?? 0),
+                    'preco' => $numero($item['preco_unitario'] ?? 0),
+                    'desconto' => $numero($item['desconto'] ?? 0),
+                    'ncm' => $item['ncm'] ?? '',
+                    'cest' => $item['cest'] ?? '',
+                    'cfop' => $item['cfop'] ?? '',
+                    'origem' => (int) ($item['origem'] ?? 0),
+                    'csosn' => $item['csosn'] ?? '',
+                    'cst_pis' => $item['cst_pis'] ?? '',
+                    'cst_cofins' => $item['cst_cofins'] ?? '',
+                ])
+                ->values()
+                ->all();
+        }
+
+        if (! $rascunho) {
+            return [];
+        }
+
+        return $rascunho->itens->map(fn ($item) => [
+            'produto_id' => (int) $item->produto_id,
+            'nome' => $item->produto_nome,
+            'codigo' => $item->produto_codigo,
+            'unidade' => $item->unidade ?: 'UN',
+            'ean' => $item->ean ?: '',
+            'quantidade' => (float) $item->quantidade,
+            'preco' => (float) $item->preco_unitario,
+            'desconto' => (float) $item->desconto,
+            'ncm' => $item->ncm ?: '',
+            'cest' => $item->cest ?: '',
+            'cfop' => $item->cfop ?: '',
+            'origem' => (int) ($item->origem ?? 0),
+            'csosn' => $item->csosn ?: '',
+            'cst_pis' => $item->cst_pis ?: '',
+            'cst_cofins' => $item->cst_cofins ?: '',
+        ])->values()->all();
+    }
+
+    public function editarRascunho(Venda $venda)
+    {
+        $this->autorizarVenda($venda);
+
+        if (! $venda->isRascunhoNfe()) {
+            return redirect()->route('nfe.index')->with('error', 'Este rascunho já foi emitido, cancelado ou excluído.');
+        }
+
+        return $this->create($venda);
+    }
+
+    public function store(NfeCreateRequest $request, ?Venda $rascunho = null)
+    {
+        if ($rascunho) {
+            $this->autorizarVenda($rascunho);
+        }
+
         $empresa = Empresa::query()->findOrFail((int) auth()->user()->empresa_id);
+
+        if ($request->ehRascunho()) {
+            try {
+                $venda = $this->vendaService->salvarRascunhoNfe($request, $rascunho);
+            } catch (ValidationException $e) {
+                return back()->withErrors($e->errors())->withInput();
+            }
+
+            return redirect()
+                ->route('nfe.rascunho.edit', $venda)
+                ->with('success', 'Rascunho da NF-e salvo (venda #'.$venda->numero.'). Nenhum estoque foi movimentado e nada foi enviado à SEFAZ.');
+        }
+
         $alertas = $this->alertasConfiguracao($empresa);
 
         if ($alertas !== []) {
@@ -73,7 +193,17 @@ class NfeService
         }
 
         try {
-            $venda = $this->vendaService->criarVendaConfirmada($request);
+            // Pendências desfazem tudo: nada de venda confirmada, estoque baixado ou número consumido.
+            $venda = DB::transaction(function () use ($request, $rascunho, $empresa) {
+                $venda = $this->vendaService->salvarRascunhoNfe($request, $rascunho);
+                $pendencias = $this->pendenciasService->verificar($venda, $empresa);
+
+                if ($pendencias !== []) {
+                    throw ValidationException::withMessages(['pendencias' => $pendencias]);
+                }
+
+                return $this->vendaService->confirmarRascunhoNfe($venda);
+            });
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (Throwable $e) {
@@ -83,10 +213,25 @@ class NfeService
 
             return back()
                 ->withInput()
-                ->with('error', 'Não foi possível gerar a venda da NF-e. Verifique os itens e o estoque.');
+                ->with('error', 'Não foi possível gerar a venda da NF-e: '.($e instanceof \Exception && ! $e instanceof QueryException
+                    ? $e->getMessage()
+                    : 'verifique os itens e o estoque.'));
         }
 
         return $this->emitir($venda);
+    }
+
+    public function excluirRascunho(Venda $venda)
+    {
+        $this->autorizarVenda($venda);
+
+        if (! $venda->isRascunhoNfe()) {
+            return redirect()->route('nfe.index')->with('error', 'Somente rascunhos ainda não emitidos podem ser excluídos.');
+        }
+
+        $venda->delete();
+
+        return redirect()->route('nfe.index')->with('success', 'Rascunho da NF-e excluído.');
     }
 
     /**

@@ -41,6 +41,7 @@ class Venda extends Model
         'ind_final',
         'inf_ad_fisco',
         'situacao',
+        'nfe_rascunho',
         'nfe_numero',
     ];
 
@@ -53,7 +54,13 @@ class Venda extends Model
         'total'         => 'decimal:2',
         'mod_frete'     => 'integer',
         'ind_final'     => 'integer',
+        'nfe_rascunho'  => 'boolean',
     ];
+
+    public function isRascunhoNfe(): bool
+    {
+        return $this->nfe_rascunho && $this->situacao === 'em_andamento';
+    }
 
     public function empresa()
     {

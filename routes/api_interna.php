@@ -79,7 +79,8 @@ Route::middleware('auth')->group(function () {
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
                 $builder->where('nome', 'like', '%' . $q . '%')
-                    ->orWhere('codigo', 'like', '%' . $q . '%');
+                    ->orWhere('codigo', 'like', '%' . $q . '%')
+                    ->orWhere('codigo_barras', $q);
             });
         }
 
@@ -100,7 +101,9 @@ Route::middleware('auth')->group(function () {
                 'cst_pis',
                 'cst_cofins',
                 'unidade_medida_id',
-                'codigo_barras'
+                'codigo_barras',
+                'tipo',
+                'controla_estoque'
             )
             ->limit($limit)
             ->get()
@@ -121,6 +124,8 @@ Route::middleware('auth')->group(function () {
                     'cst_cofins' => $produto->cst_cofins,
                     'unidade' => $produto->unidadeMedida?->sigla ?: 'UN',
                     'ean' => $produto->codigo_barras,
+                    'tipo' => $produto->tipo,
+                    'controla_estoque' => (bool) $produto->controla_estoque,
                 ];
             });
     })->name('api.produtos.busca');
