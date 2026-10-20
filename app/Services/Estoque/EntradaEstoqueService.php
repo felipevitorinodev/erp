@@ -4,6 +4,7 @@ namespace App\Services\Estoque;
 
 use App\Http\Requests\Estoque\EntradaEstoqueRequest;
 use App\Http\Requests\Estoque\ImportarXmlRequest;
+use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
@@ -45,6 +46,15 @@ class EntradaEstoqueService
         // 1. Parse the XML
         $parser = new NfeXmlParser();
         $parsed = $parser->parse($xmlContent);
+
+        $cnpjEmpresa = preg_replace('/\D/', '', (string) Empresa::whereKey($empresaId)->value('cnpj'));
+        $cnpjDestinatario = (string) ($parsed['destinatario']['cnpj'] ?? '');
+
+        if (strlen($cnpjEmpresa) === 14 && $cnpjDestinatario !== '' && $cnpjDestinatario !== $cnpjEmpresa) {
+            throw new RuntimeException(
+                'Esta NF-e foi emitida para outro CNPJ (' . $this->formatarCnpj($cnpjDestinatario) . '), não para a sua empresa.'
+            );
+        }
 
         // 2. Duplicate check (ignora excluídas; libera chave órfã para reimportar)
         EntradaEstoque::onlyTrashed()
@@ -195,9 +205,16 @@ class EntradaEstoqueService
         $empresaId = auth()->user()->empresa_id;
         $fornecedorId = $request->fornecedor_id ?: null;
 
+        // O XML da sessão só vale para o formulário que foi aberto a partir dele
+        $dadosXml = session('dados_xml');
+        $chaveDoFormulario = (string) $request->input('chave_acesso_xml', '');
+
+        if ($dadosXml && ($chaveDoFormulario === '' || $chaveDoFormulario !== ($dadosXml['nota']['chave_acesso'] ?? null))) {
+            $dadosXml = null;
+        }
+
         // Verificar duplicidade de NF-e antes de salvar
-        if (session()->has('dados_xml')) {
-            $dadosXml = session('dados_xml');
+        if ($dadosXml) {
             $chaveAcesso = $dadosXml['nota']['chave_acesso'] ?? null;
             
             if ($chaveAcesso) {
@@ -249,8 +266,7 @@ class EntradaEstoqueService
         ];
 
         // Merge XML fields from session if present
-        if (session()->has('dados_xml')) {
-            $dadosXml = session('dados_xml');
+        if ($dadosXml) {
             $dados['chave_acesso']     = $dadosXml['nota']['chave_acesso'] ?? null;
             $dados['xml_importado']    = session('xml_content');
             $dados['numero_nfe']       = $dadosXml['nota']['numero'] ?? null;
@@ -354,10 +370,13 @@ class EntradaEstoqueService
             'desconto'      => $desconto,
             'total'         => $total,
             'observacoes'   => $request->observacoes,
-            'situacao'      => 'rascunho',
         ];
 
-        $this->repository->update($entradaEstoque, $dados, $itens);
+        try {
+            $this->repository->update($entradaEstoque, $dados, $itens);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('entrada-estoque.show', $entradaEstoque)->with('error', $e->getMessage());
+        }
 
         return redirect()->route('entrada-estoque.show', $entradaEstoque)
             ->with('success', 'Entrada de estoque #' . $entradaEstoque->numero . ' atualizada com sucesso.');
@@ -464,9 +483,9 @@ class EntradaEstoqueService
                 continue;
             }
 
-            $precoUnit = $this->parseMoeda($item['preco_unitario'] ?? 0);
+            $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
             $descItem  = $this->parseMoeda($item['desconto'] ?? 0);
-            $total     = max(0, ($quantidade * $precoUnit) - $descItem);
+            $total     = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             // Se tem produto_id, usa o produto existente
             if (!empty($item['produto_id'])) {

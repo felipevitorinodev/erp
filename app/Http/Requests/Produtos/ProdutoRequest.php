@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Produtos;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class ProdutoRequest extends FormRequest
 {
@@ -15,9 +17,9 @@ class ProdutoRequest extends FormRequest
     {
         return [
             'empresa_id'         => 'required|exists:empresa,id',
-            'grupo_id'           => 'nullable|exists:grupos,id',
-            'unidade_medida_id'  => 'nullable|exists:unidades_medida,id',
-            'fornecedor_id'      => 'nullable|exists:fornecedores,id',
+            'grupo_id'           => ['nullable', $this->existeNaEmpresa('grupos')],
+            'unidade_medida_id'  => ['nullable', $this->existeNaEmpresa('unidades_medida')],
+            'fornecedor_id'      => ['nullable', $this->existeNaEmpresa('fornecedores')],
 
             'codigo'             => 'nullable|string|max:50',
             'codigo_barras'      => 'nullable|string|max:50',
@@ -66,6 +68,13 @@ class ProdutoRequest extends FormRequest
             'min'      => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
+    }
+
+    private function existeNaEmpresa(string $tabela): Exists
+    {
+        return Rule::exists($tabela, 'id')
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->whereNull('deleted_at');
     }
 
     protected function prepareForValidation(): void

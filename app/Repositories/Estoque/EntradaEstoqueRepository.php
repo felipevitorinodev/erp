@@ -55,6 +55,12 @@ class EntradaEstoqueRepository
     public function update(EntradaEstoque $entrada, array $dados, array $itens): EntradaEstoque
     {
         return DB::transaction(function () use ($entrada, $dados, $itens) {
+            $entrada = EntradaEstoque::whereKey($entrada->id)->lockForUpdate()->firstOrFail();
+
+            if ($entrada->situacao !== 'rascunho') {
+                throw new \RuntimeException('Somente entradas em rascunho podem ser editadas.');
+            }
+
             $entrada->update($dados);
             $entrada->itens()->delete();
             $this->salvarItens($entrada, $itens);
@@ -146,9 +152,16 @@ class EntradaEstoqueRepository
     public function cancelar(EntradaEstoque $entrada): EntradaEstoque
     {
         return DB::transaction(function () use ($entrada) {
+            $entrada = EntradaEstoque::whereKey($entrada->id)->lockForUpdate()->firstOrFail();
+
+            if ($entrada->situacao !== 'confirmada') {
+                throw new \Exception('Somente entradas confirmadas podem ser canceladas.');
+            }
+
             $temPago = ContaPagar::where('entrada_estoque_id', $entrada->id)
-                ->whereIn('situacao', ['paga', 'parcial'])
-                ->exists();
+                ->lockForUpdate()
+                ->get()
+                ->contains(fn ($conta) => in_array($conta->situacao, ['paga', 'parcial'], true));
 
             if ($temPago) {
                 throw new \Exception('Não é possível cancelar: a conta a pagar vinculada já foi paga ou parcialmente paga.');
@@ -201,7 +214,7 @@ class EntradaEstoqueRepository
             }
 
             ContaPagar::where('entrada_estoque_id', $entrada->id)
-                ->whereIn('situacao', ['aberta', 'parcial'])
+                ->where('situacao', 'aberta')
                 ->update(['situacao' => 'cancelada']);
 
             $entrada->update(['situacao' => 'cancelada']);
@@ -214,10 +227,11 @@ class EntradaEstoqueRepository
     {
         return DB::transaction(function () use ($id) {
             $entrada = EntradaEstoque::where('empresa_id', auth()->user()->empresa_id)
+                ->lockForUpdate()
                 ->findOrFail($id);
 
             if ($entrada->situacao === 'confirmada') {
-                $this->cancelar($entrada->load('itens'));
+                $this->cancelar($entrada);
                 $entrada->refresh();
             }
 

@@ -61,9 +61,9 @@ class Produto extends Model
         'preco_custo'               => 'decimal:2',
         'preco_venda'               => 'decimal:2',
         'preco_minimo'              => 'decimal:2',
-        'estoque_minimo'            => 'decimal:2',
-        'estoque_maximo'            => 'decimal:2',
-        'estoque_atual'             => 'decimal:2',
+        'estoque_minimo'            => 'decimal:3',
+        'estoque_maximo'            => 'decimal:3',
+        'estoque_atual'             => 'decimal:3',
     ];
 
     public function empresa()

@@ -25,9 +25,9 @@ class MovimentacaoEstoque extends Model
     ];
 
     protected $casts = [
-        'quantidade'     => 'decimal:2',
-        'estoque_antes'  => 'decimal:2',
-        'estoque_depois' => 'decimal:2',
+        'quantidade'     => 'decimal:3',
+        'estoque_antes'  => 'decimal:3',
+        'estoque_depois' => 'decimal:3',
     ];
 
     public function empresa()

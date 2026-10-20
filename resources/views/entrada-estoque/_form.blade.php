@@ -109,6 +109,9 @@
 }
 </style>
 @endpush
+@if($dadosXml)
+    <input type="hidden" name="chave_acesso_xml" value="{{ $dadosXml['nota']['chave_acesso'] ?? '' }}">
+@endif
 <div class="form-section">
     <div class="form-section__title">Dados da entrada</div>
     <div class="form-grid form-grid--col-3">
@@ -589,12 +592,6 @@
         // Preenche observações
         @if(!empty($observacoesXml))
             $('textarea[name="observacoes"]').val({!! json_encode($observacoesXml) !!});
-        @endif
-
-        // Preenche desconto geral
-        @if(!empty($dadosXml['totais']['desconto']) && $dadosXml['totais']['desconto'] > 0)
-            var descontoGeral = {{ $dadosXml['totais']['desconto'] }};
-            $('#input-desconto').val(descontoGeral.toFixed(2).replace('.', ','));
         @endif
 
         // Adiciona itens
