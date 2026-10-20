@@ -174,7 +174,7 @@ class OrcamentoService
                 'cliente_id'      => $orcamento->cliente_id,
                 'usuario_id'      => auth()->id(),
                 'numero'          => $this->vendaRepository->proximoNumero($orcamento->empresa_id),
-                'data_venda'      => $orcamento->data_orcamento,
+                'data_venda'      => now()->toDateString(),
                 'data_entrega'    => $orcamento->data_entrega,
                 'subtotal'        => $orcamento->subtotal,
                 'desconto'        => $orcamento->desconto,
