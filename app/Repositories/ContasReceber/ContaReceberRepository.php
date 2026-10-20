@@ -140,7 +140,8 @@ class ContaReceberRepository
 
     /**
      * Gera Conta a Receber apenas para formas a prazo (duplicata, boleto, etc.).
-     * Retorna null se a forma for à vista ou não estiver configurada para gerar.
+     * Retorna null se a forma for à vista ou se a venda não tiver forma informada.
+     * Forma informada mas desconhecida impede a confirmação: sem isso a venda a prazo ficaria sem conta a receber.
      */
     public function gerarDaVendaConfirmada(Venda $venda): ?ContaReceber
     {
@@ -148,7 +149,15 @@ class ContaReceberRepository
             return ContaReceber::where('venda_id', $venda->id)->first();
         }
 
-        $forma = FormaPagamento::buscarPorNome($venda->forma_pagamento, (int) $venda->empresa_id);
+        $forma = $venda->forma_pagamento_id
+            ? FormaPagamento::withTrashed()->where('empresa_id', $venda->empresa_id)->find($venda->forma_pagamento_id)
+            : FormaPagamento::buscarPorNome($venda->forma_pagamento, (int) $venda->empresa_id);
+
+        if (!$forma && trim((string) $venda->forma_pagamento) !== '') {
+            throw new \RuntimeException(
+                'Forma de pagamento "' . $venda->forma_pagamento . '" não encontrada ou inativa. Ajuste a forma de pagamento antes de confirmar.'
+            );
+        }
 
         if (!$forma || !$forma->isPrazo()) {
             return null;

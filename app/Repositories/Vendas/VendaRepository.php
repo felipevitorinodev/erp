@@ -6,6 +6,7 @@ use App\Repositories\ContasReceber\ContaReceberRepository;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
+use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Nfe;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Estoque\MovimentacaoEstoque;
@@ -83,6 +84,10 @@ class VendaRepository
     public function store(array $dados, array $itens): Venda
     {
         return DB::transaction(function () use ($dados, $itens) {
+            if (array_key_exists('forma_pagamento', $dados)) {
+                $dados['forma_pagamento_id'] = FormaPagamento::buscarPorNome($dados['forma_pagamento'], (int) $dados['empresa_id'])?->id;
+            }
+
             $venda = Venda::create($dados);
             $this->salvarItens($venda, $itens);
             return $venda;
@@ -92,6 +97,16 @@ class VendaRepository
     public function update(Venda $venda, array $dados, array $itens): Venda
     {
         return DB::transaction(function () use ($venda, $dados, $itens) {
+            if (array_key_exists('forma_pagamento', $dados)) {
+                $forma = FormaPagamento::buscarPorNome($dados['forma_pagamento'], (int) $venda->empresa_id);
+
+                if (!$forma && $venda->situacao === 'confirmada' && trim((string) $dados['forma_pagamento']) !== '') {
+                    throw new \Exception('Forma de pagamento "' . $dados['forma_pagamento'] . '" não encontrada ou inativa.');
+                }
+
+                $dados['forma_pagamento_id'] = $forma?->id;
+            }
+
             if ($venda->situacao === 'confirmada') {
                 $this->estornarEstoque($venda);
             }

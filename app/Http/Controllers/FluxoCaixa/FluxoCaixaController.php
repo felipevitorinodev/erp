@@ -181,12 +181,19 @@ class FluxoCaixaController extends Controller
             ->whereDoesntHave('contasReceber', function ($query) {
                 $query->where('situacao', '!=', 'cancelada');
             })
-            ->get(['id', 'data_venda', 'total', 'forma_pagamento']);
+            ->with('formaPagamento')
+            ->get(['id', 'data_venda', 'total', 'forma_pagamento', 'forma_pagamento_id']);
 
         foreach ($vendas as $venda) {
-            $nome = mb_strtolower(trim((string) $venda->forma_pagamento));
-            if ($nome !== '' && in_array($nome, $nomesPrazo, true)) {
-                continue;
+            if ($venda->formaPagamento) {
+                if ($venda->formaPagamento->isPrazo()) {
+                    continue;
+                }
+            } else {
+                $nome = mb_strtolower(trim((string) $venda->forma_pagamento));
+                if ($nome !== '' && in_array($nome, $nomesPrazo, true)) {
+                    continue;
+                }
             }
 
             $dia = $venda->data_venda->toDateString();

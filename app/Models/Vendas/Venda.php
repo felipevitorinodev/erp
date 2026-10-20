@@ -6,6 +6,7 @@ use App\Models\Clientes\Cliente;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
+use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfe;
 use App\Models\Usuarios\User;
@@ -33,6 +34,7 @@ class Venda extends Model
         'acrescimo',
         'total',
         'forma_pagamento',
+        'forma_pagamento_id',
         'observacoes',
         'natureza_operacao',
         'mod_frete',
@@ -66,6 +68,11 @@ class Venda extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    public function formaPagamento()
+    {
+        return $this->belongsTo(FormaPagamento::class)->withTrashed();
     }
 
     public function itens()
