@@ -133,7 +133,9 @@ class EntradaEstoqueRepository
                     'fornecedor_id'      => $entrada->fornecedor_id,
                     'entrada_estoque_id' => $entrada->id,
                     'descricao'          => 'Entrada #' . $entrada->numero . ' — ' . ($entrada->fornecedor->nome ?? 'Fornecedor não informado'),
-                    'valor'              => $entrada->total,
+                    'valor'              => $entrada->valor_nota !== null && (float) $entrada->valor_nota > 0
+                        ? $entrada->valor_nota
+                        : $entrada->total,
                     'valor_pago'         => 0,
                     'data_vencimento'    => $entrada->data_entrada
                         ? $entrada->data_entrada->copy()->addDays(30)

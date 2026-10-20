@@ -24,6 +24,7 @@ class EntradaEstoque extends Model
         'subtotal',
         'desconto',
         'total',
+        'valor_nota',
         'observacoes',
         'situacao',
         'chave_acesso',
@@ -39,6 +40,7 @@ class EntradaEstoque extends Model
         'subtotal'         => 'decimal:2',
         'desconto'         => 'decimal:2',
         'total'            => 'decimal:2',
+        'valor_nota'       => 'decimal:2',
     ];
 
     public function empresa()

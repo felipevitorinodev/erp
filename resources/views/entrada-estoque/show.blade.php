@@ -192,6 +192,12 @@
                     <span>Total</span>
                     <span>R$ {{ number_format($entrada->total, 2, ',', '.') }}</span>
                 </div>
+                @if($entrada->valor_nota !== null && round((float) $entrada->valor_nota, 2) !== round((float) $entrada->total, 2))
+                    <div class="totals-box__row">
+                        <span class="text-muted">Valor da NF-e (conta a pagar)</span>
+                        <span>R$ {{ number_format($entrada->valor_nota, 2, ',', '.') }}</span>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

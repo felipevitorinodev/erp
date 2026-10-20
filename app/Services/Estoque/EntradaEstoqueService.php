@@ -272,6 +272,7 @@ class EntradaEstoqueService
             $dados['numero_nfe']       = $dadosXml['nota']['numero'] ?? null;
             $dados['serie_nfe']        = $dadosXml['nota']['serie'] ?? null;
             $dados['data_emissao_nfe'] = $dadosXml['nota']['data_emissao'] ?? null;
+            $dados['valor_nota']       = isset($dadosXml['totais']['total']) ? round((float) $dadosXml['totais']['total'], 2) : null;
         }
 
         try {
