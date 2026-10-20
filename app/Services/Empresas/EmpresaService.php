@@ -204,9 +204,7 @@ class EmpresaService
 
     public function destroy($id)
     {
-        $this->empresaRepository->destroy($id);
-
         return redirect()->route('empresa.index')
-            ->with('success', 'Empresa apagada com sucesso.');
+            ->with('error', 'A empresa em uso não pode ser excluída pelo sistema. Entre em contato com o suporte.');
     }                       
 }

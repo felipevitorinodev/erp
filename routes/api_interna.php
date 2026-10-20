@@ -10,6 +10,7 @@ use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
 use App\Models\Vendas\Venda;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 
 Route::middleware('auth')->group(function () {
 
@@ -209,7 +210,7 @@ Route::middleware('auth')->group(function () {
         $q = trim((string) request('q', ''));
         $limit = $q === '' ? 5 : 10;
 
-        $query = Empresa::query();
+        $query = Empresa::whereKey(auth()->user()->empresa_id);
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
@@ -348,10 +349,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/fornecedores/store', function () {
         $data = request()->validate([
             'nome' => 'required|string|max:200',
-            'cnpj' => 'nullable|string|max:18',
+            'cnpj' => 'nullable|string|max:18|cnpj',
             'telefone' => 'nullable|string|max:20',
         ], [
             'nome.required' => 'O nome do fornecedor é obrigatório.',
+            'cnpj.cnpj' => 'CNPJ inválido.',
         ]);
 
         $fornecedor = Fornecedor::create([
@@ -373,12 +375,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/clientes/store', function () {
         $data = request()->validate([
             'nome' => 'required|string|max:200',
-            'cpf' => 'nullable|string|max:14',
-            'cnpj' => 'nullable|string|max:18',
+            'cpf' => [
+                'nullable', 'string', 'max:14', 'cpf',
+                Rule::unique('clientes', 'cpf')->where('empresa_id', auth()->user()->empresa_id)->whereNull('deleted_at'),
+            ],
+            'cnpj' => [
+                'nullable', 'string', 'max:18', 'cnpj',
+                Rule::unique('clientes', 'cnpj')->where('empresa_id', auth()->user()->empresa_id)->whereNull('deleted_at'),
+            ],
             'telefone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:100',
         ], [
             'nome.required' => 'O nome do cliente é obrigatório.',
+            'cpf.cpf' => 'CPF inválido.',
+            'cnpj.cnpj' => 'CNPJ inválido.',
+            'cpf.unique' => 'Já existe um cliente com este CPF.',
+            'cnpj.unique' => 'Já existe um cliente com este CNPJ.',
         ]);
 
         $cliente = Cliente::create([

@@ -4,6 +4,8 @@ namespace App\Http\Requests\Clientes;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class ClienteRequest extends FormRequest
 {
@@ -21,8 +23,8 @@ class ClienteRequest extends FormRequest
             'nome_fantasia'        => 'nullable|string|max:255',
 
             'tipo_pessoa' => 'required|in:PF,PJ',
-            'cpf'  => 'nullable|max:14|cpf',
-            'cnpj' => 'required_if:tipo_pessoa,PJ|nullable|max:18|cnpj',
+            'cpf'  => ['nullable', 'max:14', 'cpf', $this->unicoNaEmpresa('cpf')],
+            'cnpj' => ['required_if:tipo_pessoa,PJ', 'nullable', 'max:18', 'cnpj', $this->unicoNaEmpresa('cnpj')],
 
             'inscricao_estadual'   => 'nullable|string|max:20',
             'inscricao_municipal'  => 'nullable|string|max:20',
@@ -43,8 +45,20 @@ class ClienteRequest extends FormRequest
             'ativo'                => 'nullable|boolean',
         ];
     }
+    private function unicoNaEmpresa(string $coluna): Unique
+    {
+        $cliente = $this->route('cliente');
+
+        return Rule::unique('clientes', $coluna)
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->whereNull('deleted_at')
+            ->ignore(is_object($cliente) ? $cliente->getKey() : $cliente);
+    }
+
     public function messages(): array{
         return [
+            'cpf.unique'  => 'Já existe um cliente com este CPF.',
+            'cnpj.unique' => 'Já existe um cliente com este CNPJ.',
             'required' => 'O campo :attribute é obrigatório.',
             'date'     => 'O campo :attribute deve ser uma data válida.',
             'numeric'  => 'O campo :attribute deve ser numérico.',

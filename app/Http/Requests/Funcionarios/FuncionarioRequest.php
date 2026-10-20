@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Funcionarios;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FuncionarioRequest extends FormRequest
 {
@@ -15,7 +16,12 @@ class FuncionarioRequest extends FormRequest
     {
         return [
             'empresa_id'      => 'required|exists:empresa,id',
-            'usuario_id'      => 'nullable|exists:users,id',
+            'usuario_id'      => [
+                'nullable',
+                Rule::exists('users', 'id')
+                    ->where('empresa_id', auth()->user()->empresa_id)
+                    ->whereNull('deleted_at'),
+            ],
 
             'nome'            => 'required|string|max:255',
             'cpf'             => 'nullable|max:14|cpf',

@@ -66,16 +66,6 @@
                                     <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
                                         <x-icon name="edit" />
                                     </a>
-                                    <form method="POST" action="{{ route('empresa.destroy', $empresa) }}"
-                                        class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                            title="Excluir" aria-label="Excluir"
-                                            data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            <x-icon name="trash" />
-                                        </button>
-                                    </form>
                                 </td>
                             </tr>
                         @empty
