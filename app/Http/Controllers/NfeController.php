@@ -56,4 +56,14 @@ class NfeController extends Controller
     {
         return $this->nfeService->danfe($nfe);
     }
+
+    public function consultar(Nfe $nfe)
+    {
+        return $this->nfeService->consultar($nfe);
+    }
+
+    public function xml(Request $request, Nfe $nfe)
+    {
+        return $this->nfeService->xml($nfe, $request->query('tipo') === 'cancelamento');
+    }
 }

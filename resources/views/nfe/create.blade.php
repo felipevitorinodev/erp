@@ -25,6 +25,10 @@
         </div>
     @endif
 
+    @if ($avisoCertificado)
+        <div class="alert alert--warning">{{ $avisoCertificado }}</div>
+    @endif
+
     @if ((int) ($empresa->nfe_ambiente ?? 2) === 2)
         <div class="alert alert--warning">Homologação — sem valor fiscal.</div>
     @else

@@ -38,6 +38,7 @@ class EmpresaRequest extends FormRequest
         'certificado_pfx' => 'nullable|file|extensions:pfx,p12',
         'certificado_senha' => 'nullable|string|max:255',
         'nfe_ambiente' => 'sometimes|required|integer|in:1,2',
+        'confirmar_ambiente' => 'nullable|boolean',
         'nfe_serie' => 'sometimes|required|string|max:3|regex:/^\d{1,3}$/',
         'cod_ibge' => 'nullable|digits:7',
         'crt' => 'sometimes|required|integer|in:1,2,3',

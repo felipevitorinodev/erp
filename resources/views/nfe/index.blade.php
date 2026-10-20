@@ -47,6 +47,8 @@
                                         <span class="badge badge--success">Autorizada</span>
                                     @elseif ($nfe->situacao === 'rejeitada')
                                         <span class="badge badge--error">Rejeitada</span>
+                                    @elseif ($nfe->situacao === 'denegada')
+                                        <span class="badge badge--error">Denegada</span>
                                     @elseif ($nfe->situacao === 'cancelada')
                                         <span class="badge badge--neutral">Cancelada</span>
                                     @else

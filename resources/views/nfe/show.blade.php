@@ -23,6 +23,21 @@
             </a>
         @endif
 
+        @if ($nfe->xml_autorizado)
+            <a href="{{ route('nfe.xml', $nfe) }}" class="btn btn--ghost btn--sm">XML</a>
+        @endif
+
+        @if ($nfe->xml_cancelamento)
+            <a href="{{ route('nfe.xml', [$nfe, 'tipo' => 'cancelamento']) }}" class="btn btn--ghost btn--sm">XML cancelamento</a>
+        @endif
+
+        @if ($nfe->situacao === 'pendente')
+            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;">
+                @csrf
+                <button type="submit" class="btn btn--primary btn--sm">Consultar SEFAZ</button>
+            </form>
+        @endif
+
         @if ($nfe->podeCancelar())
             <button type="button" class="btn btn--danger btn--sm" id="btn-abrir-cancelar-nfe">
                 Cancelar
@@ -39,11 +54,20 @@
         </div>
     @endif
 
-    @if (in_array($nfe->situacao, ['rejeitada'], true) && $nfe->motivo_status)
+    @if (in_array($nfe->situacao, ['rejeitada', 'denegada'], true) && $nfe->motivo_status)
         <div class="alert alert--error" style="margin-top:0.75rem;">
             {{ $nfe->motivo_status }}
             @if ($nfe->codigo_status)
                 <span class="text-muted">(Código {{ $nfe->codigo_status }})</span>
+            @endif
+        </div>
+    @endif
+
+    @if ($nfe->situacao === 'pendente')
+        <div class="alert alert--warning" style="margin-top:0.75rem;">
+            A situação desta NF-e na SEFAZ ainda não foi confirmada. Use "Consultar SEFAZ" antes de qualquer nova tentativa de emissão.
+            @if ($nfe->motivo_status)
+                <br><span class="text-muted">Último retorno: {{ $nfe->motivo_status }}@if ($nfe->codigo_status) (Código {{ $nfe->codigo_status }})@endif</span>
             @endif
         </div>
     @endif
@@ -56,6 +80,8 @@
                     <span class="badge badge--success">Autorizada</span>
                 @elseif ($nfe->situacao === 'rejeitada')
                     <span class="badge badge--error">Rejeitada</span>
+                @elseif ($nfe->situacao === 'denegada')
+                    <span class="badge badge--error">Denegada</span>
                 @elseif ($nfe->situacao === 'cancelada')
                     <span class="badge badge--neutral">Cancelada</span>
                 @else

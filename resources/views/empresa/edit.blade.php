@@ -268,6 +268,14 @@
                             @error('nfe_ambiente')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
+                            <label style="display:flex; gap:.4rem; align-items:center; margin-top:.4rem; font-size:13px;">
+                                <input type="checkbox" name="confirmar_ambiente" value="1">
+                                Confirmo a alteração do ambiente
+                            </label>
+                            <small class="text-muted">Obrigatório apenas ao trocar entre Homologação e Produção.</small>
+                            @error('confirmar_ambiente')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <div class="form-group">

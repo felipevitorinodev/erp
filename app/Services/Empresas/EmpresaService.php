@@ -4,6 +4,7 @@ namespace App\Services\Empresas;
 
 use App\Http\Requests\Empresas\EmpresaRequest;
 use App\Models\Empresas\Empresa;
+use App\Models\Nfe;
 use App\Repositories\Empresas\EmpresaRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -57,6 +58,8 @@ class EmpresaService
 
     public function edit(Empresa $empresa)
     {
+        $this->autorizarEmpresa($empresa);
+
         return view('empresa.edit', [
             'empresa' => $empresa
         ]);
@@ -64,8 +67,18 @@ class EmpresaService
 
     public function update(EmpresaRequest $request, Empresa $empresa)
     {
+        $this->autorizarEmpresa($empresa);
+
         $dados = $request->validated();
-        unset($dados['certificado_pfx'], $dados['certificado_senha']);
+        unset($dados['certificado_pfx'], $dados['certificado_senha'], $dados['confirmar_ambiente']);
+
+        if (isset($dados['nfe_ambiente'])
+            && (int) $dados['nfe_ambiente'] !== (int) ($empresa->nfe_ambiente ?: 2)
+            && ! $request->boolean('confirmar_ambiente')) {
+            return back()
+                ->withInput()
+                ->withErrors(['confirmar_ambiente' => 'Marque a confirmação para alterar o ambiente da NF-e.']);
+        }
 
         try {
             $this->aplicarCertificado($request, $empresa, $dados);
@@ -90,7 +103,13 @@ class EmpresaService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $sequencia = (int) ($registro->nfe_sequencia ?: 1);
+            $maiorUsado = (int) Nfe::withTrashed()
+                ->where('empresa_id', $registro->id)
+                ->where('ambiente', (int) ($registro->nfe_ambiente ?: 2))
+                ->where('serie', $registro->nfe_serie ?: '001')
+                ->max('numero');
+
+            $sequencia = max((int) ($registro->nfe_sequencia ?: 1), $maiorUsado + 1);
             $numero = str_pad((string) $sequencia, 9, '0', STR_PAD_LEFT);
 
             $registro->nfe_sequencia = $sequencia + 1;
@@ -119,9 +138,18 @@ class EmpresaService
 
         if ($temArquivo) {
             $conteudo = file_get_contents($request->file('certificado_pfx')->getRealPath());
-            $this->validarPfx($conteudo, $senha);
-
             $cnpj = preg_replace('/\D/', '', (string) ($dados['cnpj'] ?? $empresa->cnpj));
+            $certificado = $this->validarPfx($conteudo, $senha);
+
+            if ($certificado->isExpired()) {
+                throw new RuntimeException('O certificado enviado está vencido desde '.$certificado->getValidTo()->format('d/m/Y').'.');
+            }
+
+            $cnpjCertificado = preg_replace('/\D/', '', (string) $certificado->getCnpj());
+            if ($cnpjCertificado !== '' && $cnpjCertificado !== $cnpj) {
+                throw new RuntimeException('O certificado enviado pertence a outro CNPJ ('.$cnpjCertificado.').');
+            }
+
             $caminho = 'certificados/'.$empresa->id.'_'.$cnpj.'.pfx';
             $this->gravarCertificado($caminho, $conteudo);
 
@@ -147,16 +175,23 @@ class EmpresaService
         }
     }
 
-    private function validarPfx(string|false $conteudo, string $senha): void
+    private function validarPfx(string|false $conteudo, string $senha): Certificate
     {
         if ($conteudo === false || $conteudo === '') {
             throw new RuntimeException('Certificado inválido ou senha incorreta.');
         }
 
         try {
-            Certificate::readPfx($conteudo, $senha);
+            return Certificate::readPfx($conteudo, $senha);
         } catch (Throwable) {
             throw new RuntimeException('Certificado inválido ou senha incorreta.');
+        }
+    }
+
+    private function autorizarEmpresa(Empresa $empresa): void
+    {
+        if ((int) $empresa->id !== (int) auth()->user()->empresa_id) {
+            abort(404);
         }
     }
 

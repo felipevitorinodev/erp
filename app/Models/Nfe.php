@@ -24,15 +24,19 @@ class Nfe extends Model
         'ambiente',
         'xml_assinado',
         'xml_autorizado',
+        'xml_cancelamento',
         'protocolo',
+        'recibo',
         'codigo_status',
         'motivo_status',
         'data_autorizacao',
+        'data_cancelamento',
     ];
 
     protected $casts = [
         'ambiente' => 'integer',
         'data_autorizacao' => 'datetime',
+        'data_cancelamento' => 'datetime',
     ];
 
     public function empresa(): BelongsTo

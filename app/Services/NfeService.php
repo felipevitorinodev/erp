@@ -8,10 +8,12 @@ use App\Models\Nfe;
 use App\Models\Vendas\Venda;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Vendas\VendaService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use NFePHP\Common\Certificate;
 use NFePHP\DA\NFe\Danfe;
 use RuntimeException;
 use Throwable;
@@ -42,10 +44,19 @@ class NfeService
     {
         $empresa = Empresa::query()->findOrFail((int) auth()->user()->empresa_id);
         $alertas = $this->alertasConfiguracao($empresa);
+        $avisoCertificado = null;
+
+        if ($alertas === [] && $empresa->certificado_path) {
+            $validade = $this->validadeCertificado($empresa);
+            if ($validade !== null && $validade->lt(now()->addDays(30))) {
+                $avisoCertificado = 'O certificado digital vence em '.$validade->format('d/m/Y').'. Providencie a renovação.';
+            }
+        }
 
         return view('nfe.create', [
             'empresa' => $empresa,
             'alertas' => $alertas,
+            'avisoCertificado' => $avisoCertificado,
             'podeEmitir' => $alertas === [],
         ]);
     }
@@ -91,6 +102,14 @@ class NfeService
 
         if (! $empresa->certificado_path || ! is_file($arquivo) || blank($empresa->certificado_senha_decrypted)) {
             $alertas[] = 'Configure o certificado digital A1 na empresa antes de emitir a NF-e.';
+        } else {
+            $validade = $this->validadeCertificado($empresa);
+
+            if ($validade === null) {
+                $alertas[] = 'O certificado digital da empresa é inválido ou a senha está incorreta.';
+            } elseif ($validade->isPast()) {
+                $alertas[] = 'O certificado digital venceu em '.$validade->format('d/m/Y').'. Envie um certificado válido na empresa.';
+            }
         }
 
         if (strlen(preg_replace('/\D/', '', (string) $empresa->cod_ibge) ?? '') !== 7) {
@@ -116,6 +135,20 @@ class NfeService
         return $alertas;
     }
 
+    private function validadeCertificado(Empresa $empresa): ?Carbon
+    {
+        try {
+            $certificado = Certificate::readPfx(
+                (string) file_get_contents(storage_path('app/'.$empresa->certificado_path)),
+                (string) $empresa->certificado_senha_decrypted
+            );
+
+            return Carbon::instance($certificado->getValidTo());
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     public function show(Nfe $nfe)
     {
         $this->autorizarNfe($nfe);
@@ -130,47 +163,79 @@ class NfeService
     {
         $this->autorizarVenda($venda);
 
-        if ($venda->situacao !== 'confirmada') {
-            return back()->with('error', 'Apenas vendas confirmadas podem ter NF-e emitida.');
-        }
-
-        if (Nfe::query()
-            ->where('empresa_id', $venda->empresa_id)
-            ->where('venda_id', $venda->id)
-            ->where('situacao', 'autorizada')
-            ->exists()) {
-            return back()->with('error', 'Esta venda já possui NF-e autorizada.');
-        }
-
-        if (Nfe::query()
-            ->where('empresa_id', $venda->empresa_id)
-            ->where('venda_id', $venda->id)
-            ->where('situacao', 'pendente')
-            ->exists()) {
-            return back()->with('error', 'Esta venda já possui uma NF-e em andamento.');
-        }
-
         $empresa = Empresa::query()->findOrFail($venda->empresa_id);
 
         $nfe = DB::transaction(function () use ($venda, $empresa) {
+            $venda = Venda::query()->whereKey($venda->id)->lockForUpdate()->firstOrFail();
+
+            if ($venda->situacao !== 'confirmada') {
+                return 'Apenas vendas confirmadas podem ter NF-e emitida.';
+            }
+
+            $nfes = Nfe::query()
+                ->where('empresa_id', $venda->empresa_id)
+                ->where('venda_id', $venda->id)
+                ->orderByDesc('id')
+                ->get();
+
+            if ($nfes->contains('situacao', 'autorizada')) {
+                return 'Esta venda já possui NF-e autorizada.';
+            }
+
+            if ($nfes->contains('situacao', 'pendente')) {
+                return 'Esta venda já possui uma NF-e em andamento. Use "Consultar SEFAZ" na NF-e pendente.';
+            }
+
+            $ambiente = (int) ($empresa->nfe_ambiente ?: 2);
+            $serie = $empresa->nfe_serie ?: '001';
+            $ultima = $nfes->first();
+
+            // Nota rejeitada não consome o número na SEFAZ: reaproveita para não abrir buraco na numeração.
+            // 539 = o número já foi usado por outra chave na SEFAZ, então não pode ser reaproveitado.
+            if ($ultima
+                && $ultima->situacao === 'rejeitada'
+                && (int) $ultima->ambiente === $ambiente
+                && $ultima->serie === $serie
+                && $ultima->codigo_status !== '539') {
+                $ultima->update([
+                    'situacao' => 'pendente',
+                    'chave_acesso' => null,
+                    'xml_assinado' => null,
+                    'xml_autorizado' => null,
+                    'protocolo' => null,
+                    'recibo' => null,
+                    'codigo_status' => null,
+                    'motivo_status' => null,
+                    'data_autorizacao' => null,
+                ]);
+                $venda->update(['nfe_numero' => $ultima->numero]);
+
+                return $ultima;
+            }
+
             $numero = $this->empresaService->proximoNumeronNfe($empresa);
 
             $venda->update(['nfe_numero' => $numero]);
-            $venda->refresh();
 
             return Nfe::query()->create([
                 'empresa_id' => $empresa->id,
                 'venda_id' => $venda->id,
                 'numero' => $numero,
-                'serie' => $empresa->nfe_serie ?: '001',
+                'serie' => $serie,
                 'situacao' => 'pendente',
-                'ambiente' => (int) ($empresa->nfe_ambiente ?: 2),
+                'ambiente' => $ambiente,
             ]);
         });
 
+        if (is_string($nfe)) {
+            return back()->with('error', $nfe);
+        }
+
+        $venda->refresh();
+
         try {
-            $signedXml = (new NfeBuilderService($empresa))
-                ->buildAndSign($venda->load(['itens.produto.unidadeMedida', 'cliente']));
+            $builder = new NfeBuilderService($empresa);
+            $signedXml = $builder->buildAndSign($venda->load(['itens.produto.unidadeMedida', 'cliente']));
 
             $nfe->update([
                 'xml_assinado' => $signedXml,
@@ -201,9 +266,62 @@ class NfeService
                 ->with('error', 'Não foi possível montar a NF-e. Verifique os dados fiscais da empresa e dos produtos.');
         }
 
-        $resultado = (new NfeSenderService($empresa))->enviar($signedXml, $empresa);
+        $resultado = (new NfeSenderService($empresa, $builder->tools()))->enviar($signedXml, $empresa);
 
         return $this->aplicarResultadoEnvio($nfe, $resultado);
+    }
+
+    public function consultar(Nfe $nfe)
+    {
+        $this->autorizarNfe($nfe);
+
+        if ($nfe->situacao !== 'pendente') {
+            return redirect()
+                ->route('nfe.show', $nfe)
+                ->with('error', 'Somente NF-e pendente pode ser consultada para atualizar a situação.');
+        }
+
+        if (blank($nfe->chave_acesso) || blank($nfe->xml_assinado)) {
+            // Sem XML assinado a nota nunca foi transmitida.
+            $nfe->update([
+                'situacao' => 'rejeitada',
+                'motivo_status' => 'A NF-e não chegou a ser transmitida à SEFAZ.',
+            ]);
+
+            return redirect()
+                ->route('nfe.show', $nfe)
+                ->with('error', 'A NF-e não chegou a ser transmitida. Você pode emitir novamente pela venda.');
+        }
+
+        $empresa = Empresa::query()->findOrFail($nfe->empresa_id);
+
+        try {
+            $sender = new NfeSenderService($empresa);
+        } catch (RuntimeException $e) {
+            return redirect()->route('nfe.show', $nfe)->with('error', $e->getMessage());
+        }
+
+        $resultado = $sender->consultar($nfe->chave_acesso, $nfe->xml_assinado, (int) $nfe->ambiente);
+
+        return $this->aplicarResultadoEnvio($nfe, $resultado);
+    }
+
+    public function xml(Nfe $nfe, bool $cancelamento = false)
+    {
+        $this->autorizarNfe($nfe);
+
+        $conteudo = $cancelamento ? $nfe->xml_cancelamento : $nfe->xml_autorizado;
+
+        if (blank($conteudo)) {
+            return back()->with('error', 'XML não disponível para esta NF-e.');
+        }
+
+        $nome = ($nfe->chave_acesso ?: $nfe->numero).($cancelamento ? '-procEventoNFe' : '-nfe').'.xml';
+
+        return response($conteudo, 200, [
+            'Content-Type' => 'application/xml',
+            'Content-Disposition' => 'attachment; filename="'.$nome.'"',
+        ]);
     }
 
     public function cancelar(Nfe $nfe, string $justificativa)
@@ -219,17 +337,23 @@ class NfeService
         }
 
         $empresa = Empresa::query()->findOrFail($nfe->empresa_id);
-        $sender = new NfeSenderService($empresa);
-        $resultado = $sender->cancelar($nfe->chave_acesso, $justificativa, $nfe->protocolo);
+
+        try {
+            $sender = new NfeSenderService($empresa);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $resultado = $sender->cancelar($nfe->chave_acesso, $justificativa, $nfe->protocolo, (int) $nfe->ambiente);
 
         if (($resultado['status'] ?? '') === 'cancelada') {
-            DB::transaction(function () use ($nfe, $resultado) {
-                $nfe->update([
-                    'situacao' => 'cancelada',
-                    'codigo_status' => $resultado['codigo'] ?? '101',
-                    'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Cancelamento homologado'), 0, 255),
-                ]);
-            });
+            $nfe->update([
+                'situacao' => 'cancelada',
+                'codigo_status' => $resultado['codigo'] ?? '101',
+                'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Cancelamento homologado'), 0, 255),
+                'xml_cancelamento' => $resultado['xml_evento'] ?? null,
+                'data_cancelamento' => now(),
+            ]);
 
             return redirect()
                 ->route('nfe.show', $nfe)
@@ -274,40 +398,57 @@ class NfeService
     private function aplicarResultadoEnvio(Nfe $nfe, array $resultado)
     {
         $status = $resultado['status'] ?? 'erro';
+        $motivo = (string) ($resultado['motivo'] ?? 'erro desconhecido');
+        $codigo = $resultado['codigo'] ?? null;
 
-        if ($status === 'autorizada') {
-            DB::transaction(function () use ($nfe, $resultado) {
-                $nfe->update([
-                    'situacao' => 'autorizada',
-                    'chave_acesso' => $resultado['chave'] ?? $nfe->chave_acesso,
-                    'protocolo' => $resultado['protocolo'] ?? null,
-                    'xml_autorizado' => $resultado['xml_autorizado'] ?? null,
-                    'codigo_status' => $resultado['codigo'] ?? '100',
-                    'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Autorizado o uso da NF-e'), 0, 255),
-                    'data_autorizacao' => now(),
-                ]);
-            });
+        if ($status === 'autorizada' || $status === 'denegada') {
+            $nfe->update([
+                'situacao' => $status,
+                'chave_acesso' => $resultado['chave'] ?? $nfe->chave_acesso,
+                'protocolo' => $resultado['protocolo'] ?? null,
+                'xml_autorizado' => $resultado['xml_autorizado'] ?? null,
+                'codigo_status' => $codigo ?? '100',
+                'motivo_status' => mb_substr($status === 'autorizada' && ! isset($resultado['motivo']) ? 'Autorizado o uso da NF-e' : $motivo, 0, 255),
+                'data_autorizacao' => now(),
+            ]);
+
+            if ($status === 'denegada') {
+                return redirect()
+                    ->route('nfe.show', $nfe)
+                    ->with('error', 'NF-e denegada pela SEFAZ: '.$motivo.($codigo ? ' Código: '.$codigo : '').'. O número foi consumido e não pode ser reutilizado.');
+            }
 
             return redirect()
                 ->route('nfe.show', $nfe)
                 ->with('success', 'NF-e autorizada com sucesso.');
         }
 
-        DB::transaction(function () use ($nfe, $resultado, $status) {
+        if ($status === 'rejeitada' || $status === 'nao_encontrada') {
             $nfe->update([
                 'situacao' => 'rejeitada',
                 'chave_acesso' => $resultado['chave'] ?? $nfe->chave_acesso,
-                'codigo_status' => $resultado['codigo'] ?? null,
-                'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Falha no envio'), 0, 255),
+                'codigo_status' => $codigo,
+                'motivo_status' => mb_substr($status === 'nao_encontrada'
+                    ? 'A NF-e não consta na SEFAZ (não foi autorizada). Pode ser emitida novamente.'
+                    : $motivo, 0, 255),
             ]);
-        });
 
-        $motivo = $resultado['motivo'] ?? 'erro desconhecido';
-        $codigo = $resultado['codigo'] ?? null;
+            return redirect()
+                ->route('nfe.show', $nfe)
+                ->with('error', 'NF-e rejeitada: '.$motivo.($codigo ? ' Código: '.$codigo : ''));
+        }
+
+        // Timeout, lote em processamento, retorno ilegível, duplicidade: a situação real na SEFAZ é desconhecida.
+        // A nota continua pendente para impedir reemissão com outro número antes de consultar.
+        $nfe->update([
+            'codigo_status' => $codigo,
+            'motivo_status' => mb_substr($motivo, 0, 255),
+            'recibo' => $resultado['recibo'] ?? $nfe->recibo,
+        ]);
 
         return redirect()
             ->route('nfe.show', $nfe)
-            ->with('error', 'NF-e rejeitada: '.$motivo.($codigo ? ' Código: '.$codigo : ''));
+            ->with('warning', 'Não foi possível confirmar a situação da NF-e na SEFAZ: '.$motivo.' Use "Consultar SEFAZ" antes de tentar emitir novamente.');
     }
 
     private function extrairChave(string $xml): ?string

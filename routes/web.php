@@ -201,6 +201,8 @@ Route::middleware('auth')->group(function () {
         Route::get('{nfe}/ver', [NfeController::class, 'show'])->name('nfe.show');
         Route::post('{nfe}/cancelar', [NfeController::class, 'cancelar'])->name('nfe.cancelar');
         Route::get('{nfe}/danfe', [NfeController::class, 'danfe'])->name('nfe.danfe');
+        Route::post('{nfe}/consultar', [NfeController::class, 'consultar'])->name('nfe.consultar');
+        Route::get('{nfe}/xml', [NfeController::class, 'xml'])->name('nfe.xml');
     });
 
     Route::prefix('orcamento')->middleware('permissao:orcamentos')->group(function () {

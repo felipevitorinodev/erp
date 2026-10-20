@@ -57,10 +57,10 @@ class NfeBuilderService
         $this->montarIdentificacao($make, $venda, $numero);
         $this->montarEmitente($make);
         $this->montarDestinatario($make, $venda);
-        $this->montarItens($make, $venda);
-        $this->montarTotais($make, $venda);
+        $totais = $this->montarItens($make, $venda);
+        $this->montarTotais($make, $venda, $totais);
         $this->montarTransporte($make, $venda);
-        $this->montarPagamento($make, $venda);
+        $this->montarPagamento($make, $venda, $totais['vNF']);
         $this->montarInformacoes($make, $venda);
 
         $xml = $make->getXML();
@@ -146,7 +146,7 @@ class NfeBuilderService
             'cNF' => $cNf,
             'natOp' => $this->limitar($venda->natureza_operacao ?: 'VENDA DE MERCADORIA', 60),
             'mod' => 55,
-            'serie' => $this->empresa->nfe_serie ?: '001',
+            'serie' => (int) ($this->empresa->nfe_serie ?: 1),
             'nNF' => (int) $numero,
             'dhEmi' => Carbon::now($this->fuso($cUf))->format('Y-m-d\TH:i:sP'),
             'tpNF' => 1,
@@ -286,12 +286,17 @@ class NfeBuilderService
         ]));
     }
 
-    private function montarItens(Make $make, Venda $venda): void
+    /**
+     * @return array{vProd: float, vDesc: float, vOutro: float, vNF: float}
+     */
+    private function montarItens(Make $make, Venda $venda): array
     {
         $itens = $venda->itens->values();
         $ultimo = $itens->count();
         $homologacao = (int) ($this->empresa->nfe_ambiente ?: 2) === 2;
         $descontos = $this->ratearDesconto((float) $venda->desconto, $itens);
+        $somaProd = 0.0;
+        $somaDesc = 0.0;
 
         foreach ($itens as $indice => $item) {
             $nItem = $indice + 1;
@@ -330,10 +335,13 @@ class NfeBuilderService
                 $prod['CEST'] = $this->somenteDigitos($item->cest);
             }
 
-            $descItem = (float) $item->desconto + (float) ($descontos[$indice] ?? 0);
+            $descItem = round((float) $item->desconto + (float) ($descontos[$indice] ?? 0), 2);
             if ($descItem > 0) {
                 $prod['vDesc'] = $this->valor($descItem);
             }
+
+            $somaProd = round($somaProd + (float) $this->valor($vProdItem), 2);
+            $somaDesc = round($somaDesc + $descItem, 2);
 
             if ($nItem === $ultimo && (float) $venda->acrescimo > 0) {
                 $prod['vOutro'] = $this->valor($venda->acrescimo);
@@ -358,9 +366,21 @@ class NfeBuilderService
                 'CST' => $cstCofins,
             ]));
         }
+
+        $vOutro = round((float) $venda->acrescimo, 2);
+
+        return [
+            'vProd' => $somaProd,
+            'vDesc' => $somaDesc,
+            'vOutro' => $vOutro,
+            'vNF' => round($somaProd - $somaDesc + $vOutro, 2),
+        ];
     }
 
-    private function montarTotais(Make $make, Venda $venda): void
+    /**
+     * @param  array{vProd: float, vDesc: float, vOutro: float, vNF: float}  $totais
+     */
+    private function montarTotais(Make $make, Venda $venda, array $totais): void
     {
         $make->tagICMSTot($this->dados([
             'vBC' => '0.00',
@@ -371,17 +391,17 @@ class NfeBuilderService
             'vST' => '0.00',
             'vFCPST' => '0.00',
             'vFCPSTRet' => '0.00',
-            'vProd' => $this->valor($venda->subtotal),
+            'vProd' => $this->valor($totais['vProd']),
             'vFrete' => '0.00',
             'vSeg' => '0.00',
-            'vDesc' => $this->valor($venda->desconto),
+            'vDesc' => $this->valor($totais['vDesc']),
             'vII' => '0.00',
             'vIPI' => '0.00',
             'vIPIDevol' => '0.00',
             'vPIS' => '0.00',
             'vCOFINS' => '0.00',
-            'vOutro' => $this->valor($venda->acrescimo),
-            'vNF' => $this->valor($venda->total),
+            'vOutro' => $this->valor($totais['vOutro']),
+            'vNF' => $this->valor($totais['vNF']),
             'vTotTrib' => '0.00',
         ]));
     }
@@ -393,7 +413,7 @@ class NfeBuilderService
         ]));
     }
 
-    private function montarPagamento(Make $make, Venda $venda): void
+    private function montarPagamento(Make $make, Venda $venda, float $vNF): void
     {
         $tPag = $this->codigoPagamento((string) $venda->forma_pagamento);
 
@@ -401,7 +421,7 @@ class NfeBuilderService
         $make->tagdetPag($this->dados([
             'tPag' => $tPag,
             'xPag' => $tPag === '99' ? $this->limitar($venda->forma_pagamento ?: 'Outros', 60) : null,
-            'vPag' => $this->valor($venda->total),
+            'vPag' => $this->valor($vNF),
         ]));
     }
 

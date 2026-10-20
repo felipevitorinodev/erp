@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Empresas\Empresa;
 use Illuminate\Support\Facades\Log;
+use NFePHP\Common\Exception\ValidatorException;
 use NFePHP\Common\Keys;
 use NFePHP\NFe\Common\Standardize;
 use NFePHP\NFe\Complements;
@@ -13,6 +14,8 @@ use Throwable;
 
 class NfeSenderService
 {
+    private const CSTAT_DENEGADA = ['110', '205', '301', '302', '303'];
+
     private Tools $tools;
 
     public function __construct(private readonly Empresa $empresa, ?Tools $tools = null)
@@ -27,6 +30,12 @@ class NfeSenderService
             $response = $this->tools->sefazEnviaLote([$signedXml], $nfeLote, 1);
 
             return $this->processarRespostaEnvio($signedXml, $response);
+        } catch (ValidatorException $e) {
+            // Falha de schema acontece antes do envio: a nota não chegou à SEFAZ.
+            return [
+                'status' => 'rejeitada',
+                'motivo' => mb_substr('XML inválido: '.$e->getMessage(), 0, 255),
+            ];
         } catch (Throwable $e) {
             Log::error('SEFAZ response inesperado', [
                 'empresa_id' => $empresa->id,
@@ -40,9 +49,10 @@ class NfeSenderService
         }
     }
 
-    public function cancelar(string $chave, string $justificativa, string $protocolo): array
+    public function cancelar(string $chave, string $justificativa, string $protocolo, int $ambiente): array
     {
         try {
+            $this->tools->setEnvironment($ambiente);
             $response = $this->tools->sefazCancela($chave, $justificativa, $protocolo);
             $std = (new Standardize($response))->toStd();
 
@@ -55,11 +65,21 @@ class NfeSenderService
             $xMotivo = (string) (data_get($infEvento, 'xMotivo') ?? data_get($std, 'xMotivo') ?? 'Retorno sem motivo.');
 
             if (in_array($cStat, ['101', '135', '155'], true)) {
+                try {
+                    $xmlEvento = Complements::toAuthorize($this->tools->lastRequest, $response);
+                } catch (Throwable $e) {
+                    Log::error('SEFAZ response inesperado', [
+                        'empresa_id' => $this->empresa->id,
+                        'exception' => $e->getMessage(),
+                    ]);
+                    $xmlEvento = $response;
+                }
+
                 return [
                     'status' => 'cancelada',
                     'codigo' => $cStat,
                     'motivo' => $xMotivo,
-                    'xml_retorno' => $response,
+                    'xml_evento' => $xmlEvento,
                 ];
             }
 
@@ -81,6 +101,65 @@ class NfeSenderService
         }
     }
 
+    /**
+     * Consulta a situação de uma NF-e pela chave, para resolver notas que ficaram pendentes
+     * (timeout, lote em processamento, falha ao anexar protocolo, duplicidade).
+     */
+    public function consultar(string $chave, string $signedXml, int $ambiente): array
+    {
+        try {
+            $this->tools->setEnvironment($ambiente);
+            $response = $this->tools->sefazConsultaChave($chave);
+        } catch (Throwable $e) {
+            Log::error('SEFAZ response inesperado', [
+                'empresa_id' => $this->empresa->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return [
+                'status' => 'erro',
+                'motivo' => $this->mensagemAmigavel($e->getMessage()),
+            ];
+        }
+
+        $std = $this->padronizar($response);
+        if ($std === null) {
+            return [
+                'status' => 'erro',
+                'motivo' => 'Não foi possível interpretar o retorno da SEFAZ.',
+            ];
+        }
+
+        $cStat = (string) ($std->cStat ?? '');
+        $xMotivo = (string) ($std->xMotivo ?? 'Retorno sem motivo.');
+
+        if ($cStat === '217') {
+            return [
+                'status' => 'nao_encontrada',
+                'codigo' => $cStat,
+                'motivo' => $xMotivo,
+            ];
+        }
+
+        if (in_array($cStat, ['101', '151', '155'], true)) {
+            return [
+                'status' => 'erro',
+                'codigo' => $cStat,
+                'motivo' => 'A SEFAZ informa que esta NF-e está cancelada: '.$xMotivo,
+            ];
+        }
+
+        if ($this->extrairInfProt($std) === null) {
+            return [
+                'status' => 'erro',
+                'codigo' => $cStat,
+                'motivo' => $xMotivo,
+            ];
+        }
+
+        return $this->resultadoProtocolo($signedXml, $std, $response, $cStat, $xMotivo);
+    }
+
     private function processarRespostaEnvio(string $signedXml, string $response): array
     {
         $std = $this->padronizar($response);
@@ -98,9 +177,9 @@ class NfeSenderService
             $nRec = (string) (data_get($std, 'infRec.nRec') ?? '');
             if ($nRec === '') {
                 return [
-                    'status' => 'rejeitada',
+                    'status' => 'erro',
                     'codigo' => $cStat,
-                    'motivo' => $xMotivo,
+                    'motivo' => 'Lote recebido sem protocolo nem recibo: '.$xMotivo,
                 ];
             }
 
@@ -151,6 +230,7 @@ class NfeSenderService
 
         return [
             'status' => 'erro',
+            'recibo' => $nRec,
             'motivo' => 'A SEFAZ ainda está processando o lote. Tente consultar a NF-e novamente em instantes.',
         ];
     }
@@ -182,6 +262,14 @@ class NfeSenderService
         $protocolo = (string) ($infProt->nProt ?? '');
 
         if (in_array($cStat, ['100', '150'], true)) {
+            if ($protocolo === '') {
+                return [
+                    'status' => 'erro',
+                    'codigo' => $cStat,
+                    'motivo' => 'A SEFAZ retornou autorização sem número de protocolo. Consulte a NF-e novamente.',
+                ];
+            }
+
             try {
                 $xmlAutorizado = Complements::toAuthorize($signedXml, $response);
 
@@ -202,9 +290,36 @@ class NfeSenderService
 
                 return [
                     'status' => 'erro',
-                    'motivo' => 'A nota foi autorizada, mas o protocolo não pôde ser anexado ao XML.',
+                    'codigo' => $cStat,
+                    'motivo' => 'A nota foi autorizada, mas o protocolo não pôde ser anexado ao XML. Consulte a NF-e novamente.',
                 ];
             }
+        }
+
+        if (in_array($cStat, self::CSTAT_DENEGADA, true)) {
+            try {
+                $xmlDenegado = Complements::toAuthorize($signedXml, $response);
+            } catch (Throwable) {
+                $xmlDenegado = null;
+            }
+
+            return [
+                'status' => 'denegada',
+                'chave' => $chave,
+                'protocolo' => $protocolo,
+                'xml_autorizado' => $xmlDenegado,
+                'codigo' => $cStat,
+                'motivo' => $xMotivo,
+            ];
+        }
+
+        if ($cStat === '204') {
+            // Duplicidade: esta mesma chave já foi recebida pela SEFAZ; a situação real vem da consulta.
+            return [
+                'status' => 'erro',
+                'codigo' => $cStat,
+                'motivo' => 'A SEFAZ informou duplicidade desta NF-e. Use "Consultar SEFAZ" para obter a situação real.',
+            ];
         }
 
         return [
@@ -226,6 +341,14 @@ class NfeSenderService
             $chave = Keys::extractAccessKey($xmlAutorizado) ?: Keys::extractAccessKey($signedXml);
             $std = $this->padronizar($response);
             $infProt = $std ? $this->extrairInfProt($std) : null;
+
+            if ((string) ($infProt->nProt ?? '') === '') {
+                return [
+                    'status' => 'erro',
+                    'codigo' => $cStat,
+                    'motivo' => 'A SEFAZ retornou autorização sem número de protocolo. Consulte a NF-e novamente.',
+                ];
+            }
 
             return [
                 'status' => 'autorizada',
