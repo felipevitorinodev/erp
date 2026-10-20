@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
 
     $periodoPadrao = function (): array {
+        request()->validate([
+            'data_inicio' => 'nullable|date',
+            'data_fim'    => 'nullable|date',
+        ]);
+
         $dataInicio = request('data_inicio')
             ? Carbon::parse(request('data_inicio'))->toDateString()
             : now()->startOfMonth()->toDateString();
@@ -24,6 +29,14 @@ Route::middleware('auth')->group(function () {
 
         return [$dataInicio, $dataFim];
     };
+
+    // Evita que nomes/descrições iniciados por = + - @ sejam interpretados como fórmula no Excel
+    $csvSeguro = fn (array $campos): array => array_map(
+        fn ($valor) => is_string($valor) && preg_match('/^[=+\-@\t\r]/', $valor) && ! preg_match('/^-?[\d.,]+$/', $valor)
+            ? "'" . $valor
+            : $valor,
+        $campos
+    );
 
     $aplicarFiltrosVendas = function ($query) {
         if (request()->filled('situacao')) {
@@ -240,7 +253,7 @@ Route::middleware('auth')->group(function () {
                 'busca'         => request('busca', ''),
             ],
         ]);
-    })->middleware('permissao:relatorios')->name('relatorio.contas-receber');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-receber');
 
     Route::get('/relatorios/contas-pagar', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -287,7 +300,7 @@ Route::middleware('auth')->group(function () {
                 'busca'        => request('busca', ''),
             ],
         ]);
-    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-pagar');
 
     Route::get('/relatorios/estoque', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -320,7 +333,7 @@ Route::middleware('auth')->group(function () {
 
     // ---- CSV exports ----
 
-    Route::get('/relatorios/vendas/csv', function () use ($periodoPadrao, $aplicarFiltrosVendas) {
+    Route::get('/relatorios/vendas/csv', function () use ($periodoPadrao, $aplicarFiltrosVendas, $csvSeguro) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -334,7 +347,7 @@ Route::middleware('auth')->group(function () {
         $vendas = $query->orderBy('data_venda')->orderBy('numero')->get();
         $filename = 'relatorio-vendas-' . date('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($vendas) {
+        return response()->streamDownload(function () use ($vendas, $csvSeguro) {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             $situacoesVenda = [
@@ -344,43 +357,43 @@ Route::middleware('auth')->group(function () {
             ];
             fputcsv($out, ['Nº', 'Data', 'Cliente', 'Forma de Pagamento', 'Total', 'Situação'], ';');
             foreach ($vendas as $v) {
-                fputcsv($out, [
+                fputcsv($out, $csvSeguro([
                     $v->numero,
                     $v->data_venda->format('d/m/Y'),
                     $v->cliente->nome ?? 'Consumidor Final',
                     $v->forma_pagamento ?: '—',
                     number_format($v->total, 2, ',', '.'),
                     $situacoesVenda[$v->situacao] ?? $v->situacao,
-                ], ';');
+                ]), ';');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->middleware('permissao:relatorios')->name('relatorio.vendas.csv');
 
-    Route::get('/relatorios/produtos-mais-vendidos/csv', function () use ($periodoPadrao, $queryProdutosMaisVendidos) {
+    Route::get('/relatorios/produtos-mais-vendidos/csv', function () use ($periodoPadrao, $queryProdutosMaisVendidos, $csvSeguro) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
         $produtos = $queryProdutosMaisVendidos($empresaId, $dataInicio, $dataFim)->get();
         $filename = 'relatorio-produtos-mais-vendidos-' . date('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($produtos) {
+        return response()->streamDownload(function () use ($produtos, $csvSeguro) {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($out, ['Código', 'Produto', 'Qtd', 'Valor Total'], ';');
             foreach ($produtos as $p) {
-                fputcsv($out, [
+                fputcsv($out, $csvSeguro([
                     $p->produto_codigo,
                     $p->produto_nome,
                     number_format($p->qtd_total, 2, ',', '.'),
                     number_format($p->valor_total, 2, ',', '.'),
-                ], ';');
+                ]), ';');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos.csv');
 
-    Route::get('/relatorios/contas-receber/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-receber/csv', function () use ($periodoPadrao, $aplicarFiltrosContas, $csvSeguro) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -394,12 +407,12 @@ Route::middleware('auth')->group(function () {
         $contas = $query->orderBy('data_vencimento')->get();
         $filename = 'relatorio-contas-receber-' . date('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($contas) {
+        return response()->streamDownload(function () use ($contas, $csvSeguro) {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($out, ['Descrição', 'Cliente', 'Categoria', 'Vencimento', 'Valor', 'Pago', 'Situação'], ';');
             foreach ($contas as $c) {
-                fputcsv($out, [
+                fputcsv($out, $csvSeguro([
                     $c->descricao,
                     $c->cliente->nome ?? '—',
                     $c->categoria->nome ?? '—',
@@ -407,13 +420,13 @@ Route::middleware('auth')->group(function () {
                     number_format($c->valor, 2, ',', '.'),
                     number_format($c->valor_pago, 2, ',', '.'),
                     $c->situacao,
-                ], ';');
+                ]), ';');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('permissao:relatorios')->name('relatorio.contas-receber.csv');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-receber.csv');
 
-    Route::get('/relatorios/contas-pagar/csv', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-pagar/csv', function () use ($periodoPadrao, $aplicarFiltrosContas, $csvSeguro) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -427,12 +440,12 @@ Route::middleware('auth')->group(function () {
         $contas = $query->orderBy('data_vencimento')->get();
         $filename = 'relatorio-contas-pagar-' . date('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($contas) {
+        return response()->streamDownload(function () use ($contas, $csvSeguro) {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($out, ['Descrição', 'Fornecedor', 'Categoria', 'Vencimento', 'Valor', 'Pago', 'Situação'], ';');
             foreach ($contas as $c) {
-                fputcsv($out, [
+                fputcsv($out, $csvSeguro([
                     $c->descricao,
                     $c->fornecedor->nome ?? '—',
                     $c->categoria->nome ?? '—',
@@ -440,13 +453,13 @@ Route::middleware('auth')->group(function () {
                     number_format($c->valor, 2, ',', '.'),
                     number_format($c->valor_pago, 2, ',', '.'),
                     $c->situacao,
-                ], ';');
+                ]), ';');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar.csv');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-pagar.csv');
 
-    Route::get('/relatorios/estoque/csv', function () use ($aplicarFiltrosEstoque) {
+    Route::get('/relatorios/estoque/csv', function () use ($aplicarFiltrosEstoque, $csvSeguro) {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
         $query = Produto::with(['grupos', 'unidadeMedida'])
@@ -459,19 +472,19 @@ Route::middleware('auth')->group(function () {
         $produtos = $query->orderBy('nome')->get();
         $filename = 'relatorio-estoque-' . date('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($produtos) {
+        return response()->streamDownload(function () use ($produtos, $csvSeguro) {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($out, ['Código', 'Produto', 'Grupo', 'Estoque', 'Mínimo', 'Unidade'], ';');
             foreach ($produtos as $p) {
-                fputcsv($out, [
+                fputcsv($out, $csvSeguro([
                     $p->codigo,
                     $p->nome,
                     $p->grupos->nome ?? '—',
                     number_format($p->estoque_atual, 2, ',', '.'),
                     number_format($p->estoque_minimo, 2, ',', '.'),
                     $p->unidadeMedida->sigla ?? '—',
-                ], ';');
+                ]), ';');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -651,7 +664,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-contas-receber-' . date('Y-m-d') . '.pdf');
-    })->middleware('permissao:relatorios')->name('relatorio.contas-receber.pdf');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-receber.pdf');
 
     Route::get('/relatorios/contas-pagar/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
         $empresaId = auth()->user()->empresa_id ?? 0;
@@ -723,7 +736,7 @@ Route::middleware('auth')->group(function () {
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-contas-pagar-' . date('Y-m-d') . '.pdf');
-    })->middleware('permissao:relatorios')->name('relatorio.contas-pagar.pdf');
+    })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-pagar.pdf');
 
     Route::get('/relatorios/estoque/pdf', function () use ($aplicarFiltrosEstoque) {
         $empresaId = auth()->user()->empresa_id ?? 0;
