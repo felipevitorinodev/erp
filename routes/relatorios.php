@@ -58,6 +58,11 @@ Route::middleware('auth')->group(function () {
         return $query;
     };
 
+    // Canceladas continuam listadas, mas só entram nos totais quando o filtro pede explicitamente canceladas
+    $contasSomaveis = fn ($contas) => request('situacao') === 'cancelada'
+        ? $contas
+        : $contas->where('situacao', '!=', 'cancelada');
+
     $aplicarFiltrosContas = function ($query, string $relacionamentoNome) {
         $situacao = request('situacao');
         if ($situacao === 'em_aberto' || $situacao === 'pendente') {
@@ -208,7 +213,7 @@ Route::middleware('auth')->group(function () {
         ]);
     })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos');
 
-    Route::get('/relatorios/contas-receber', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-receber', function () use ($periodoPadrao, $aplicarFiltrosContas, $contasSomaveis) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -219,7 +224,7 @@ Route::middleware('auth')->group(function () {
 
         $aplicarFiltrosContas($query, 'cliente');
 
-        $todas = (clone $query)->with(['cliente', 'categoria'])->orderBy('data_vencimento')->get();
+        $todas = $contasSomaveis((clone $query)->with(['cliente', 'categoria'])->orderBy('data_vencimento')->get());
 
         $subtotaisCategoria = $todas
             ->groupBy(fn ($conta) => $conta->categoria?->nome ?? 'Sem categoria')
@@ -255,7 +260,7 @@ Route::middleware('auth')->group(function () {
         ]);
     })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-receber');
 
-    Route::get('/relatorios/contas-pagar', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-pagar', function () use ($periodoPadrao, $aplicarFiltrosContas, $contasSomaveis) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -266,7 +271,7 @@ Route::middleware('auth')->group(function () {
 
         $aplicarFiltrosContas($query, 'fornecedor');
 
-        $todas = (clone $query)->with(['fornecedor', 'categoria'])->orderBy('data_vencimento')->get();
+        $todas = $contasSomaveis((clone $query)->with(['fornecedor', 'categoria'])->orderBy('data_vencimento')->get());
 
         $subtotaisCategoria = $todas
             ->groupBy(fn ($conta) => $conta->categoria?->nome ?? 'Sem categoria')
@@ -594,7 +599,7 @@ Route::middleware('auth')->group(function () {
         return $pdf->stream('relatorio-produtos-mais-vendidos-' . date('Y-m-d') . '.pdf');
     })->middleware('permissao:relatorios')->name('relatorio.produtos-mais-vendidos.pdf');
 
-    Route::get('/relatorios/contas-receber/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-receber/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas, $contasSomaveis) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -658,15 +663,15 @@ Route::middleware('auth')->group(function () {
             ],
             'linhas' => $linhas,
             'totais' => [
-                ['label' => 'Soma do valor', 'valor' => 'R$ ' . number_format((float) $contas->sum('valor'), 2, ',', '.')],
-                ['label' => 'Soma do pago', 'valor' => 'R$ ' . number_format((float) $contas->sum('valor_pago'), 2, ',', '.'), 'destaque' => true],
+                ['label' => 'Soma do valor', 'valor' => 'R$ ' . number_format((float) $contasSomaveis($contas)->sum('valor'), 2, ',', '.')],
+                ['label' => 'Soma do pago', 'valor' => 'R$ ' . number_format((float) $contasSomaveis($contas)->sum('valor_pago'), 2, ',', '.'), 'destaque' => true],
             ],
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('relatorio-contas-receber-' . date('Y-m-d') . '.pdf');
     })->middleware(['permissao:relatorios', 'permissao:financeiro'])->name('relatorio.contas-receber.pdf');
 
-    Route::get('/relatorios/contas-pagar/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas) {
+    Route::get('/relatorios/contas-pagar/pdf', function () use ($periodoPadrao, $aplicarFiltrosContas, $contasSomaveis) {
         $empresaId = auth()->user()->empresa_id ?? 0;
         [$dataInicio, $dataFim] = $periodoPadrao();
 
@@ -730,8 +735,8 @@ Route::middleware('auth')->group(function () {
             ],
             'linhas' => $linhas,
             'totais' => [
-                ['label' => 'Soma do valor', 'valor' => 'R$ ' . number_format((float) $contas->sum('valor'), 2, ',', '.')],
-                ['label' => 'Soma do pago', 'valor' => 'R$ ' . number_format((float) $contas->sum('valor_pago'), 2, ',', '.'), 'destaque' => true],
+                ['label' => 'Soma do valor', 'valor' => 'R$ ' . number_format((float) $contasSomaveis($contas)->sum('valor'), 2, ',', '.')],
+                ['label' => 'Soma do pago', 'valor' => 'R$ ' . number_format((float) $contasSomaveis($contas)->sum('valor_pago'), 2, ',', '.'), 'destaque' => true],
             ],
         ])->setPaper('a4', 'landscape');
 
