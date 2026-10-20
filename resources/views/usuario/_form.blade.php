@@ -40,9 +40,13 @@
     <div class="form-grid form-grid--col-2">
         <div class="form-group">
             <label class="form-label form-label--required">Perfil</label>
+            @php
+                $perfilAtual = old('perfil', ($usuario->perfil ?? 'vendedor') === 'operador' ? 'vendedor' : ($usuario->perfil ?? 'vendedor'));
+            @endphp
             <select name="perfil" class="form-control @error('perfil') is-invalid @enderror">
-                @foreach(\App\Models\Usuarios\Perfil::where('empresa_id', auth()->user()->empresa_id)->where('ativo', true)->orderBy('nome')->get() as $perfilOpcao)
-                    <option value="{{ $perfilOpcao->slug }}" {{ old('perfil', $usuario->perfil ?? 'vendedor') === $perfilOpcao->slug ? 'selected' : '' }}>
+                <option value="">— Selecione —</option>
+                @foreach(\App\Models\Usuarios\Perfil::where('empresa_id', auth()->user()->empresa_id)->where('ativo', true)->when(! auth()->user()->isAdmin(), fn ($q) => $q->where('slug', '<>', 'admin'))->orderBy('nome')->get() as $perfilOpcao)
+                    <option value="{{ $perfilOpcao->slug }}" {{ $perfilAtual === $perfilOpcao->slug ? 'selected' : '' }}>
                         {{ $perfilOpcao->nome }}
                     </option>
                 @endforeach

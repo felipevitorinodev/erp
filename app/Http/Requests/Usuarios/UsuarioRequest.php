@@ -5,6 +5,7 @@ namespace App\Http\Requests\Usuarios;
 use App\Models\Usuarios\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UsuarioRequest extends FormRequest
 {
@@ -40,6 +41,22 @@ class UsuarioRequest extends FormRequest
             ],
             'ativo'    => 'nullable|boolean',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if (auth()->user()->isAdmin()) {
+                return;
+            }
+
+            /** @var User|null $alvo */
+            $alvo = $this->route('usuario');
+
+            if ($this->input('perfil') === 'admin' || $alvo?->isAdmin()) {
+                $validator->errors()->add('perfil', 'Somente administradores podem criar ou alterar administradores.');
+            }
+        });
     }
 
     public function attributes(): array

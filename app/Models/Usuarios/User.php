@@ -88,6 +88,10 @@ class User extends Authenticatable
             ->where('slug', $slug)
             ->first();
 
+        if ($perfil && ! $perfil->ativo) {
+            return $this->chavesPermissao = [];
+        }
+
         $chaves = is_array($perfil?->permissoes) ? $perfil->permissoes : CatalogoPermissoes::padrao($slug);
 
         return $this->chavesPermissao = array_values($chaves);

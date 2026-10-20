@@ -31,9 +31,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::get('/esqueci-senha', [AuthController::class, 'showForgotPassword'])->name('password.request');
-Route::post('/esqueci-senha', [AuthController::class, 'sendResetLink'])->name('password.email');
+Route::post('/esqueci-senha', [AuthController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
 Route::get('/redefinir-senha/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
-Route::post('/redefinir-senha', [AuthController::class, 'resetPassword'])->name('password.update');
+Route::post('/redefinir-senha', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1')->name('password.update');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {

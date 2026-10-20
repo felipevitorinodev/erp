@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -29,8 +30,17 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
         $remember    = $request->boolean('remember');
+        $chaveLimite = 'login|' . Str::lower((string) $request->email) . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($chaveLimite, 5)) {
+            return back()->withErrors([
+                'email' => 'Muitas tentativas de login. Tente novamente em ' . RateLimiter::availableIn($chaveLimite) . ' segundos.',
+            ])->withInput($request->only('email'));
+        }
 
         if (Auth::attempt($credentials, $remember)) {
+            RateLimiter::clear($chaveLimite);
+
             if (! Auth::user()->ativo) {
                 Auth::logout();
                 $request->session()->invalidate();
@@ -44,6 +54,8 @@ class AuthController extends Controller
             $request->session()->regenerate();
             return redirect()->intended('/');
         }
+
+        RateLimiter::hit($chaveLimite, 60);
 
         return back()->withErrors([
             'email' => 'E-mail ou senha incorretos.',
@@ -68,17 +80,11 @@ class AuthController extends Controller
         $request->validate(['email' => 'required|email']);
 
         $user = User::where('email', $request->email)->first();
-        if ($user && ! $user->ativo) {
-            return back()->withErrors([
-                'email' => 'Usuário inativo. Entre em contato com o administrador.',
-            ])->withInput($request->only('email'));
+        if ($user && $user->ativo) {
+            Password::sendResetLink($request->only('email'));
         }
 
-        $status = Password::sendResetLink($request->only('email'));
-
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('success', __($status))
-            : back()->withErrors(['email' => __($status)])->withInput($request->only('email'));
+        return back()->with('success', 'Se o e-mail estiver cadastrado e ativo, você receberá o link para redefinir a senha.');
     }
 
     public function showResetPassword(Request $request, string $token)

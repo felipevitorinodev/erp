@@ -65,6 +65,14 @@ class UsuarioController extends Controller
                 ->withInput();
         }
 
+        $deixaDeSerAdminAtivo = $request->perfil !== 'admin' || ! $request->boolean('ativo', true);
+
+        if ($usuario->isAdmin() && $usuario->ativo && $deixaDeSerAdminAtivo && ! $this->existeOutroAdminAtivo($usuario)) {
+            return back()
+                ->with('error', 'É preciso manter ao menos um administrador ativo.')
+                ->withInput();
+        }
+
         $dados = [
             'name'   => $request->name,
             'email'  => $request->email,
@@ -78,7 +86,7 @@ class UsuarioController extends Controller
 
         $usuario->update($dados);
 
-        if (! $usuario->ativo) {
+        if (! $usuario->ativo || ($request->filled('password') && (int) $usuario->id !== (int) auth()->id())) {
             DB::table('sessions')->where('user_id', $usuario->id)->delete();
         }
 
@@ -95,11 +103,30 @@ class UsuarioController extends Controller
                 ->with('error', 'Você não pode excluir o próprio usuário.');
         }
 
+        if ($usuario->isAdmin() && ! auth()->user()->isAdmin()) {
+            return redirect()->route('usuario.index')
+                ->with('error', 'Somente administradores podem excluir administradores.');
+        }
+
+        if ($usuario->isAdmin() && $usuario->ativo && ! $this->existeOutroAdminAtivo($usuario)) {
+            return redirect()->route('usuario.index')
+                ->with('error', 'É preciso manter ao menos um administrador ativo.');
+        }
+
         DB::table('sessions')->where('user_id', $usuario->id)->delete();
         $usuario->delete();
 
         return redirect()->route('usuario.index')
             ->with('success', 'Usuário excluído com sucesso.');
+    }
+
+    private function existeOutroAdminAtivo(User $usuario): bool
+    {
+        return User::where('empresa_id', $usuario->empresa_id)
+            ->where('perfil', 'admin')
+            ->where('ativo', true)
+            ->whereKeyNot($usuario->id)
+            ->exists();
     }
 
     private function garantirEmpresa(User $usuario): void

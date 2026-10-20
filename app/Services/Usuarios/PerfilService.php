@@ -66,7 +66,7 @@ class PerfilService
             return back()->withErrors(['nome' => 'Informe um nome válido.'])->withInput();
         }
 
-        if (Perfil::where('empresa_id', $empresaId)->where('slug', $slug)->exists()) {
+        if ($slug === 'operador' || Perfil::where('empresa_id', $empresaId)->where('slug', $slug)->exists()) {
             return back()->withErrors(['nome' => 'Já existe um perfil com este nome.'])->withInput();
         }
 
