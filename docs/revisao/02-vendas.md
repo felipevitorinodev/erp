@@ -60,3 +60,10 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 4. Lançar desconto maior que o subtotal: erro no campo desconto.
 
 Testes automatizados: `tests/Feature/VendaIntegridadeTest.php` (4 testes).
+
+## Layout do PDV (pedido de 20/10)
+Só tela e JavaScript (`venda/pdv.blade.php`, `public/js/pdv.js`, `app.css`); o contrato do `POST` de finalização não mudou.
+- O painel lateral ficou só com cliente, resumo da forma escolhida e o botão **Pagamento (F4)**. Forma de pagamento, desconto, acréscimo, valor recebido e troco foram para uma tela de pagamento própria, aberta pelo F4.
+- Na tela de pagamento: formas numeradas (teclas 1–9 ou ←/→), desconto (F7), valor recebido (F8) com troco calculado na hora, aviso quando a forma é a prazo e não há cliente, Enter confirma, Esc volta. Recebido menor que o total é recusado.
+- Atalhos no caixa: `3*código` lança 3 unidades, F3 cliente, F9 altera a quantidade do último item, Ctrl+Del remove o último item, Ctrl+Shift+Del cancela a venda, botão "Atalhos" lista tudo. O foco volta sempre para o campo de código.
+- Tela de sucesso mostra o troco; Enter ou N inicia nova venda.

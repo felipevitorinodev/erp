@@ -25,7 +25,7 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 | `php artisan config:cache` | não verificável | Nenhum `env()` fora de `config/` encontrado no código alterado. |
 | `php artisan route:cache` | pendente (testar) | As rotas de `api_interna.php` e `relatorios.php` são closures; o Laravel 13 serializa closures, mas convém rodar `route:cache` em homologação antes. |
 | `php artisan view:cache` | ok | Sem impedimentos encontrados. |
-| Migrations pendentes | pendente | Aplicar com `php artisan migrate` (nunca `fresh`): `2026_10_20_000001` (controle SEFAZ + unique de numeração da NF-e — **aborta se já houver número duplicado**), `2026_10_20_000002` (CPF/CNPJ de cliente por empresa), `2026_10_20_000003` (índices), `2026_10_20_000004` (`vendas.forma_pagamento_id` com backfill pelo nome — conferir as vendas em andamento que ficarem sem ID, módulo 03 item 9), `2026_10_20_000005` (`entradas_estoque.valor_nota`). Todas verificadas com `--pretend`; nenhuma foi aplicada no banco local. Fazer backup antes. |
+| Migrations pendentes | pendente | Aplicar com `php artisan migrate` (nunca `fresh`): `2026_10_20_000001` (controle SEFAZ + unique de numeração da NF-e — **aborta se já houver número duplicado**), `2026_10_20_000002` (CPF/CNPJ de cliente por empresa), `2026_10_20_000003` (índices), `2026_10_20_000004` (`vendas.forma_pagamento_id` com backfill pelo nome — conferir as vendas em andamento que ficarem sem ID, módulo 03 item 9), `2026_10_20_000005` (`entradas_estoque.valor_nota`), `2026_10_21_000001` (`vendas.nfe_rascunho`), `2026_10_21_000002` (ordens de serviço + `orcamentos.ordem_servico_id` + permissão `ordens_servico` nos perfis que já tinham `orcamentos`). Todas verificadas com `--pretend`; nenhuma foi aplicada no banco local. Fazer backup antes. |
 | Filas | ok | `QUEUE_CONNECTION=database`, mas não há jobs; nada precisa de worker hoje. A emissão de NF-e é síncrona (pendente no módulo 01). |
 | Scheduler | ok | `routes/console.php` não agenda nada; não precisa de cron. |
 
@@ -53,7 +53,7 @@ Base: `.env.example`, `config/*`, `bootstrap/app.php`, código e migrations. O `
 
 | Item | Situação | Observação |
 |---|---|---|
-| Suíte passando | ok | 68 testes, 239 asserções (antes: 21/22, com o `ExampleTest` falhando). |
+| Suíte passando | ok | 84 testes (antes: 21/22, com o `ExampleTest` falhando). Inclui rascunho de NF-e, ordem de serviço e renderização do PDV. |
 | Cobertura dos fluxos críticos | parcial | Cobertos: numeração/reuso/concorrência de NF-e, totais do XML, IDOR de NF-e e empresa; cancelamento de venda e estoque; baixas e cancelamento de contas; entrada de estoque; orçamento; login/permissões; isolamento de cadastros; relatórios; contrato JSON do PDV. **Não cobertos:** comunicação real com a SEFAZ (precisa de certificado e homologação), cancelamento de NF-e na SEFAZ, DANFE, importação de XML ponta a ponta. |
 | Teste manual em homologação SEFAZ | pendente | Roteiro em `01-nfe.md`. Obrigatório antes do primeiro cliente emitir em produção. |
 

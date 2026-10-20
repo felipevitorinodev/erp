@@ -120,3 +120,17 @@ Testes automatizados: `tests/Feature/NfeEmissaoTest.php` (8 testes).
 - `nfes.situacao` ganhou o valor `denegada`; colunas novas `recibo`, `xml_cancelamento`, `data_cancelamento`; índice único `nfes_empresa_ambiente_serie_numero_unique`.
 - Campo de formulário novo `confirmar_ambiente` em `empresa/edit`.
 - `NfeSenderService::cancelar()` ganhou o parâmetro `int $ambiente`.
+
+## Rascunho de NF-e e checagem de pendências (pedido de 20/10)
+- **Salvar rascunho:** a tela de emissão tem "Salvar rascunho" além de "Emitir". O rascunho é uma venda `em_andamento` com `vendas.nfe_rascunho = true`: não mexe em estoque, não gera conta a receber, não cria registro em `nfes` e **não consome número de NF-e**. Aparece no card "Rascunhos" da listagem de NF-e e na venda ("Continuar rascunho da NF-e"); pode ser editado, emitido ou excluído.
+- **Rascunho valida só o formato** (ex.: NCM com 8 dígitos se informado); campos fiscais obrigatórios ficam para a emissão.
+- **Emitir valida tudo de uma vez** (`NfePendenciasService`): natureza, forma de pagamento, itens, NCM/CFOP/CSOSN/CST PIS-COFINS por item (com o fallback item → produto → padrão da empresa), desconto maior que o total, CPF/CNPJ incompleto e UF/município do cliente diferentes da empresa com CFOP 5xxx. As pendências aparecem numa lista com botão "Corrigir" e a transação inteira é desfeita (sem estoque, sem número).
+- **Modal de item reescrito:** busca com ↑/↓/Enter/Esc, código de barras seleciona sozinho, card do produto escolhido com "Trocar", quantidade/preço/desconto/total numa linha, dados fiscais recolhidos num bloco que abre sozinho quando falta algo, "Salvar e adicionar outro". Atalho Insert abre o modal.
+- Corrigido de quebra: após erro de validação a tela perdia os itens digitados.
+
+Contrato:
+- Rotas novas: `GET nfe/rascunho/{venda}/editar` (`nfe.rascunho.edit`), `PUT nfe/rascunho/{venda}` (`nfe.rascunho.update`), `DELETE nfe/rascunho/{venda}` (`nfe.rascunho.destroy`). Campo novo `acao` (`rascunho`|`emitir`, padrão emitir) no `POST nfe/salvar`.
+- Migration `2026_10_21_000001`: `vendas.nfe_rascunho` (boolean, default false) + índice `vendas_empresa_nfe_rascunho_index`.
+- `/api/produtos/busca` também casa `codigo_barras` exato e devolve `tipo` e `controla_estoque` (campos adicionados; nada removido).
+
+Testes: `tests/Feature/NfeRascunhoTest.php` (6 testes).
