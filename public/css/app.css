@@ -5477,6 +5477,237 @@ body.pdv-page .page-bar {
     margin-left: 0.15rem;
 }
 
+/* PDV: resumo lateral e tela de pagamento (F4) */
+.pdv-resumo-forma {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 13px;
+}
+
+.pdv-resumo-forma strong {
+    color: var(--color-primary);
+    text-align: right;
+}
+
+.pdv-link-atalhos {
+    align-self: center;
+    border: none;
+    background: none;
+    padding: 0.25rem;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.pdv-link-atalhos:hover {
+    color: var(--color-primary);
+}
+
+.pdv-pag-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(21, 34, 50, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+.pdv-pag-overlay[hidden] {
+    display: none !important;
+}
+
+.pdv-pag {
+    display: flex;
+    flex-direction: column;
+    width: min(960px, 100%);
+    max-height: calc(100vh - 2.5rem);
+    overflow: auto;
+    background: var(--color-surface);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(21, 34, 50, 0.35);
+}
+
+.pdv-pag--ajuda {
+    width: min(620px, 100%);
+}
+
+.pdv-pag__header,
+.pdv-pag__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+}
+
+.pdv-pag__header {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.pdv-pag__footer {
+    border-top: 1px solid var(--color-border);
+}
+
+.pdv-pag__titulo {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.pdv-pag > .pdv-alert-erro {
+    margin: 0.75rem 1.25rem 0;
+}
+
+.pdv-pag__corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.25rem;
+}
+
+.pdv-pag__formas,
+.pdv-pag__valores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pdv-formas-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.pdv-formas-lista .pdv-forma-btn {
+    position: relative;
+    min-height: 64px;
+    font-size: 14px;
+}
+
+.pdv-forma-btn__tecla {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+}
+
+.pdv-pag__valores .pdv-total-grande {
+    font-size: 2.4rem;
+}
+
+.pdv-pag__recebido {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: end;
+    padding: 0.85rem;
+    border-radius: 12px;
+    background: var(--color-bg);
+}
+
+.pdv-pag__recebido[hidden] {
+    display: none;
+}
+
+.pdv-pag__recebido .form-group {
+    margin: 0;
+}
+
+.pdv-input-recebido {
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.pdv-pag__troco {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.pdv-pag__troco span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.pdv-pag__troco strong {
+    font-size: 1.6rem;
+    color: var(--color-success);
+}
+
+.pdv-pag__troco strong.pdv-pag__troco--falta {
+    font-size: 1.05rem;
+    color: var(--color-error);
+}
+
+.pdv-pag__cliente {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+.pdv-pag__aviso {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    font-size: 13px;
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.pdv-pag__aviso[hidden] {
+    display: none;
+}
+
+.pdv-pag__confirmar {
+    width: auto;
+    min-width: 320px;
+}
+
+.pdv-ajuda-lista {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.55rem 1rem;
+    margin: 0;
+    padding: 1.25rem;
+    font-size: 14px;
+}
+
+.pdv-ajuda-lista dt {
+    white-space: nowrap;
+}
+
+.pdv-ajuda-lista dd {
+    margin: 0;
+    color: var(--color-text-mid);
+}
+
+.pdv-sucesso__troco {
+    margin: 0.25rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--color-success);
+}
+
+.pdv-sucesso__troco[hidden] {
+    display: none;
+}
+
+@media (max-width: 1100px) {
+    .pdv-pag__corpo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pdv-pag__confirmar {
+        min-width: 0;
+        flex: 1;
+    }
+}
+
 .pdv-sucesso {
     display: none;
     position: absolute;

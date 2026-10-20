@@ -50,7 +50,37 @@
         painelExtra: document.getElementById('pdv-painel-extra'),
         telaPequena: document.getElementById('pdv-tela-pequena'),
         larguraAtual: document.getElementById('pdv-largura-atual'),
+        pagamento: document.getElementById('pdv-pagamento'),
+        pagErro: document.getElementById('pdv-pag-erro'),
+        pagSubtotal: document.getElementById('pdv-pag-subtotal'),
+        pagQtdItens: document.getElementById('pdv-pag-qtd-itens'),
+        pagTotal: document.getElementById('pdv-pag-total'),
+        pagCliente: document.getElementById('pdv-pag-cliente'),
+        pagAviso: document.getElementById('pdv-pag-aviso'),
+        recebidoWrap: document.getElementById('pdv-pag-recebido-wrap'),
+        recebido: document.getElementById('pdv-recebido'),
+        troco: document.getElementById('pdv-troco'),
+        btnConfirmar: document.getElementById('pdv-btn-confirmar'),
+        btnConfirmarValor: document.getElementById('pdv-btn-confirmar-valor'),
+        resumoForma: document.getElementById('pdv-resumo-forma'),
+        inputCliente: document.getElementById('pdv-input-cliente'),
+        ajuda: document.getElementById('pdv-ajuda'),
+        btnAjuda: document.getElementById('pdv-btn-ajuda'),
+        sucessoTroco: document.getElementById('pdv-sucesso-troco'),
     };
+
+    function pagamentoAberto() {
+        return !!(el.pagamento && !el.pagamento.hidden);
+    }
+
+    function ajudaAberta() {
+        return !!(el.ajuda && !el.ajuda.hidden);
+    }
+
+    function formaAtualEhPrazo() {
+        var ativo = el.formasGrid ? el.formasGrid.querySelector('.pdv-forma-btn--ativa') : null;
+        return !!(ativo && ativo.getAttribute('data-prazo') === '1');
+    }
 
     function telaAdequada() {
         return window.innerWidth >= PDV_MIN_WIDTH;
@@ -164,6 +194,11 @@
     }
 
     function mostrarErro(msg) {
+        if (pagamentoAberto() && el.pagErro) {
+            el.pagErro.textContent = msg || 'Ocorreu um erro. Tente novamente.';
+            el.pagErro.style.display = 'flex';
+            return;
+        }
         if (!el.alert || !el.alertMsg) return;
         el.alertMsg.textContent = msg || 'Ocorreu um erro. Tente novamente.';
         el.alert.style.display = 'flex';
@@ -173,6 +208,7 @@
     }
 
     function esconderErro() {
+        if (el.pagErro) el.pagErro.style.display = 'none';
         if (!el.alert) return;
         el.alert.style.display = 'none';
         el.alert.classList.remove('pdv-alert-erro--visivel');
@@ -231,10 +267,24 @@
         }
     }
 
+    /**
+     * "3*7891234" ou "2,5*parafuso": quantidade antes do asterisco.
+     */
+    function separarQuantidade(termo) {
+        var m = /^\s*(\d+(?:[.,]\d{1,3})?)\s*\*\s*(.*)$/.exec(termo || '');
+        if (!m) return { quantidade: 1, termo: (termo || '').trim() };
+        var qtd = parseBR(m[1]);
+        return { quantidade: qtd > 0 ? qtd : 1, termo: m[2].trim() };
+    }
+
+    function quantidadeDigitada() {
+        return separarQuantidade(el.inputBusca ? el.inputBusca.value : '').quantidade;
+    }
+
     function adicionarSugestao(index) {
         var produto = sugestoes[index];
         if (!produto) return false;
-        adicionarAoCarrinho(normalizarProduto(produto));
+        adicionarAoCarrinho(normalizarProduto(produto, quantidadeDigitada()));
         limparBusca();
         focarBusca();
         return true;
@@ -242,7 +292,7 @@
 
     function buscarProduto(termo) {
         clearTimeout(debounceTimer);
-        termo = (termo || '').trim();
+        termo = separarQuantidade(termo).termo;
 
         if (termo.length < 2) {
             fecharSugestoes();
@@ -313,14 +363,14 @@
         destacarSugestao(0);
     }
 
-    function normalizarProduto(p) {
+    function normalizarProduto(p, quantidade) {
         return {
             produtoId: p.id || p.produtoId,
             nome: p.nome || '',
             codigo: p.codigo || '',
             unidade: p.unidade || null,
             precoUnitario: Number(p.preco_venda != null ? p.preco_venda : p.precoUnitario) || 0,
-            quantidade: 1,
+            quantidade: quantidade > 0 ? quantidade : 1,
             desconto: 0,
         };
     }
@@ -349,11 +399,11 @@
 
         renderizarCarrinho();
         if (!opts.silent) {
-            mostrarToast((produto.nome || 'Produto') + ' · +1');
+            mostrarToast((produto.nome || 'Produto') + ' · +' + formatQtd(Number(produto.quantidade) || 1));
         }
     }
 
-    function buscarPorCodigo(codigo) {
+    function buscarPorCodigo(codigo, quantidade) {
         codigo = (codigo || '').trim();
         if (!codigo) return Promise.resolve(false);
         if (buscandoCodigo) return Promise.resolve(false);
@@ -372,7 +422,7 @@
             })
             .then(function (data) {
                 if (!data || !data.encontrado || !data.produto) return false;
-                adicionarAoCarrinho(normalizarProduto(data.produto));
+                adicionarAoCarrinho(normalizarProduto(data.produto, quantidade));
                 return true;
             })
             .finally(function () {
@@ -388,7 +438,9 @@
      * - senão busca por nome
      */
     function confirmarBusca() {
-        var termo = (el.inputBusca ? el.inputBusca.value : '').trim();
+        var separado = separarQuantidade(el.inputBusca ? el.inputBusca.value : '');
+        var termo = separado.termo;
+        var quantidade = separado.quantidade;
         if (!termo || buscandoCodigo) return;
 
         clearTimeout(debounceTimer);
@@ -421,7 +473,7 @@
                 .then(function (data) {
                     sugestoes = Array.isArray(data) ? data : [];
                     if (sugestoes.length === 1) {
-                        adicionarAoCarrinho(normalizarProduto(sugestoes[0]));
+                        adicionarAoCarrinho(normalizarProduto(sugestoes[0], quantidade));
                         finalizarOk();
                         return;
                     }
@@ -436,7 +488,7 @@
 
         // 3) código / SKU / EAN
         if (pareceCodigo(termo)) {
-            buscarPorCodigo(termo).then(function (ok) {
+            buscarPorCodigo(termo, quantidade).then(function (ok) {
                 if (ok) {
                     finalizarOk();
                     return;
@@ -472,7 +524,116 @@
         if (el.displaySubtotal) el.displaySubtotal.textContent = formatMoney(totais.subtotal);
         if (el.displayTotal) el.displayTotal.textContent = formatMoney(totais.total);
         if (el.btnFinalizarValor) el.btnFinalizarValor.textContent = formatMoney(totais.total);
+        if (el.pagSubtotal) el.pagSubtotal.textContent = formatMoney(totais.subtotal);
+        if (el.pagQtdItens) el.pagQtdItens.textContent = String(carrinho.length);
+        if (el.pagTotal) el.pagTotal.textContent = formatMoney(totais.total);
+        if (el.btnConfirmarValor) el.btnConfirmarValor.textContent = formatMoney(totais.total);
+        atualizarTroco(totais.total);
         return totais;
+    }
+
+    function calcularTroco(total) {
+        if (formaAtualEhPrazo() || !el.recebido) return 0;
+        var recebido = parseBR(el.recebido.value);
+        return recebido > total ? recebido - total : 0;
+    }
+
+    function atualizarTroco(total) {
+        if (!el.troco) return;
+        var recebido = el.recebido ? parseBR(el.recebido.value) : 0;
+        var troco = calcularTroco(total);
+        el.troco.textContent = formatMoney(troco);
+        el.troco.classList.toggle('pdv-pag__troco--falta', recebido > 0 && recebido < total);
+        if (recebido > 0 && recebido < total) {
+            el.troco.textContent = 'Faltam ' + formatMoney(total - recebido);
+        }
+    }
+
+    function atualizarResumoPagamento() {
+        var prazo = formaAtualEhPrazo();
+        var semCliente = !(el.clienteHidden && el.clienteHidden.value);
+        if (el.recebidoWrap) el.recebidoWrap.hidden = prazo;
+        if (el.pagAviso) el.pagAviso.hidden = !(prazo && semCliente);
+        if (el.pagCliente) {
+            el.pagCliente.textContent = !semCliente && el.inputCliente && el.inputCliente.value
+                ? el.inputCliente.value
+                : 'Consumidor Final';
+        }
+        atualizarTotais();
+    }
+
+    function abrirPagamento() {
+        if (!el.pagamento) return;
+        if (el.sucesso && !el.sucesso.hidden) return;
+        esconderErro();
+        if (!carrinho.length) {
+            mostrarErro('Adicione pelo menos um produto antes do pagamento.');
+            focarBusca();
+            return;
+        }
+        fecharSugestoes();
+        el.pagamento.hidden = false;
+        if (el.recebido) el.recebido.value = '0,00';
+        atualizarResumoPagamento();
+        setTimeout(function () {
+            if (!formaAtualEhPrazo() && el.recebido) {
+                el.recebido.focus();
+                el.recebido.select();
+            } else if (el.btnConfirmar) {
+                el.btnConfirmar.focus();
+            }
+        }, 30);
+    }
+
+    function fecharPagamento() {
+        if (!el.pagamento) return;
+        el.pagamento.hidden = true;
+        esconderErro();
+        focarBusca();
+    }
+
+    function abrirAjuda() {
+        if (el.ajuda) el.ajuda.hidden = false;
+    }
+
+    function fecharAjuda() {
+        if (el.ajuda) el.ajuda.hidden = true;
+        if (!pagamentoAberto()) focarBusca();
+    }
+
+    function editarQuantidadeUltimo() {
+        if (!carrinho.length) return;
+        var idx = carrinho.length - 1;
+        if (ultimoProdutoId != null) {
+            carrinho.forEach(function (item, i) {
+                if (String(item.produtoId) === String(ultimoProdutoId)) idx = i;
+            });
+        }
+        var span = el.itens ? el.itens.querySelector('.pdv-item-card[data-index="' + idx + '"] [data-acao="editar-qtd"]') : null;
+        if (span) editarQuantidadeInline(span, carrinho[idx]);
+    }
+
+    function removerUltimo() {
+        if (!carrinho.length) return;
+        var idx = carrinho.length - 1;
+        var removido = carrinho.splice(idx, 1)[0];
+        ultimoProdutoId = carrinho.length ? carrinho[carrinho.length - 1].produtoId : null;
+        renderizarCarrinho();
+        mostrarToast('Removido: ' + (removido.nome || 'item'));
+        focarBusca();
+    }
+
+    function cancelarVenda() {
+        if (!carrinho.length) return;
+        if (!window.confirm('Cancelar esta venda e limpar todos os itens?')) return;
+        carrinho = [];
+        ultimoProdutoId = null;
+        if (el.desconto) el.desconto.value = '0,00';
+        if (el.acrescimo) el.acrescimo.value = '0,00';
+        if (el.recebido) el.recebido.value = '0,00';
+        renderizarCarrinho();
+        mostrarToast('Venda cancelada');
+        focarBusca();
     }
 
     function renderizarCarrinho() {
@@ -627,6 +788,11 @@
             return;
         }
 
+        if (!pagamentoAberto()) {
+            abrirPagamento();
+            return;
+        }
+
         var forma = el.formaHidden ? el.formaHidden.value : '';
         if (!forma) {
             if (el.formaErro) el.formaErro.hidden = false;
@@ -635,6 +801,13 @@
         }
 
         var totais = calcularTotais();
+        var recebido = el.recebido && !formaAtualEhPrazo() ? parseBR(el.recebido.value) : 0;
+        if (recebido > 0 && recebido + 0.001 < totais.total) {
+            mostrarErro('O valor recebido é menor que o total. Corrija o valor ou deixe em branco para pagamento exato.');
+            if (el.recebido) { el.recebido.focus(); el.recebido.select(); }
+            return;
+        }
+        var troco = calcularTroco(totais.total);
         var payload = {
             cliente_id: el.clienteHidden && el.clienteHidden.value ? el.clienteHidden.value : '',
             data_venda: config.dataHoje || new Date().toISOString().slice(0, 10),
@@ -656,6 +829,7 @@
 
         finalizando = true;
         if (el.btnFinalizar) el.btnFinalizar.disabled = true;
+        if (el.btnConfirmar) el.btnConfirmar.disabled = true;
 
         fetch(urls.vendaStore, {
             method: 'POST',
@@ -672,7 +846,7 @@
             .then(function (response) {
                 if (response.status === 201 || response.status === 200) {
                     return response.json()
-                        .then(function (data) { abrirTelaSucesso(totais.total, data || {}); })
+                        .then(function (data) { abrirTelaSucesso(totais.total, data || {}, troco); })
                         .catch(function () { mostrarErro('Venda enviada, mas a resposta do servidor não foi reconhecida. Confira a lista de vendas antes de tentar novamente.'); });
                 }
                 if (response.type === 'opaqueredirect' || response.status === 401 || response.status === 419) {
@@ -701,10 +875,16 @@
             .finally(function () {
                 finalizando = false;
                 if (el.btnFinalizar) el.btnFinalizar.disabled = false;
+                if (el.btnConfirmar) el.btnConfirmar.disabled = false;
             });
     }
 
-    function abrirTelaSucesso(total, data) {
+    function abrirTelaSucesso(total, data, troco) {
+        if (el.pagamento) el.pagamento.hidden = true;
+        if (el.sucessoTroco) {
+            el.sucessoTroco.hidden = !(troco > 0);
+            el.sucessoTroco.textContent = troco > 0 ? 'Troco: ' + formatMoney(troco) : '';
+        }
         if (el.sucessoPagamento) {
             var formaNome = el.formaHidden && el.formaHidden.value ? el.formaHidden.value : '';
             el.sucessoPagamento.textContent = formaNome ? ('Pago em ' + formaNome) : 'Pagamento registrado';
@@ -746,10 +926,50 @@
                 || (el.sucesso && !el.sucesso.hidden);
 
             if (sucessoAberto) {
-                if (e.key === 'n' || e.key === 'N') {
+                if (e.key === 'n' || e.key === 'N' || (e.key === 'Enter' && e.target !== el.linkVer)) {
                     e.preventDefault();
                     window.location.reload();
                 }
+                return;
+            }
+
+            if (e.key === 'F1') {
+                e.preventDefault();
+                if (ajudaAberta()) fecharAjuda(); else abrirAjuda();
+                return;
+            }
+
+            if (ajudaAberta()) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    fecharAjuda();
+                }
+                return;
+            }
+
+            if (pagamentoAberto()) {
+                atalhosPagamento(e, isTyping);
+                return;
+            }
+
+            if (e.key === 'F3') {
+                e.preventDefault();
+                if (el.inputCliente) {
+                    el.inputCliente.focus();
+                    el.inputCliente.select();
+                }
+                return;
+            }
+
+            if (e.key === 'F9') {
+                e.preventDefault();
+                editarQuantidadeUltimo();
+                return;
+            }
+
+            if (e.key === 'Delete' && e.ctrlKey) {
+                e.preventDefault();
+                if (e.shiftKey) cancelarVenda(); else removerUltimo();
                 return;
             }
 
@@ -766,7 +986,7 @@
 
             if (e.key === 'F4') {
                 e.preventDefault();
-                finalizarVenda();
+                abrirPagamento();
                 return;
             }
 
@@ -806,6 +1026,54 @@
                 renderizarCarrinho();
             }
         });
+    }
+
+    function atalhosPagamento(e, isTyping) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            fecharPagamento();
+            return;
+        }
+
+        if (e.key === 'F4' || (e.key === 'Enter' && !e.target.closest('[data-pag-fechar]'))) {
+            e.preventDefault();
+            finalizarVenda();
+            return;
+        }
+
+        if (e.key === 'F6' || e.key === 'ArrowDown' || (e.key === 'ArrowRight' && !isTyping)) {
+            e.preventDefault();
+            cicloFormaPagamento(1);
+            return;
+        }
+
+        if (e.key === 'ArrowUp' || (e.key === 'ArrowLeft' && !isTyping)) {
+            e.preventDefault();
+            cicloFormaPagamento(-1);
+            return;
+        }
+
+        if (e.key === 'F7' && el.desconto) {
+            e.preventDefault();
+            el.desconto.focus();
+            el.desconto.select();
+            return;
+        }
+
+        if (e.key === 'F8' && el.recebido && !formaAtualEhPrazo()) {
+            e.preventDefault();
+            el.recebido.focus();
+            el.recebido.select();
+            return;
+        }
+
+        if (!isTyping && /^[1-9]$/.test(e.key)) {
+            var btn = botoesForma()[parseInt(e.key, 10) - 1];
+            if (btn) {
+                e.preventDefault();
+                selecionarFormaPagamento(btn, true);
+            }
+        }
     }
 
     function bindScannerNoInput() {
@@ -854,7 +1122,7 @@
                 clearTimeout(scannerTimer);
                 // leitor sem Enter: rajada rápida + pausa → confirma automaticamente
                 scannerTimer = setTimeout(function () {
-                    var termo = (el.inputBusca.value || '').trim();
+                    var termo = separarQuantidade(el.inputBusca.value || '').termo;
                     if (rapidChars >= 6 && pareceCodigo(termo)) {
                         confirmarBusca();
                     }
@@ -865,7 +1133,7 @@
 
         el.inputBusca.addEventListener('paste', function () {
             setTimeout(function () {
-                var termo = (el.inputBusca.value || '').trim();
+                var termo = separarQuantidade(el.inputBusca.value || '').termo;
                 if (pareceCodigo(termo)) {
                     confirmarBusca();
                 }
@@ -895,11 +1163,16 @@
             b.classList.toggle('pdv-forma-btn--ativa', ativa);
             b.setAttribute('aria-pressed', ativa ? 'true' : 'false');
         });
+        botoesForma().forEach(function (b) {
+            b.setAttribute('aria-checked', b === btn ? 'true' : 'false');
+        });
         var nome = btn.getAttribute('data-forma') || '';
         var tipo = btn.getAttribute('data-tipo') || '';
         if (el.formaHidden) el.formaHidden.value = nome;
         if (el.formaRotulo) el.formaRotulo.textContent = nome ? (nome + (tipo ? ' · ' + tipo : '')) : 'Sem pagamento';
+        if (el.resumoForma) el.resumoForma.textContent = nome ? (nome + (tipo ? ' · ' + tipo : '')) : 'Sem pagamento';
         if (el.formaErro) el.formaErro.hidden = true;
+        atualizarResumoPagamento();
         if (typeof btn.scrollIntoView === 'function') {
             btn.scrollIntoView({ block: 'nearest' });
         }
@@ -922,7 +1195,7 @@
         selecionarFormaPagamento(escolhido, false);
     }
 
-    function cicloFormaPagamento() {
+    function cicloFormaPagamento(direcao) {
         var botoes = botoesForma();
         if (!botoes.length) {
             mostrarToast('Nenhuma forma de pagamento ativa.');
@@ -932,7 +1205,8 @@
         botoes.forEach(function (btn, i) {
             if (btn.classList.contains('pdv-forma-btn--ativa')) atual = i;
         });
-        var proximo = botoes[(atual + 1) % botoes.length];
+        var passo = direcao === -1 ? -1 : 1;
+        var proximo = botoes[(atual + passo + botoes.length) % botoes.length];
         selecionarFormaPagamento(proximo, true);
         var nome = proximo.getAttribute('data-forma') || '';
         var tipo = proximo.getAttribute('data-tipo') || '';
@@ -952,8 +1226,30 @@
             el.formasGrid.querySelectorAll('.pdv-forma-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     selecionarFormaPagamento(btn, true);
-                    focarBusca();
+                    if (!formaAtualEhPrazo() && el.recebido) el.recebido.focus();
                 });
+            });
+        }
+
+        if (el.recebido) {
+            el.recebido.addEventListener('input', function () { atualizarTroco(calcularTotais().total); });
+        }
+        if (el.btnConfirmar) el.btnConfirmar.addEventListener('click', finalizarVenda);
+        if (el.pagamento) {
+            el.pagamento.querySelectorAll('[data-pag-fechar]').forEach(function (b) {
+                b.addEventListener('click', fecharPagamento);
+            });
+            el.pagamento.addEventListener('click', function (e) {
+                if (e.target === el.pagamento) fecharPagamento();
+            });
+        }
+        if (el.btnAjuda) el.btnAjuda.addEventListener('click', abrirAjuda);
+        if (el.ajuda) {
+            el.ajuda.querySelectorAll('[data-ajuda-fechar]').forEach(function (b) {
+                b.addEventListener('click', fecharAjuda);
+            });
+            el.ajuda.addEventListener('click', function (e) {
+                if (e.target === el.ajuda) fecharAjuda();
             });
         }
 
@@ -966,7 +1262,7 @@
             el.acrescimo.addEventListener('blur', atualizarTotais);
         }
 
-        if (el.btnFinalizar) el.btnFinalizar.addEventListener('click', finalizarVenda);
+        if (el.btnFinalizar) el.btnFinalizar.addEventListener('click', abrirPagamento);
         if (el.alertFechar) el.alertFechar.addEventListener('click', esconderErro);
         if (el.btnNova) {
             el.btnNova.addEventListener('click', function () {
@@ -983,7 +1279,10 @@
                     var doc = item.cpf || item.cnpj || '';
                     return item.nome + (doc ? ' — ' + doc : '');
                 },
-                function () { focarBusca(); }
+                function () {
+                    atualizarResumoPagamento();
+                    focarBusca();
+                }
             );
         }
 
@@ -991,9 +1290,10 @@
         document.addEventListener('click', function (e) {
             var t = e.target;
             if (!t) return;
-            if (t.closest && (t.closest('input, textarea, select, button, a, .autocomplete-list, .pdv-qtd-controles, .pdv-ajustes'))) {
+            if (t.closest && (t.closest('input, textarea, select, button, a, .autocomplete-list, .pdv-qtd-controles, .pdv-ajustes, .pdv-pag-overlay'))) {
                 return;
             }
+            if (pagamentoAberto() || ajudaAberta()) return;
             if (el.shell && el.shell.classList.contains('pdv-shell--sucesso')) return;
             if (el.sucesso && !el.sucesso.hidden) return;
             setTimeout(focarBusca, 0);

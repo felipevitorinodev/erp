@@ -77,8 +77,10 @@
                     <span class="pdv-atalho"><kbd class="pdv-kbd">Enter</kbd> adicionar</span>
                     <span class="pdv-atalho pdv-atalho--desktop"><kbd class="pdv-kbd">↑</kbd><kbd class="pdv-kbd">↓</kbd> navegar</span>
                     <span class="pdv-atalho"><kbd class="pdv-kbd">F2</kbd> buscar</span>
-                    <span class="pdv-atalho"><kbd class="pdv-kbd">F4</kbd> finalizar</span>
+                    <span class="pdv-atalho"><kbd class="pdv-kbd">3*</kbd> quantidade</span>
+                    <span class="pdv-atalho"><kbd class="pdv-kbd">F4</kbd> pagamento</span>
                     <span class="pdv-atalho pdv-atalho--desktop"><kbd class="pdv-kbd">Esc</kbd> limpar</span>
+                    <span class="pdv-atalho pdv-atalho--desktop"><kbd class="pdv-kbd">F1</kbd> todos</span>
                 </div>
                 <p class="pdv-busca__hint">Bipe ou cole o código e pressione Enter — adiciona 1 unidade automaticamente.</p>
             </div>
@@ -109,49 +111,71 @@
                     </div>
                 </div>
 
-                <details class="pdv-ajustes pdv-painel-extra" id="pdv-painel-extra">
-                    <summary class="pdv-ajustes__summary">Cliente e desconto</summary>
-                    <div class="pdv-painel-extra__body">
-                        <div class="pdv-cliente form-group">
-                            <label class="form-label" for="pdv-input-cliente">Cliente <span class="pdv-label-opcional">opcional</span></label>
-                            <div class="autocomplete-wrap">
-                                <input type="text" id="pdv-input-cliente" class="form-control pdv-input-soft"
-                                       placeholder="Consumidor Final" autocomplete="off">
-                                <input type="hidden" id="pdv-hidden-cliente-id" value="">
-                            </div>
-                        </div>
-
-                        <div class="pdv-ajustes-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="pdv-desconto">Desconto (R$)</label>
-                                <input type="tel" id="pdv-desconto" class="form-control input-numeric text-right pdv-input-soft"
-                                       inputmode="numeric" data-decimals="2" value="0,00">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="pdv-acrescimo">Acréscimo (R$)</label>
-                                <input type="tel" id="pdv-acrescimo" class="form-control input-numeric text-right pdv-input-soft"
-                                       inputmode="numeric" data-decimals="2" value="0,00">
-                            </div>
-                        </div>
-
+                <div class="pdv-cliente form-group">
+                    <label class="form-label" for="pdv-input-cliente">
+                        Cliente <span class="pdv-label-opcional">opcional · <kbd class="pdv-kbd">F3</kbd></span>
+                    </label>
+                    <div class="autocomplete-wrap">
+                        <input type="text" id="pdv-input-cliente" class="form-control pdv-input-soft"
+                               placeholder="Consumidor Final" autocomplete="off">
+                        <input type="hidden" id="pdv-hidden-cliente-id" value="">
                     </div>
-                </details>
+                </div>
 
-                <div class="pdv-pagamento">
+                <div class="pdv-resumo-forma">
+                    <span class="text-muted">Pagamento</span>
+                    <strong id="pdv-resumo-forma">{{ $formasPagamento->first()->nome ?? 'Nenhuma forma ativa' }}</strong>
+                </div>
+
+                <div class="pdv-btn-finalizar-fixed">
+                    <button type="button" class="pdv-btn-finalizar" id="pdv-btn-finalizar">
+                        <span class="pdv-btn-finalizar__textos">
+                            <span class="pdv-btn-finalizar__label">Pagamento</span>
+                            <span class="pdv-btn-finalizar__forma">revisar e finalizar</span>
+                        </span>
+                        <span class="pdv-btn-finalizar__valor" id="pdv-btn-finalizar-valor">R$ 0,00</span>
+                        <kbd class="pdv-kbd pdv-kbd--on-dark pdv-btn-finalizar__kbd">F4</kbd>
+                    </button>
+                </div>
+
+                <button type="button" class="pdv-link-atalhos" id="pdv-btn-ajuda">
+                    Atalhos do teclado <kbd class="pdv-kbd">F1</kbd>
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <div class="pdv-pag-overlay" id="pdv-pagamento" hidden>
+        <div class="pdv-pag" role="dialog" aria-modal="true" aria-labelledby="pdv-pag-titulo">
+            <div class="pdv-pag__header">
+                <h2 class="pdv-pag__titulo" id="pdv-pag-titulo">Pagamento</h2>
+                <button type="button" class="btn btn--ghost btn--sm" data-pag-fechar>Voltar <kbd class="pdv-kbd">Esc</kbd></button>
+            </div>
+
+            <div class="pdv-alert-erro alert alert--error" id="pdv-pag-erro" role="alert"></div>
+
+            <div class="pdv-pag__corpo">
+                <div class="pdv-pag__formas">
                     <div class="pdv-pagamento__topo">
-                        <label class="form-label">Pagamento</label>
-                        <span class="pdv-pagamento__atalho">trocar <kbd class="pdv-kbd">F6</kbd></span>
+                        <span class="form-label">Forma de pagamento</span>
+                        <span class="pdv-pagamento__atalho"><kbd class="pdv-kbd">1</kbd>–<kbd class="pdv-kbd">9</kbd> ou <kbd class="pdv-kbd">↑</kbd><kbd class="pdv-kbd">↓</kbd></span>
                     </div>
                     @if($formasPagamento->isEmpty())
                         <p class="pdv-pagamento__vazio">Nenhuma forma de pagamento ativa. Peça ao administrador para cadastrar.</p>
                     @else
-                        <div class="pdv-formas-grid" id="pdv-formas-grid" role="group" aria-label="Forma de pagamento">
+                        <div class="pdv-formas-lista" id="pdv-formas-grid" role="radiogroup" aria-label="Forma de pagamento">
                             @foreach($formasPagamento as $i => $forma)
                                 <button type="button"
                                         class="pdv-forma-btn{{ $forma->isPrazo() ? ' pdv-forma-btn--prazo' : '' }}{{ $i === 0 ? ' pdv-forma-btn--ativa' : '' }}"
                                         data-forma="{{ $forma->nome }}"
                                         data-tipo="{{ $forma->isPrazo() ? 'A prazo' : 'À vista' }}"
+                                        data-prazo="{{ $forma->isPrazo() ? '1' : '0' }}"
+                                        role="radio"
+                                        aria-checked="{{ $i === 0 ? 'true' : 'false' }}"
                                         aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
+                                    @if ($i < 9)
+                                        <kbd class="pdv-kbd pdv-forma-btn__tecla">{{ $i + 1 }}</kbd>
+                                    @endif
                                     <span class="pdv-forma-btn__nome">{{ $forma->nome }}</span>
                                     <span class="pdv-forma-btn__tipo">{{ $forma->isPrazo() ? 'A prazo' : 'À vista' }}</span>
                                 </button>
@@ -163,18 +187,83 @@
                     <span class="form-error" id="pdv-forma-erro" hidden>Selecione a forma de pagamento.</span>
                 </div>
 
-                <div class="pdv-btn-finalizar-fixed">
-                    <button type="button" class="pdv-btn-finalizar" id="pdv-btn-finalizar">
-                        <span class="pdv-btn-finalizar__textos">
-                            <span class="pdv-btn-finalizar__label">Finalizar Venda</span>
-                            <span class="pdv-btn-finalizar__forma" id="pdv-btn-finalizar-forma">{{ $formasPagamento->first()->nome ?? 'Sem pagamento' }}</span>
-                        </span>
-                        <span class="pdv-btn-finalizar__valor" id="pdv-btn-finalizar-valor">R$ 0,00</span>
-                        <kbd class="pdv-kbd pdv-kbd--on-dark pdv-btn-finalizar__kbd">F4</kbd>
-                    </button>
+                <div class="pdv-pag__valores">
+                    <div class="pdv-totais__linha">
+                        <span>Subtotal (<span id="pdv-pag-qtd-itens">0</span> itens)</span>
+                        <strong id="pdv-pag-subtotal">R$ 0,00</strong>
+                    </div>
+                    <div class="pdv-ajustes-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pdv-desconto">Desconto (R$) <kbd class="pdv-kbd">F7</kbd></label>
+                            <input type="tel" id="pdv-desconto" class="form-control input-numeric text-right pdv-input-soft"
+                                   inputmode="numeric" data-decimals="2" value="0,00">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pdv-acrescimo">Acréscimo (R$)</label>
+                            <input type="tel" id="pdv-acrescimo" class="form-control input-numeric text-right pdv-input-soft"
+                                   inputmode="numeric" data-decimals="2" value="0,00">
+                        </div>
+                    </div>
+                    <div class="pdv-totais__total">
+                        <span class="pdv-totais__total-label">Total a pagar</span>
+                        <strong class="pdv-total-grande" id="pdv-pag-total">R$ 0,00</strong>
+                    </div>
+
+                    <div class="pdv-pag__recebido" id="pdv-pag-recebido-wrap">
+                        <div class="form-group">
+                            <label class="form-label" for="pdv-recebido">Valor recebido (R$) <kbd class="pdv-kbd">F8</kbd></label>
+                            <input type="tel" id="pdv-recebido" class="form-control input-numeric text-right pdv-input-recebido"
+                                   inputmode="numeric" data-decimals="2" value="0,00">
+                        </div>
+                        <div class="pdv-pag__troco">
+                            <span>Troco</span>
+                            <strong id="pdv-troco">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <p class="pdv-pag__cliente">Cliente: <strong id="pdv-pag-cliente">Consumidor Final</strong></p>
+                    <p class="pdv-pag__aviso" id="pdv-pag-aviso" hidden>
+                        Venda a prazo sem cliente identificado: a conta a receber ficará sem cliente. Informe o cliente (F3) se possível.
+                    </p>
                 </div>
             </div>
-        </aside>
+
+            <div class="pdv-pag__footer">
+                <button type="button" class="btn btn--ghost" data-pag-fechar>Voltar aos itens</button>
+                <button type="button" class="pdv-btn-finalizar pdv-pag__confirmar" id="pdv-btn-confirmar">
+                    <span class="pdv-btn-finalizar__textos">
+                        <span class="pdv-btn-finalizar__label">Confirmar venda</span>
+                        <span class="pdv-btn-finalizar__forma" id="pdv-btn-finalizar-forma">{{ $formasPagamento->first()->nome ?? 'Sem pagamento' }}</span>
+                    </span>
+                    <span class="pdv-btn-finalizar__valor" id="pdv-btn-confirmar-valor">R$ 0,00</span>
+                    <kbd class="pdv-kbd pdv-kbd--on-dark pdv-btn-finalizar__kbd">Enter</kbd>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pdv-pag-overlay" id="pdv-ajuda" hidden>
+        <div class="pdv-pag pdv-pag--ajuda" role="dialog" aria-modal="true" aria-labelledby="pdv-ajuda-titulo">
+            <div class="pdv-pag__header">
+                <h2 class="pdv-pag__titulo" id="pdv-ajuda-titulo">Atalhos do teclado</h2>
+                <button type="button" class="btn btn--ghost btn--sm" data-ajuda-fechar>Fechar <kbd class="pdv-kbd">Esc</kbd></button>
+            </div>
+            <dl class="pdv-ajuda-lista">
+                <dt><kbd class="pdv-kbd">F2</kbd> ou <kbd class="pdv-kbd">/</kbd></dt><dd>Ir para a busca de produto</dd>
+                <dt><kbd class="pdv-kbd">3</kbd><kbd class="pdv-kbd">*</kbd> + código</dt><dd>Adicionar com quantidade (ex.: <code>3*7891234</code>)</dd>
+                <dt><kbd class="pdv-kbd">Enter</kbd></dt><dd>Adicionar o produto destacado / bipado</dd>
+                <dt><kbd class="pdv-kbd">↑</kbd><kbd class="pdv-kbd">↓</kbd></dt><dd>Navegar nas sugestões</dd>
+                <dt><kbd class="pdv-kbd">F3</kbd></dt><dd>Informar o cliente</dd>
+                <dt><kbd class="pdv-kbd">F4</kbd></dt><dd>Abrir o pagamento / confirmar a venda</dd>
+                <dt><kbd class="pdv-kbd">F6</kbd></dt><dd>Trocar a forma de pagamento</dd>
+                <dt><kbd class="pdv-kbd">F7</kbd> / <kbd class="pdv-kbd">F8</kbd></dt><dd>Desconto / valor recebido (no pagamento)</dd>
+                <dt><kbd class="pdv-kbd">F9</kbd></dt><dd>Alterar a quantidade do último item</dd>
+                <dt><kbd class="pdv-kbd">Ctrl</kbd>+<kbd class="pdv-kbd">Del</kbd></dt><dd>Remover o último item</dd>
+                <dt><kbd class="pdv-kbd">Ctrl</kbd>+<kbd class="pdv-kbd">Shift</kbd>+<kbd class="pdv-kbd">Del</kbd></dt><dd>Cancelar a venda (limpar tudo)</dd>
+                <dt><kbd class="pdv-kbd">Esc</kbd></dt><dd>Limpar a busca / fechar janelas</dd>
+                <dt><kbd class="pdv-kbd">N</kbd> ou <kbd class="pdv-kbd">Enter</kbd></dt><dd>Nova venda (após confirmar)</dd>
+            </dl>
+        </div>
     </div>
 
     <div id="pdv-sucesso" class="pdv-sucesso" hidden>
@@ -189,6 +278,7 @@
             <h2 class="pdv-sucesso__titulo">Venda Confirmada!</h2>
             <p class="pdv-sucesso__valor" id="pdv-sucesso-total">Total: R$ 0,00</p>
             <p class="pdv-sucesso__numero" id="pdv-sucesso-numero">Nº —</p>
+            <p class="pdv-sucesso__troco" id="pdv-sucesso-troco" hidden></p>
             <div class="pdv-sucesso__acoes">
                 <button type="button" class="btn btn--primary pdv-sucesso__btn" id="pdv-btn-nova-venda">
                     Nova Venda <kbd class="pdv-kbd pdv-kbd--on-dark">N</kbd>
@@ -217,5 +307,5 @@
         dataHoje: @json(date('Y-m-d')),
     };
 </script>
-<script src="{{ asset('js/pdv.js') }}?v=9"></script>
+<script src="{{ asset('js/pdv.js') }}?v=10"></script>
 @endpush
