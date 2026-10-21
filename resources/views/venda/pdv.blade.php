@@ -307,5 +307,5 @@
         dataHoje: @json(date('Y-m-d')),
     };
 </script>
-<script src="{{ asset('js/pdv.js') }}?v=10"></script>
+<script src="{{ asset('js/pdv.js') }}?v={{ filemtime(public_path('js/pdv.js')) }}"></script>
 @endpush

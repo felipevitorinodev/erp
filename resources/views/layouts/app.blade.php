@@ -545,9 +545,9 @@
         </div>
     </div>
 
-    <script src="{{ asset('js/jquery.min.js') }}"></script>
-    <script src="{{ asset('js/autocomplete.js') }}"></script>
-    <script src="{{ asset('js/app.js') }}"></script>
+    <script src="{{ asset('js/jquery.min.js') }}?v={{ filemtime(public_path('js/jquery.min.js')) }}"></script>
+    <script src="{{ asset('js/autocomplete.js') }}?v={{ filemtime(public_path('js/autocomplete.js')) }}"></script>
+    <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
     @include('partials.page-loader-script')
 
     {{-- Modais são colocados fora de qualquer form --}}
