@@ -6,8 +6,9 @@
         var texto = document.getElementById('page-loader-texto');
         if (!loader) return;
 
-        // Navegações rápidas mostram só a barra; o esqueleto entra se a próxima página demorar.
-        var ATRASO_MS = 250;
+        // Navegações rápidas mostram só a barra; o conteúdo esmaece e o status aparece só se demorar.
+        var ESMAECER_MS = 600;
+        var STATUS_MS = 1200;
         var timers = [];
         var trickle = null;
         var valor = 0;
@@ -56,6 +57,7 @@
             limparTimers();
             loader.hidden = true;
             document.body.removeAttribute('aria-busy');
+            document.body.classList.remove('is-navegando');
             if (progresso && progresso.classList.contains('is-ativo')) {
                 definirBarra(100);
                 progresso.classList.add('is-concluindo');
@@ -73,8 +75,11 @@
                 if (event.defaultPrevented) return;
                 iniciarBarra();
                 timers.push(window.setTimeout(function () {
+                    document.body.classList.add('is-navegando');
+                }, ESMAECER_MS));
+                timers.push(window.setTimeout(function () {
                     mostrar(mensagem);
-                }, ATRASO_MS));
+                }, STATUS_MS));
             }, 0));
         }
 

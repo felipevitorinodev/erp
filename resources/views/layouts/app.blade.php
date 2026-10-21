@@ -12,6 +12,28 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 
     @stack('styles')
+
+    {{-- Chrome/Edge buscam a página ao parar o mouse ~200 ms num link, e o clique abre quase na hora.
+         Requisições de prefetch não alteram a "URL anterior" da sessão (StartSession ignora prefetch). --}}
+    <script type="speculationrules">
+    {
+        "prefetch": [{
+            "where": {
+                "and": [
+                    { "href_matches": "/*" },
+                    { "not": { "href_matches": "/*/pdf" } },
+                    { "not": { "href_matches": "/*/csv" } },
+                    { "not": { "href_matches": "/*/xml" } },
+                    { "not": { "href_matches": "/*/danfe" } },
+                    { "not": { "href_matches": "/*limpar*" } },
+                    { "not": { "href_matches": "/logout" } },
+                    { "not": { "selector_matches": "[download], [data-no-loader], [data-no-prefetch], [target=_blank]" } }
+                ]
+            },
+            "eagerness": "moderate"
+        }]
+    }
+    </script>
 </head>
 
 <body>

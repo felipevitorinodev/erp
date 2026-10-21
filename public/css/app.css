@@ -3120,15 +3120,22 @@ select.form-control {
 /* =========================================
    CARREGAMENTO ENTRE TELAS
    ========================================= */
+/* Camada só para posicionar a pílula de status: não cobre nem troca o conteúdo atual. */
 .page-loader {
     position: fixed;
     inset: 0;
     z-index: 2000;
-    background: color-mix(in srgb, var(--color-bg, #F7F9FC) 94%, transparent);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    animation: page-loader-entrar 0.2s ease-out both;
+    pointer-events: none;
+}
+
+/* Navegação lenta: o conteúdo atual só esmaece e deixa de aceitar cliques repetidos. */
+.main {
+    transition: opacity 0.25s ease;
+}
+
+body.is-navegando .main {
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 .page-loader[hidden] {
@@ -3184,71 +3191,6 @@ select.form-control {
         left: 0;
     }
 }
-
-/* Esqueleto da próxima tela */
-.page-loader__skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.35rem 1.4rem;
-    width: 100%;
-    max-width: 1400px;
-}
-
-.page-loader__sk-topo {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.page-loader__sk-card {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.85rem;
-    padding: 1rem 1.1rem;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg, 12px);
-}
-
-.page-loader__sk-card--tabela {
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding: 0.35rem 1.1rem;
-}
-
-.page-loader__sk-linha {
-    display: grid;
-    grid-template-columns: 0.6fr 2fr 1.2fr 0.7fr;
-    gap: 1.25rem;
-    align-items: center;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--color-border);
-    opacity: 0;
-    animation: page-loader-linha 0.35s ease-out forwards;
-    animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-.page-loader__sk-linha:last-child {
-    border-bottom: none;
-}
-
-.page-loader__sk {
-    display: block;
-    height: 12px;
-    border-radius: 6px;
-    background: linear-gradient(90deg, #e9edf2 0%, #f5f7fa 40%, #e9edf2 80%);
-    background-size: 300% 100%;
-    animation: page-loader-brilho 1.3s ease-in-out infinite;
-}
-
-.page-loader__sk--titulo { width: min(280px, 50%); height: 22px; border-radius: 8px; }
-.page-loader__sk--botao { width: 120px; height: 32px; border-radius: 8px; }
-.page-loader__sk--campo { height: 36px; border-radius: 8px; }
-.page-loader__sk--curto { width: 70%; }
-.page-loader__sk--medio { width: 85%; }
-.page-loader__sk--longo { width: 95%; }
 
 /* Pílula de status */
 .page-loader__status {
@@ -3313,24 +3255,9 @@ select.form-control {
     animation-duration: 0.8s;
 }
 
-@keyframes page-loader-entrar {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 @keyframes page-loader-subir {
     from { opacity: 0; transform: translate(-50%, 12px); }
     to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-@keyframes page-loader-linha {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes page-loader-brilho {
-    0% { background-position: 100% 0; }
-    100% { background-position: -50% 0; }
 }
 
 @keyframes page-loader-girar {
@@ -3344,36 +3271,12 @@ select.form-control {
     75% { content: '...'; }
 }
 
-@media (max-width: 600px) {
-    .page-loader__skeleton {
-        padding: 1rem;
-    }
-
-    .page-loader__sk-card {
-        grid-template-columns: 1fr;
-    }
-
-    .page-loader__sk-card .page-loader__sk--campo:nth-child(n + 2) {
-        display: none;
-    }
-
-    .page-loader__sk-linha {
-        grid-template-columns: 1fr 2fr;
-    }
-
-    .page-loader__sk-linha .page-loader__sk:nth-child(n + 3) {
-        display: none;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .page-loader,
+    .main,
     .page-loader__status,
-    .page-loader__sk-linha,
-    .page-loader__sk,
     .page-loader__texto::after {
         animation: none;
-        opacity: 1;
+        transition: none;
     }
 
     .page-loader__orbita span {
