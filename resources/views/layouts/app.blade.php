@@ -75,7 +75,7 @@
 
     <div class="layout">
 
-        <aside class="sidebar">
+        <aside class="sidebar sidebar--iniciando">
             <nav class="sidebar__nav">
                 @php
                     $usuarioMenu = auth()->user();
@@ -392,6 +392,61 @@
             </nav>
         </aside>
 
+        {{-- Roda logo após a sidebar (antes dos scripts externos) para o menu já ser desenhado recolhido. --}}
+        <script>
+            (function () {
+                var sidebar = document.querySelector('.sidebar');
+
+                document.querySelectorAll('[data-group]').forEach(function (group) {
+                    var toggle = group.querySelector('[data-toggle]');
+                    var links = group.querySelector('[data-links]');
+                    var arrow = group.querySelector('.sidebar__group-arrow');
+
+                    if (!toggle || !links || !arrow) return;
+
+                    var hasActive = group.querySelector('.sidebar__link--active');
+                    var keepOpen = group.hasAttribute('data-keep-open');
+                    if (!hasActive && !keepOpen) {
+                        links.classList.add('sidebar__group-links--collapsed');
+                        arrow.classList.add('sidebar__group-arrow--collapsed');
+                    }
+
+                    toggle.addEventListener('click', function () {
+                        var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
+                        arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
+                    });
+                });
+
+                document.querySelectorAll('[data-subgroup]').forEach(function (subgroup) {
+                    var subtoggle = subgroup.querySelector('[data-subtoggle]');
+                    var sublinks = subgroup.querySelector('[data-sublinks]');
+                    var subarrow = subgroup.querySelector('.sidebar__subgroup-arrow');
+
+                    if (!subtoggle || !sublinks || !subarrow) return;
+
+                    var hasActive = subgroup.querySelector('.sidebar__link--active');
+                    if (!hasActive) {
+                        sublinks.classList.add('sidebar__subgroup-links--collapsed');
+                        subarrow.classList.add('sidebar__subgroup-arrow--collapsed');
+                    }
+
+                    subtoggle.addEventListener('click', function () {
+                        var collapsed = sublinks.classList.toggle('sidebar__subgroup-links--collapsed');
+                        subarrow.classList.toggle('sidebar__subgroup-arrow--collapsed', collapsed);
+                        subtoggle.classList.toggle('sidebar__subgroup-toggle--open', !collapsed);
+                    });
+                });
+
+                if (sidebar) {
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            sidebar.classList.remove('sidebar--iniciando');
+                        });
+                    });
+                }
+            })();
+        </script>
+
         <main class="main">
 
             <div class="page-bar">
@@ -464,48 +519,6 @@
     <script src="{{ asset('js/autocomplete.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
     @include('partials.page-loader-script')
-
-    <script>
-        document.querySelectorAll('[data-group]').forEach(function(group) {
-            var toggle = group.querySelector('[data-toggle]');
-            var links = group.querySelector('[data-links]');
-            var arrow = group.querySelector('.sidebar__group-arrow');
-
-            if (!toggle || !links || !arrow) return;
-
-            var hasActive = group.querySelector('.sidebar__link--active');
-            var keepOpen = group.hasAttribute('data-keep-open');
-            if (!hasActive && !keepOpen) {
-                links.classList.add('sidebar__group-links--collapsed');
-                arrow.classList.add('sidebar__group-arrow--collapsed');
-            }
-
-            toggle.addEventListener('click', function() {
-                var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
-                arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
-            });
-        });
-
-        document.querySelectorAll('[data-subgroup]').forEach(function(subgroup) {
-            var subtoggle = subgroup.querySelector('[data-subtoggle]');
-            var sublinks = subgroup.querySelector('[data-sublinks]');
-            var subarrow = subgroup.querySelector('.sidebar__subgroup-arrow');
-
-            if (!subtoggle || !sublinks || !subarrow) return;
-
-            var hasActive = subgroup.querySelector('.sidebar__link--active');
-            if (!hasActive) {
-                sublinks.classList.add('sidebar__subgroup-links--collapsed');
-                subarrow.classList.add('sidebar__subgroup-arrow--collapsed');
-            }
-
-            subtoggle.addEventListener('click', function() {
-                var collapsed = sublinks.classList.toggle('sidebar__subgroup-links--collapsed');
-                subarrow.classList.toggle('sidebar__subgroup-arrow--collapsed', collapsed);
-                subtoggle.classList.toggle('sidebar__subgroup-toggle--open', !collapsed);
-            });
-        });
-    </script>
 
     {{-- Modais são colocados fora de qualquer form --}}
     @stack('modals')

@@ -1446,6 +1446,12 @@ select.form-control {
     transform: rotate(-90deg);
 }
 
+/* Sem animação no carregamento: o estado inicial do menu é aplicado direto, só os cliques animam. */
+.sidebar--iniciando,
+.sidebar--iniciando * {
+    transition: none !important;
+}
+
 /* =========================================
    SIDEBAR â SUB-GRUPO (2Âº nÃ­vel)
    ========================================= */
