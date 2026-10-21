@@ -4798,6 +4798,7 @@ body.pdv-page .page-bar {
 .pdv-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: minmax(0, 1fr);
     gap: 1.25rem;
     height: 100%;
     max-height: 100%;
@@ -4822,6 +4823,17 @@ body.pdv-page .page-bar {
 
 .pdv-alert-erro.pdv-alert-erro--visivel {
     display: flex;
+}
+
+/* Com o aviso visível o grid ganha uma linha só do tamanho do aviso; sem isso a altura livre era dividida entre as linhas. */
+.pdv-wrap:has(> .pdv-alert-erro--visivel) {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.pdv-wrap > .pdv-alert-erro {
+    align-self: start;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
 }
 
 .pdv-esquerda {

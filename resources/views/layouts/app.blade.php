@@ -9,7 +9,7 @@
     <title>@yield('title', 'Visys') — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
 
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 
     @stack('styles')
 </head>
