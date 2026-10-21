@@ -46,3 +46,10 @@ Legenda: ✅ corrigido · ⏳ pendente · ❓ pergunta
 4. Produto com nome `<img src=x onerror=alert(1)>`: aparece como texto em venda, orçamento e NF-e.
 
 Testes automatizados: `VendaIntegridadeTest` (contrato JSON 201/422), `ExampleTest`.
+
+## Navegação entre telas (pedido de 20/10)
+- `partials/page-loader-script`: deixou de interceptar a navegação (antes fazia `preventDefault` e reenviava com `form.submit()`, o que **descartava o botão clicado** — ex.: botões de andamento da OS com `name="situacao"`). Agora a navegação é nativa e o loader só aparece se a próxima página demorar mais de 250 ms.
+- O loader cobre só a área de conteúdo (`page-loader--conteudo`); header e sidebar continuam visíveis. Na tela de login continua em tela cheia.
+- Transição nativa entre páginas (`@view-transition`, Chrome/Edge 126+): header e sidebar ficam parados e só o conteúdo faz fade de 150 ms. Outros navegadores ignoram e navegam normalmente.
+- A sidebar abre já recolhida (script logo após o menu, sem animação no carregamento) e mantém a rolagem entre páginas (`sessionStorage`).
+- Não adotado: troca só do `<main>` via Turbo/htmx. Exigiria adaptar os scripts das telas (28 com `@push('scripts')`, 7 com `DOMContentLoaded`, 5 com atalhos de teclado globais que continuariam ativos em outras telas).

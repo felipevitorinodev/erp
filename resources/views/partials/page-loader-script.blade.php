@@ -3,6 +3,9 @@
         var loader = document.getElementById('page-loader');
         if (!loader) return;
 
+        // Navegações rápidas não mostram o loader; o navegador mantém a página atual até a nova estar pronta.
+        var ATRASO_MS = 250;
+        var showTimer = null;
         var hideTimer = null;
 
         function show() {
@@ -14,12 +17,25 @@
         }
 
         function hide() {
+            if (showTimer) {
+                window.clearTimeout(showTimer);
+                showTimer = null;
+            }
             if (hideTimer) {
                 window.clearTimeout(hideTimer);
                 hideTimer = null;
             }
             loader.hidden = true;
             document.body.removeAttribute('aria-busy');
+        }
+
+        // A navegação segue nativa (sem preventDefault), então o botão clicado continua indo no POST.
+        function agendar(event) {
+            if (showTimer) window.clearTimeout(showTimer);
+            showTimer = window.setTimeout(function () {
+                showTimer = null;
+                if (!event.defaultPrevented) show();
+            }, ATRASO_MS);
         }
 
         function samePageHash(url) {
@@ -33,16 +49,11 @@
             var path = (url.pathname || '').toLowerCase();
             return path.endsWith('/csv')
                 || path.endsWith('.csv')
+                || path.endsWith('/pdf')
                 || path.endsWith('.pdf')
+                || path.endsWith('/xml')
                 || path.endsWith('.xlsx')
                 || path.endsWith('.xls');
-        }
-
-        function navegar(href) {
-            show();
-            window.setTimeout(function () {
-                window.location.assign(href);
-            }, 60);
         }
 
         document.addEventListener('click', function (event) {
@@ -61,32 +72,21 @@
             }
 
             if (url.origin !== window.location.origin) return;
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
             if (samePageHash(url)) return;
             if (isDownloadLink(link, url)) return;
 
-            event.preventDefault();
-            navegar(link.href);
+            agendar(event);
         });
 
-        function onSubmit(event) {
+        document.addEventListener('submit', function (event) {
             if (event.defaultPrevented) return;
             var form = event.target;
             if (!(form instanceof HTMLFormElement)) return;
+            if (form.target && form.target !== '_self') return;
 
-            event.preventDefault();
-            show();
-            window.setTimeout(function () {
-                HTMLFormElement.prototype.submit.call(form);
-            }, 60);
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () {
-                document.addEventListener('submit', onSubmit);
-            });
-        } else {
-            document.addEventListener('submit', onSubmit);
-        }
+            agendar(event);
+        });
 
         window.addEventListener('pageshow', hide);
         window.addEventListener('pagehide', hide);

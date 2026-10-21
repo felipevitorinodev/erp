@@ -3135,6 +3135,54 @@ select.form-control {
     display: none !important;
 }
 
+/* No layout com menu, o loader cobre só o conteúdo: header e sidebar continuam visíveis. */
+.page-loader--conteudo {
+    top: var(--header-h);
+    left: var(--sidebar-w);
+    bottom: var(--footer-h);
+    background: rgba(247, 249, 252, 0.8);
+    backdrop-filter: none;
+}
+
+@media (max-width: 900px) {
+    .page-loader--conteudo {
+        left: 0;
+    }
+}
+
+/* Transição nativa entre páginas (Chrome/Edge): header e sidebar ficam parados, só o conteúdo faz fade. */
+@view-transition {
+    navigation: auto;
+}
+
+.header {
+    view-transition-name: app-header;
+}
+
+.sidebar {
+    view-transition-name: app-sidebar;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.15s;
+}
+
+::view-transition-group(app-header),
+::view-transition-group(app-sidebar),
+::view-transition-old(app-header),
+::view-transition-new(app-header),
+::view-transition-old(app-sidebar),
+::view-transition-new(app-sidebar) {
+    animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+}
+
 .page-loader__bar {
     position: absolute;
     top: 0;

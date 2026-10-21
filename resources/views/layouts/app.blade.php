@@ -15,7 +15,7 @@
 </head>
 
 <body>
-    @include('partials.page-loader')
+    @include('partials.page-loader', ['area' => 'conteudo'])
 
     <header class="header">
         <button type="button" class="header__menu" id="btn-sidebar-toggle" aria-label="Abrir menu"
@@ -438,6 +438,14 @@
                 });
 
                 if (sidebar) {
+                    try {
+                        var rolagem = parseInt(sessionStorage.getItem('sidebar-scroll') || '0', 10);
+                        if (rolagem > 0) sidebar.scrollTop = rolagem;
+                        window.addEventListener('pagehide', function () {
+                            sessionStorage.setItem('sidebar-scroll', String(sidebar.scrollTop));
+                        });
+                    } catch (e) {}
+
                     requestAnimationFrame(function () {
                         requestAnimationFrame(function () {
                             sidebar.classList.remove('sidebar--iniciando');

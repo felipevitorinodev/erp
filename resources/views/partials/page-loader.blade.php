@@ -1,4 +1,4 @@
-<div class="page-loader" id="page-loader" hidden>
+<div class="page-loader {{ ($area ?? null) === 'conteudo' ? 'page-loader--conteudo' : '' }}" id="page-loader" hidden>
     <div class="page-loader__bar" aria-hidden="true"></div>
     <div class="page-loader__content" role="status" aria-live="polite">
         <div class="page-loader__spinner-wrap">
