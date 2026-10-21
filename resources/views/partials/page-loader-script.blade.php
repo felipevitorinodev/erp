@@ -1,41 +1,100 @@
 <script>
     (function () {
         var loader = document.getElementById('page-loader');
+        var progresso = document.getElementById('page-progress');
+        var barra = document.getElementById('page-progress-barra');
+        var texto = document.getElementById('page-loader-texto');
         if (!loader) return;
 
-        // Navegações rápidas não mostram o loader; o navegador mantém a página atual até a nova estar pronta.
+        // Navegações rápidas mostram só a barra; o esqueleto entra se a próxima página demorar.
         var ATRASO_MS = 250;
-        var showTimer = null;
-        var hideTimer = null;
+        var timers = [];
+        var trickle = null;
+        var valor = 0;
 
-        function show() {
-            loader.hidden = false;
-            document.body.setAttribute('aria-busy', 'true');
-            if (hideTimer) window.clearTimeout(hideTimer);
-            // Fallback: se a página não navegar (ex.: download), esconde o loader
-            hideTimer = window.setTimeout(hide, 4000);
+        function limparTimers() {
+            timers.forEach(window.clearTimeout);
+            timers = [];
+            if (trickle) {
+                window.clearInterval(trickle);
+                trickle = null;
+            }
         }
 
-        function hide() {
-            if (showTimer) {
-                window.clearTimeout(showTimer);
-                showTimer = null;
-            }
-            if (hideTimer) {
-                window.clearTimeout(hideTimer);
-                hideTimer = null;
-            }
+        function definirBarra(v) {
+            valor = v;
+            if (barra) barra.style.transform = 'scaleX(' + (v / 100) + ')';
+        }
+
+        function iniciarBarra() {
+            if (!progresso || !barra) return;
+            progresso.classList.remove('is-concluindo');
+            progresso.classList.add('is-ativo');
+            definirBarra(8);
+            // Avança cada vez mais devagar, sem nunca chegar a 100% sozinha.
+            trickle = window.setInterval(function () {
+                definirBarra(valor + (92 - valor) * 0.08);
+            }, 200);
+        }
+
+        function mostrar(mensagem) {
+            if (texto) texto.textContent = mensagem;
+            loader.hidden = false;
+            document.body.setAttribute('aria-busy', 'true');
+
+            timers.push(window.setTimeout(function () {
+                if (texto) texto.textContent = 'Quase lá…';
+            }, 3000));
+            timers.push(window.setTimeout(function () {
+                if (texto) texto.textContent = 'O servidor está demorando mais que o normal…';
+            }, 8000));
+            // Fallback: se nada navegar (ex.: resposta de download), some sozinho.
+            timers.push(window.setTimeout(esconder, 20000));
+        }
+
+        function esconder() {
+            limparTimers();
             loader.hidden = true;
             document.body.removeAttribute('aria-busy');
+            if (progresso && progresso.classList.contains('is-ativo')) {
+                definirBarra(100);
+                progresso.classList.add('is-concluindo');
+                window.setTimeout(function () {
+                    progresso.classList.remove('is-ativo', 'is-concluindo');
+                    definirBarra(0);
+                }, 300);
+            }
         }
 
         // A navegação segue nativa (sem preventDefault), então o botão clicado continua indo no POST.
-        function agendar(event) {
-            if (showTimer) window.clearTimeout(showTimer);
-            showTimer = window.setTimeout(function () {
-                showTimer = null;
-                if (!event.defaultPrevented) show();
-            }, ATRASO_MS);
+        function agendar(event, mensagem) {
+            limparTimers();
+            timers.push(window.setTimeout(function () {
+                if (event.defaultPrevented) return;
+                iniciarBarra();
+                timers.push(window.setTimeout(function () {
+                    mostrar(mensagem);
+                }, ATRASO_MS));
+            }, 0));
+        }
+
+        function mensagemDoLink(link) {
+            var rotulo = (link.getAttribute('aria-label') || link.getAttribute('title') || link.textContent || '')
+                .replace(/\s+/g, ' ')
+                .replace(/^[+←→›\s]+/, '')
+                .trim();
+            if (rotulo.length < 4 || rotulo.length > 40 || /^(ver|editar|voltar|limpar|anterior|próxim[ao])\b/i.test(rotulo)) {
+                return 'Carregando';
+            }
+            return 'Abrindo ' + rotulo;
+        }
+
+        function mensagemDoForm(form) {
+            var metodo = (form.getAttribute('method') || 'GET').toUpperCase();
+            var spoof = form.querySelector('input[name="_method"]');
+            if (spoof && spoof.value.toUpperCase() === 'DELETE') return 'Excluindo';
+            if (metodo === 'GET') return 'Buscando';
+            return 'Salvando';
         }
 
         function samePageHash(url) {
@@ -76,7 +135,7 @@
             if (samePageHash(url)) return;
             if (isDownloadLink(link, url)) return;
 
-            agendar(event);
+            agendar(event, mensagemDoLink(link));
         });
 
         document.addEventListener('submit', function (event) {
@@ -84,14 +143,15 @@
             var form = event.target;
             if (!(form instanceof HTMLFormElement)) return;
             if (form.target && form.target !== '_self') return;
+            if (form.hasAttribute('data-no-loader')) return;
 
-            agendar(event);
+            agendar(event, mensagemDoForm(form));
         });
 
-        window.addEventListener('pageshow', hide);
-        window.addEventListener('pagehide', hide);
+        window.addEventListener('pageshow', esconder);
+        window.addEventListener('pagehide', esconder);
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible') hide();
+            if (document.visibilityState === 'visible' && !loader.hidden) esconder();
         });
     })();
 </script>
