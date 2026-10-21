@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Comissões')
-@section('page_title', 'Comissões de Vendedores')
+@section('page_title', 'Comissões de Vendedores e Técnicos')
 
 @section('content')
 
@@ -79,6 +79,7 @@
                             <th>Vendedor</th>
                             <th>Venda</th>
                             <th>Data venda</th>
+                            <th class="col-num">Base</th>
                             <th class="col-num">%</th>
                             <th class="col-num">Valor</th>
                             <th>Situação</th>
@@ -94,11 +95,15 @@
                                 <td data-label="Venda">
                                     @if($comissao->venda)
                                         <a href="{{ route('venda.show', $comissao->venda) }}">#{{ $comissao->venda->numero }}</a>
+                                        @if ($comissao->venda->ordemServico)
+                                            <span class="text-muted" style="font-size:11px;">(OS #{{ $comissao->venda->ordemServico->numero }})</span>
+                                        @endif
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td data-label="Data venda">{{ $comissao->venda?->data_venda?->format('d/m/Y') ?? '—' }}</td>
+                                <td data-label="Base" class="col-num">{{ $comissao->base_calculo !== null ? 'R$ ' . number_format($comissao->base_calculo, 2, ',', '.') : '—' }}</td>
                                 <td data-label="%" class="col-num">{{ number_format($comissao->percentual, 2, ',', '.') }}%</td>
                                 <td data-label="Valor" class="col-num">R$ {{ number_format($comissao->valor, 2, ',', '.') }}</td>
                                 <td data-label="Situação">
@@ -128,7 +133,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted empty-state">Nenhuma comissão encontrada.</td>
+                                <td colspan="10" class="text-center text-muted empty-state">Nenhuma comissão encontrada.</td>
                             </tr>
                         @endforelse
                     </tbody>

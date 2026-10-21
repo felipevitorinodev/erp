@@ -36,6 +36,8 @@ class FuncionarioRequest extends FormRequest
             'departamento'    => 'nullable|string|max:100',
             'salario'              => 'nullable|numeric|min:0',
             'percentual_comissao'  => 'nullable|numeric|min:0|max:100',
+            'comissao_os_percentual' => 'nullable|numeric|min:0|max:100',
+            'comissao_os_base'     => 'required|in:total,servicos',
 
             'data_admissao'   => 'nullable|date',
             'data_demissao'   => 'nullable|date|after_or_equal:data_admissao',
@@ -55,5 +57,13 @@ class FuncionarioRequest extends FormRequest
             'min'      => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'comissao_os_percentual' => $this->input('comissao_os_percentual') ?? 0,
+            'comissao_os_base'       => $this->input('comissao_os_base') ?: 'total',
+        ]);
     }
 }

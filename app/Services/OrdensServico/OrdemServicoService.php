@@ -206,6 +206,7 @@ class OrdemServicoService
                     'empresa_id'      => $os->empresa_id,
                     'cliente_id'      => $os->cliente_id,
                     'usuario_id'      => auth()->id(),
+                    'funcionario_id'  => $os->funcionario_id,
                     'numero'          => $this->vendaRepository->proximoNumero($os->empresa_id),
                     'data_venda'      => now()->toDateString(),
                     'subtotal'        => $os->subtotal,
@@ -217,15 +218,16 @@ class OrdemServicoService
                     'situacao'        => 'em_andamento',
                 ], $itens);
 
-                if (FormaPagamento::pagamentoIntegral($os->forma_pagamento, (int) $os->empresa_id)) {
-                    $this->vendaRepository->confirmar($venda->load('itens'));
-                }
-
+                // A OS precisa estar vinculada antes de confirmar: a comissão do técnico usa a regra de OS.
                 $os->update([
                     'situacao'       => 'faturada',
                     'venda_id'       => $venda->id,
                     'data_conclusao' => $os->data_conclusao ?? now()->toDateString(),
                 ]);
+
+                if (FormaPagamento::pagamentoIntegral($os->forma_pagamento, (int) $os->empresa_id)) {
+                    $this->vendaRepository->confirmar($venda->load('itens'));
+                }
 
                 return $venda;
             });

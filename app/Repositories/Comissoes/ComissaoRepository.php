@@ -11,7 +11,7 @@ class ComissaoRepository
     public function index(Request $request)
     {
         $query = $this->filtrar($request)
-            ->with(['funcionario', 'venda.cliente'])
+            ->with(['funcionario', 'venda.cliente', 'venda.ordemServico'])
             ->orderByDesc('id');
 
         return $query->paginate(20);

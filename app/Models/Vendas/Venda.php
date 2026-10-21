@@ -9,6 +9,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfe;
+use App\Models\OrdensServico\OrdemServico;
 use App\Models\Usuarios\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -90,6 +91,11 @@ class Venda extends Model
     public function contasReceber()
     {
         return $this->hasMany(ContaReceber::class);
+    }
+
+    public function ordemServico()
+    {
+        return $this->hasOne(OrdemServico::class);
     }
 
     public function funcionario()

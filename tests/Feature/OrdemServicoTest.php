@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Comissoes\Comissao;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
+use App\Models\Funcionarios\Funcionario;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
+use App\Repositories\Vendas\VendaRepository;
 use App\Services\Orcamentos\OrcamentoService;
 use App\Services\OrdensServico\OrdemServicoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -274,10 +277,113 @@ class OrdemServicoTest extends TestCase
         $this->get(route('pdv.index'))->assertOk()->assertSee('pdv-pagamento', false)->assertSee('pdv-btn-finalizar', false);
     }
 
-    private function osComItens(string $forma): OrdemServico
+    public function test_comissao_do_tecnico_sobre_o_total_da_os(): void
+    {
+        $tecnico = $this->tecnico(geral: 5, os: 10, base: 'total');
+        $os = $this->osComItens('Dinheiro', $tecnico->id);
+
+        app(OrdemServicoService::class)->faturar($os);
+
+        $comissao = Comissao::firstOrFail();
+        $this->assertSame($tecnico->id, $comissao->funcionario_id);
+        $this->assertSame($tecnico->id, Venda::firstOrFail()->funcionario_id);
+        $this->assertEquals(10.0, (float) $comissao->percentual);
+        $this->assertEquals(400.0, (float) $comissao->base_calculo);
+        $this->assertEquals(40.0, (float) $comissao->valor);
+    }
+
+    public function test_comissao_do_tecnico_so_sobre_servicos_rateia_o_desconto(): void
+    {
+        $tecnico = $this->tecnico(geral: 5, os: 10, base: 'servicos');
+        $os = $this->osComItens('Dinheiro', $tecnico->id);
+        $os->update(['desconto' => 40, 'total' => 360]);
+
+        app(OrdemServicoService::class)->faturar($os);
+
+        $comissao = Comissao::firstOrFail();
+        // serviço de 100 sobre subtotal 400; total 360 => base 90
+        $this->assertEquals(90.0, (float) $comissao->base_calculo);
+        $this->assertEquals(9.0, (float) $comissao->valor);
+    }
+
+    public function test_os_a_prazo_gera_comissao_de_os_quando_a_venda_e_confirmada(): void
+    {
+        $tecnico = $this->tecnico(geral: 5, os: 10, base: 'total');
+        $os = $this->osComItens('Boleto', $tecnico->id);
+
+        app(OrdemServicoService::class)->faturar($os);
+        $this->assertSame(0, Comissao::count());
+
+        app(VendaRepository::class)->confirmar(Venda::firstOrFail());
+
+        $this->assertEquals(40.0, (float) Comissao::firstOrFail()->valor);
+    }
+
+    public function test_venda_comum_continua_usando_a_comissao_geral(): void
+    {
+        $tecnico = $this->tecnico(geral: 5, os: 10, base: 'servicos');
+        $venda = app(VendaRepository::class)->store([
+            'empresa_id' => $this->empresa->id,
+            'funcionario_id' => $tecnico->id,
+            'numero' => '000001',
+            'data_venda' => now()->toDateString(),
+            'subtotal' => 400,
+            'total' => 400,
+            'forma_pagamento' => 'Dinheiro',
+            'situacao' => 'em_andamento',
+        ], [[
+            'produto_id' => $this->servico->id,
+            'produto_nome' => 'Mão de obra troca de tela',
+            'quantidade' => 4,
+            'preco_unitario' => 100,
+            'total' => 400,
+        ]]);
+
+        app(VendaRepository::class)->confirmar($venda);
+
+        $comissao = Comissao::firstOrFail();
+        $this->assertEquals(5.0, (float) $comissao->percentual);
+        $this->assertEquals(20.0, (float) $comissao->valor);
+    }
+
+    public function test_cadastro_do_funcionario_salva_regra_de_os(): void
+    {
+        $this->post(route('funcionario.store'), [
+            'empresa_id' => $this->empresa->id,
+            'nome' => 'Técnico Novo',
+            'percentual_comissao' => '3.00',
+            'comissao_os_percentual' => '12.50',
+            'comissao_os_base' => 'servicos',
+        ])->assertSessionHasNoErrors();
+
+        $funcionario = Funcionario::where('nome', 'Técnico Novo')->firstOrFail();
+        $this->assertEquals(12.5, (float) $funcionario->comissao_os_percentual);
+        $this->assertSame('servicos', $funcionario->comissao_os_base);
+
+        $this->post(route('funcionario.store'), [
+            'empresa_id' => $this->empresa->id,
+            'nome' => 'Sem regra',
+            'comissao_os_base' => 'qualquer',
+        ])->assertSessionHasErrors('comissao_os_base');
+    }
+
+    private function tecnico(float $geral, float $os, string $base): Funcionario
+    {
+        return Funcionario::create([
+            'empresa_id' => $this->empresa->id,
+            'nome' => 'Técnico',
+            'ativo' => true,
+            'percentual_comissao' => $geral,
+            'comissao_os_percentual' => $os,
+            'comissao_os_base' => $base,
+        ]);
+    }
+
+    private function osComItens(string $forma, ?int $tecnicoId = null): OrdemServico
     {
         $os = OrdemServico::create([
             'empresa_id' => $this->empresa->id,
+            'funcionario_id' => $tecnicoId,
             'numero' => '000001',
             'data_abertura' => now()->toDateString(),
             'equipamento' => 'Celular',

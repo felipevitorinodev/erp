@@ -67,6 +67,11 @@ Assistência técnica genérica: cliente, técnico (funcionário), abertura/prev
 - Rotas (prefixo `ordem-servico`, nomes `ordem-servico.*`): `index`, `create` (`/nova`), `store`, `show` (`{os}/ver`), `edit`, `update`, `situacao` (POST), `faturar` (POST), `cancelar` (POST), `destroy` (DELETE), `pdf`.
 - Tabelas novas `ordens_servico` e `ordem_servico_itens` (migration `2026_10_21_000002`).
 
-❓ A venda gerada pela OS não leva o técnico como vendedor (`funcionario_id` vazio), então **não gera comissão**. Se o técnico deve comissionar, é só passar `funcionario_id` no `faturar()`.
+### Comissão do técnico (respondido: deve gerar e ser configurável por técnico)
+- A venda gerada ao faturar leva o técnico da OS em `vendas.funcionario_id`, e a comissão nasce quando a venda é confirmada (na hora se a forma for à vista; depois, se for a prazo).
+- No cadastro do funcionário há dois campos novos: **Comissão em OS (%)** e **Base da comissão em OS**. A base pode ser "Total da OS (peças + serviços)" ou "Só serviços (mão de obra)". "Só serviços" soma os itens com produto `tipo = 2` e rateia o desconto/acréscimo geral pela proporção total/subtotal.
+- Vendas comuns continuam usando a "Comissão (%)" geral sobre o total. A regra é decidida em `VendaRepository::calcularComissao()` por existir OS com `venda_id` daquela venda. Edição de venda confirmada recalcula a comissão pendente pela mesma regra.
+- `comissoes.base_calculo` guarda a base usada; a tela de comissões mostra a coluna "Base" e a OS de origem.
+- Migration `2026_10_21_000003`: `funcionarios.comissao_os_percentual` (default 0, **preenchido com o percentual geral para quem já existe**), `funcionarios.comissao_os_base` (default `total`), `comissoes.base_calculo` (nullable). Comissões antigas ficam com base vazia ("—").
 
 Testes: `tests/Feature/OrdemServicoTest.php` (10 testes: abertura, totais, faturar à vista/a prazo/sem itens/duas vezes, bloqueio após encerrar, situação, orçamento → OS, isolamento e permissão, telas e PDF).

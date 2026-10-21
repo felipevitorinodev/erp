@@ -19,6 +19,7 @@ class Comissao extends Model
         'venda_id',
         'funcionario_id',
         'percentual',
+        'base_calculo',
         'valor',
         'situacao',
         'data_pagamento',
@@ -26,6 +27,7 @@ class Comissao extends Model
 
     protected $casts = [
         'percentual'      => 'decimal:2',
+        'base_calculo'    => 'decimal:2',
         'valor'           => 'decimal:2',
         'data_pagamento'  => 'date',
     ];

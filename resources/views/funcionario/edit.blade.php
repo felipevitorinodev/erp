@@ -136,6 +136,27 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Comissão em OS (%)</label>
+                        @include('components.input-numeric', [
+                            'name' => 'comissao_os_percentual',
+                            'value' => old('comissao_os_percentual', $funcionario->comissao_os_percentual ?? '0'),
+                            'class' => $errors->has('comissao_os_percentual') ? 'is-invalid' : '',
+                            'decimals' => 2
+                        ])
+                        @error('comissao_os_percentual')<span class="form-error">{{ $message }}</span>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Base da comissão em OS</label>
+                        @php $baseOs = old('comissao_os_base', $funcionario->comissao_os_base ?? 'total'); @endphp
+                        <select name="comissao_os_base" class="form-control @error('comissao_os_base') is-invalid @enderror">
+                            <option value="total" {{ $baseOs === 'total' ? 'selected' : '' }}>Total da OS (peças + serviços)</option>
+                            <option value="servicos" {{ $baseOs === 'servicos' ? 'selected' : '' }}>Só serviços (mão de obra)</option>
+                        </select>
+                        @error('comissao_os_base')<span class="form-error">{{ $message }}</span>@enderror
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Tipo de Contrato</label>
                         <select name="tipo_contrato" class="form-control @error('tipo_contrato') is-invalid @enderror">
                             <option value="">Selecione</option>

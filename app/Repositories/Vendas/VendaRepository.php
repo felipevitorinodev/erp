@@ -10,6 +10,7 @@ use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Nfe;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Estoque\MovimentacaoEstoque;
+use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
@@ -232,25 +233,63 @@ class VendaRepository
             ->where('empresa_id', $venda->empresa_id)
             ->first();
 
-        if (!$funcionario) {
+        $calculo = $funcionario ? $this->calcularComissao($venda, $funcionario) : null;
+
+        if (!$calculo) {
             return;
         }
-
-        $percentual = (float) $funcionario->percentual_comissao;
-        if ($percentual <= 0) {
-            return;
-        }
-
-        $valor = round((float) $venda->total * ($percentual / 100), 2);
 
         Comissao::create([
             'empresa_id'     => $venda->empresa_id,
             'venda_id'       => $venda->id,
             'funcionario_id' => $funcionario->id,
-            'percentual'     => $percentual,
-            'valor'          => $valor,
+            ...$calculo,
             'situacao'       => 'pendente',
         ]);
+    }
+
+    /**
+     * Venda comum: percentual geral do funcionário sobre o total.
+     * Venda gerada por OS: percentual de OS do técnico, sobre o total ou só sobre os serviços
+     * (produtos tipo 2), com desconto/acréscimo geral rateado proporcionalmente.
+     *
+     * @return array{percentual: float, base_calculo: float, valor: float}|null
+     */
+    private function calcularComissao(Venda $venda, Funcionario $funcionario): ?array
+    {
+        $daOrdemServico = OrdemServico::where('venda_id', $venda->id)->exists();
+
+        $percentual = (float) ($daOrdemServico ? $funcionario->comissao_os_percentual : $funcionario->percentual_comissao);
+        if ($percentual <= 0) {
+            return null;
+        }
+
+        $base = (float) $venda->total;
+
+        if ($daOrdemServico && $funcionario->comissao_os_base === 'servicos') {
+            $itens = VendaItem::where('venda_id', $venda->id)->get();
+            $servicos = Produto::withTrashed()
+                ->where('empresa_id', $venda->empresa_id)
+                ->whereIn('id', $itens->pluck('produto_id')->filter())
+                ->where('tipo', 2)
+                ->pluck('id')
+                ->all();
+
+            $totalServicos = (float) $itens->whereIn('produto_id', $servicos)->sum('total');
+            $subtotal = (float) $venda->subtotal;
+            $base = $subtotal > 0 ? $totalServicos * ((float) $venda->total / $subtotal) : 0;
+        }
+
+        $base = round($base, 2);
+        if ($base <= 0) {
+            return null;
+        }
+
+        return [
+            'percentual'   => $percentual,
+            'base_calculo' => $base,
+            'valor'        => round($base * ($percentual / 100), 2),
+        ];
     }
 
     /**
@@ -298,21 +337,19 @@ class VendaRepository
             ->where('empresa_id', $venda->empresa_id)
             ->first();
 
-        if (!$funcionario || (float) $funcionario->percentual_comissao <= 0) {
+        $calculo = $funcionario ? $this->calcularComissao($venda, $funcionario) : null;
+
+        if (!$calculo) {
             if ($comissao && $comissao->situacao === 'pendente') {
                 $comissao->delete();
             }
             return;
         }
 
-        $percentual = (float) $funcionario->percentual_comissao;
-        $valor = round((float) $venda->total * ($percentual / 100), 2);
-
         if ($comissao) {
             $comissao->update([
                 'funcionario_id' => $funcionario->id,
-                'percentual'     => $percentual,
-                'valor'          => $valor,
+                ...$calculo,
             ]);
             return;
         }
@@ -321,8 +358,7 @@ class VendaRepository
             'empresa_id'     => $venda->empresa_id,
             'venda_id'       => $venda->id,
             'funcionario_id' => $funcionario->id,
-            'percentual'     => $percentual,
-            'valor'          => $valor,
+            ...$calculo,
             'situacao'       => 'pendente',
         ]);
     }
