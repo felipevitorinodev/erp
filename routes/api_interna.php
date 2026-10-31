@@ -9,6 +9,8 @@ use App\Models\Grupos\Grupo;
 use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
 use App\Models\Vendas\Venda;
+use App\Services\Nfes\NfeVinculoFiscal;
+use App\Support\NaturezasOperacao;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +28,7 @@ Route::middleware('auth')->group(function () {
         }
 
         return $query->orderBy('nome')
-            ->select('id', 'nome', 'cpf', 'cnpj')
+            ->select('id', 'nome', 'cpf', 'cnpj', 'estado', 'inscricao_estadual')
             ->limit($limit)
             ->get();
     })->name('api.clientes.busca');
@@ -84,8 +86,17 @@ Route::middleware('auth')->group(function () {
             });
         }
 
+        $empresaBusca = Empresa::query()->find(auth()->user()->empresa_id);
+        $vinculo = $empresaBusca
+            ? NfeVinculoFiscal::daEmpresa($empresaBusca)->usarContexto([
+                'operacao' => request('operacao'),
+                'uf_destino' => request('uf_destino'),
+                'tipo_destinatario' => request('tipo_destinatario'),
+            ])
+            : null;
+
         return $query->orderBy('nome')
-            ->with('unidadeMedida:id,sigla')
+            ->with(['unidadeMedida:id,sigla', 'perfilFiscal:id,cfop,csosn,cst_pis,cst_cofins'])
             ->select(
                 'id',
                 'nome',
@@ -100,14 +111,30 @@ Route::middleware('auth')->group(function () {
                 'cst_icms',
                 'cst_pis',
                 'cst_cofins',
+                'aliquota_icms',
+                'aliquota_pis',
+                'aliquota_cofins',
                 'unidade_medida_id',
                 'codigo_barras',
                 'tipo',
-                'controla_estoque'
+                'controla_estoque',
+                'perfil_fiscal_id'
             )
             ->limit($limit)
             ->get()
-            ->map(function (Produto $produto) {
+            ->map(function (Produto $produto) use ($vinculo) {
+                $semExcecao = (object) [
+                    'cfop' => null,
+                    'csosn' => null,
+                    'cst_pis' => null,
+                    'cst_cofins' => null,
+                    'ncm' => $produto->ncm,
+                ];
+                $cfop = $vinculo?->cfop($semExcecao, $produto);
+                $csosn = $vinculo?->csosn($semExcecao, $produto);
+                $pis = $vinculo?->cst($semExcecao, $produto, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao');
+                $cofins = $vinculo?->cst($semExcecao, $produto, 'cst_cofins', 'cst_cofins', 'cst_cofins', 'nfe_cst_cofins_padrao');
+
                 return [
                     'id' => $produto->id,
                     'nome' => $produto->nome,
@@ -126,6 +153,15 @@ Route::middleware('auth')->group(function () {
                     'ean' => $produto->codigo_barras,
                     'tipo' => $produto->tipo,
                     'controla_estoque' => (bool) $produto->controla_estoque,
+                    'cfop_sugerido' => $cfop['valor'] ?? null,
+                    'csosn_sugerido' => $csosn['valor'] ?? null,
+                    'cst_pis_sugerido' => $pis['valor'] ?? null,
+                    'cst_cofins_sugerido' => $cofins['valor'] ?? null,
+                    'vinculo_origem' => $cfop['origem'] ?? null,
+                    'vinculo_motivo' => $cfop['motivo'] ?? null,
+                    'aliquota_icms' => $produto->aliquota_icms,
+                    'aliquota_pis' => $produto->aliquota_pis,
+                    'aliquota_cofins' => $produto->aliquota_cofins,
                 ];
             });
     })->name('api.produtos.busca');
@@ -134,13 +170,22 @@ Route::middleware('auth')->group(function () {
         $empresaId = auth()->user()->empresa_id;
         $codigo = trim($codigo);
 
-        $produto = Produto::with('unidadeMedida')
+        $produto = Produto::with('unidadeMedida:id,sigla')
             ->where('empresa_id', $empresaId)
             ->where('ativo', true)
             ->where(function ($q) use ($codigo) {
                 $q->where('codigo', $codigo)->orWhere('codigo_barras', $codigo);
             })
-            ->first();
+            ->first([
+                'id',
+                'nome',
+                'codigo',
+                'codigo_barras',
+                'preco_venda',
+                'estoque_atual',
+                'controla_estoque',
+                'unidade_medida_id',
+            ]);
 
         if (! $produto) {
             return response()->json(['encontrado' => false], 404);
@@ -234,7 +279,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/vendas/ultima', function () {
         $venda = Venda::where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id')
-            ->first();
+            ->first(['id', 'numero']);
 
         if (! $venda) {
             return response()->json(['id' => null, 'numero' => null]);
@@ -272,6 +317,10 @@ Route::middleware('auth')->group(function () {
             ->limit($limit)
             ->get();
     })->name('api.vendas.busca');
+
+    Route::get('/api/naturezas-operacao/busca', function () {
+        return NaturezasOperacao::buscar((string) request('q', ''));
+    })->name('api.naturezas-operacao.busca');
 
     Route::get('/api/formas-pagamento/busca', function () {
         $q = trim((string) request('q', ''));

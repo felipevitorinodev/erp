@@ -63,9 +63,13 @@
                                 <td data-label="Logradouro">{{ $empresa->logradouro }}</td>
                                 <td data-label="Uf">{{ $empresa->uf }}</td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                        <x-icon name="edit" />
-                                    </a>
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                <x-icon name="edit" />
+                                            </a>
+                                        </x-slot:editar>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

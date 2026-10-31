@@ -14,7 +14,7 @@ class ContaReceberRepository
 {
     public function index(?Request $request = null)
     {
-        $query = ContaReceber::with(['cliente', 'venda'])
+        $query = ContaReceber::with(['cliente:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -31,7 +31,7 @@ class ContaReceberRepository
             }
 
             if ($request->filled('data_vencimento')) {
-                $query->whereDate('data_vencimento', $request->data_vencimento);
+                $query->whereDataEntre('data_vencimento', $request->data_vencimento, $request->data_vencimento);
             }
         }
 

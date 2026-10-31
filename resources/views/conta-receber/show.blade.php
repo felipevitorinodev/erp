@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'Conta a Receber #' . $conta->id)
 @section('page_title', 'Conta a Receber #' . $conta->id)
@@ -46,82 +46,44 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Dados da Conta</span>
+    <x-ficha titulo="Dados da Conta">
+        <x-slot:status>
+            <x-badge-situacao tipo="conta" :valor="$conta->situacao" />
+        </x-slot:status>
+        <x-slot:resumo>
             <div>
-                @if ($conta->situacao === 'paga')
-                    <span class="badge badge--success">Paga</span>
-                @elseif($conta->situacao === 'parcial')
-                    <span class="badge badge--info">Parcial</span>
-                @elseif($conta->situacao === 'cancelada')
-                    <span class="badge badge--error">Cancelada</span>
-                @else
-                    <span class="badge badge--warning">Aberta</span>
-                @endif
+                <span>Valor</span>
+                <strong><x-moeda :valor="$conta->valor" /></strong>
             </div>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-3">
-                <div class="form-group">
-                    <label class="form-label">Descrição</label>
-                    <span>{{ $conta->descricao }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Cliente</label>
-                    <span>{{ $conta->cliente->nome ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Venda</label>
-                    <span>
-                        @if ($conta->venda)
-                            <a href="{{ route('venda.show', $conta->venda) }}">#{{ $conta->venda->numero }}</a>
-                        @else
-                            —
-                        @endif
-                    </span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Categoria</label>
-                    <span>{{ $conta->categoria->nome ?? '—' }}</span>
-                </div>
+            <div>
+                <span>Pago</span>
+                <strong><x-moeda :valor="$conta->valor_pago" /></strong>
             </div>
-            <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label class="form-label">Valor</label>
-                    <span>R$ {{ number_format($conta->valor, 2, ',', '.') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Valor Pago</label>
-                    <span>R$ {{ number_format($conta->valor_pago, 2, ',', '.') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Saldo</label>
-                    <span>R$ {{ number_format($conta->valor - $conta->valor_pago, 2, ',', '.') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Vencimento</label>
-                    <span>{{ $conta->data_vencimento->format('d/m/Y') }}</span>
-                </div>
+            <div>
+                <span>Saldo</span>
+                <strong><x-moeda :valor="$conta->valor - $conta->valor_pago" /></strong>
             </div>
-            <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label class="form-label">Data Pagamento</label>
-                    <span>{{ $conta->data_pagamento ? $conta->data_pagamento->format('d/m/Y') : '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Forma de Pagamento</label>
-                    <span>{{ $conta->forma_pagamento ?? '—' }}</span>
-                </div>
+            <div>
+                <span>Vencimento</span>
+                <strong>{{ $conta->data_vencimento->format('d/m/Y') }}</strong>
             </div>
-            @if ($conta->observacoes)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Observações</label>
-                    <span>{{ $conta->observacoes }}</span>
-                </div>
+        </x-slot:resumo>
+        <x-ficha-campo label="Descrição">{{ $conta->descricao }}</x-ficha-campo>
+        <x-ficha-campo label="Cliente">{{ $conta->cliente->nome ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Venda">
+            @if ($conta->venda)
+                <a href="{{ route('venda.show', $conta->venda) }}">#{{ $conta->venda->numero }}</a>
+            @else
+                —
             @endif
-        </div>
-    </div>
+        </x-ficha-campo>
+        <x-ficha-campo label="Categoria">{{ $conta->categoria->nome ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Data do pagamento">{{ $conta->data_pagamento ? $conta->data_pagamento->format('d/m/Y') : '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Forma de pagamento">{{ $conta->forma_pagamento ?? '—' }}</x-ficha-campo>
+        @if ($conta->observacoes)
+            <x-ficha-campo label="Observações" largo class="ficha__item--texto">{{ $conta->observacoes }}</x-ficha-campo>
+        @endif
+    </x-ficha>
 
     @if ($conta->baixas->isNotEmpty())
         <div class="card" style="margin-top:1rem;">

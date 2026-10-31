@@ -52,11 +52,6 @@
     </div>
 
     <div class="pdv-wrap" id="pdv-wrap">
-        <div class="pdv-alert-erro alert alert--error" id="pdv-alert-erro" role="alert">
-            <span id="pdv-alert-erro-msg"></span>
-            <button type="button" class="btn btn--ghost btn--sm" id="pdv-alert-erro-fechar" aria-label="Fechar">✕</button>
-        </div>
-
         <div class="pdv-esquerda">
             <div class="pdv-busca">
                 <div class="pdv-busca__input-wrap">
@@ -152,8 +147,6 @@
                 <button type="button" class="btn btn--ghost btn--sm" data-pag-fechar>Voltar <kbd class="pdv-kbd">Esc</kbd></button>
             </div>
 
-            <div class="pdv-alert-erro alert alert--error" id="pdv-pag-erro" role="alert"></div>
-
             <div class="pdv-pag__corpo">
                 <div class="pdv-pag__formas">
                     <div class="pdv-pagamento__topo">
@@ -222,6 +215,14 @@
                     </div>
 
                     <p class="pdv-pag__cliente">Cliente: <strong id="pdv-pag-cliente">Consumidor Final</strong></p>
+                    @if ($emitirNfce)
+                        <div class="form-group" style="margin-top: .75rem;">
+                            <label class="form-label" for="pdv-nfce-documento">CPF ou CNPJ na NFC-e</label>
+                            <input type="tel" id="pdv-nfce-documento" class="form-control" inputmode="numeric"
+                                   autocomplete="off" maxlength="18" placeholder="Opcional abaixo de R$ 500,00">
+                            <small class="text-muted">Na Paraíba, a partir de R$ 500,00 o documento é obrigatório.</small>
+                        </div>
+                    @endif
                     <p class="pdv-pag__aviso" id="pdv-pag-aviso" hidden>
                         Venda a prazo sem cliente identificado: a conta a receber ficará sem cliente. Informe o cliente (F3) se possível.
                     </p>
@@ -232,7 +233,7 @@
                 <button type="button" class="btn btn--ghost" data-pag-fechar>Voltar aos itens</button>
                 <button type="button" class="pdv-btn-finalizar pdv-pag__confirmar" id="pdv-btn-confirmar">
                     <span class="pdv-btn-finalizar__textos">
-                        <span class="pdv-btn-finalizar__label">Confirmar venda</span>
+                        <span class="pdv-btn-finalizar__label">{{ $emitirNfce ? 'Confirmar e emitir NFC-e' : 'Confirmar venda' }}</span>
                         <span class="pdv-btn-finalizar__forma" id="pdv-btn-finalizar-forma">{{ $formasPagamento->first()->nome ?? 'Sem pagamento' }}</span>
                     </span>
                     <span class="pdv-btn-finalizar__valor" id="pdv-btn-confirmar-valor">R$ 0,00</span>
@@ -279,7 +280,9 @@
             <p class="pdv-sucesso__valor" id="pdv-sucesso-total">Total: R$ 0,00</p>
             <p class="pdv-sucesso__numero" id="pdv-sucesso-numero">Nº —</p>
             <p class="pdv-sucesso__troco" id="pdv-sucesso-troco" hidden></p>
+            <p class="pdv-sucesso__nfce" id="pdv-sucesso-nfce" hidden></p>
             <div class="pdv-sucesso__acoes">
+                <a href="#" class="btn btn--primary pdv-sucesso__btn" id="pdv-link-nfce" hidden target="_blank" rel="noopener">Imprimir NFC-e</a>
                 <button type="button" class="btn btn--primary pdv-sucesso__btn" id="pdv-btn-nova-venda">
                     Nova Venda <kbd class="pdv-kbd pdv-kbd--on-dark">N</kbd>
                 </button>
@@ -305,6 +308,7 @@
             vendaShowBase: @json(url('/venda')),
         },
         dataHoje: @json(date('Y-m-d')),
+        emitirNfce: @json($emitirNfce),
     };
 </script>
 <script src="{{ asset('js/pdv.js') }}?v={{ filemtime(public_path('js/pdv.js')) }}"></script>

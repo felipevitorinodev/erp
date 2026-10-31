@@ -14,89 +14,79 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('relatorio.produtos-mais-vendidos') }}" class="form-grid form-grid--col-3">
-                <div class="form-group">
-                    <label class="form-label">Data início</label>
-                    <input type="date" name="data_inicio" class="form-control" value="{{ $filtros['data_inicio'] }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data fim</label>
-                    <input type="date" name="data_fim" class="form-control" value="{{ $filtros['data_fim'] }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Grupo</label>
-                    <select name="grupo_id" class="form-control">
-                        <option value="">— Todos —</option>
-                        @foreach($grupos ?? [] as $grupo)
-                            <option value="{{ $grupo->id }}"
-                                {{ (string) ($filtros['grupo_id'] ?? '') === (string) $grupo->id ? 'selected' : '' }}>
-                                {{ $grupo->nome }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ordenar por</label>
-                    <select name="ordenar" class="form-control">
-                        <option value="qtd" {{ ($filtros['ordenar'] ?? 'qtd') === 'qtd' ? 'selected' : '' }}>Quantidade</option>
-                        <option value="valor" {{ ($filtros['ordenar'] ?? '') === 'valor' ? 'selected' : '' }}>Valor</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Nome ou código">
-                </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('relatorio.produtos-mais-vendidos') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-filtros :action="route('relatorio.produtos-mais-vendidos')">
+        <x-filtro-periodo :inicio="$filtros['data_inicio']" :fim="$filtros['data_fim']" />
+        <x-filtro-campo
+            label="Grupo"
+            name="grupo_id"
+            type="select"
+            :value="$filtros['grupo_id'] ?? ''"
+            :options="($grupos ?? collect())->pluck('nome', 'id')"
+            vazio="— Todos —"
+        />
+        <x-filtro-campo
+            label="Ordenar por"
+            name="ordenar"
+            type="select"
+            :value="$filtros['ordenar'] ?? 'qtd'"
+            :options="['qtd' => 'Quantidade', 'valor' => 'Valor']"
+            :vazio="false"
+        />
+        <x-filtro-campo
+            label="Busca"
+            name="busca"
+            :value="$filtros['busca'] ?? ''"
+            placeholder="Nome ou código"
+        />
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding:0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
-                    <thead>
-                        <tr>
-                            <th>Posição</th>
-                            <th>Produto</th>
-                            <th>Código</th>
-                            <th class="col-num">Qtd. Vendida</th>
-                            <th class="col-num">Valor Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($produtos as $produto)
-                            <tr>
-                                <td data-label="Posição">{{ $produtos->firstItem() + $loop->index }}º</td>
-                                <td data-label="Produto">{{ $produto->produto_nome }}</td>
-                                <td data-label="Código">{{ $produto->produto_codigo ?: '—' }}</td>
-                                <td data-label="Qtd. Vendida" class="col-num">{{ number_format($produto->qtd_total, 2, ',', '.') }}</td>
-                                <td data-label="Valor Total" class="col-num">R$ {{ number_format($produto->valor_total, 2, ',', '.') }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted" style="padding:2rem;">
-                                    Nenhum produto vendido no período.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $produtos->links() }}
-        </div>
-    </div>
+    <x-relatorio-kpis>
+        <x-relatorio-kpi
+            label="Valor vendido"
+            :valor="'R$ ' . number_format($totais['valor_total'], 2, ',', '.')"
+            detalhe="Somente vendas confirmadas"
+            tom="success"
+            icone="trending-up"
+            destaque
+        />
+        <x-relatorio-kpi
+            label="Quantidade vendida"
+            :valor="number_format($totais['qtd_total'], 2, ',', '.')"
+            detalhe="Unidades somadas"
+            icone="package"
+        />
+        <x-relatorio-kpi
+            label="Produtos distintos"
+            :valor="number_format($totais['produtos'], 0, ',', '.')"
+            detalhe="Com venda no período"
+            tom="accent"
+            icone="layers"
+        />
+    </x-relatorio-kpis>
+
+    <x-tabela-card :paginator="$produtos">
+        <thead>
+            <tr>
+                <th>Posição</th>
+                <th>Produto</th>
+                <th>Código</th>
+                <th class="col-num">Qtd. Vendida</th>
+                <th class="col-num">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($produtos as $produto)
+                <tr>
+                    <td data-label="Posição">{{ $produtos->firstItem() + $loop->index }}º</td>
+                    <td data-label="Produto">{{ $produto->produto_nome }}</td>
+                    <td data-label="Código">{{ $produto->produto_codigo ?: '—' }}</td>
+                    <td data-label="Qtd. Vendida" class="col-num">{{ number_format($produto->qtd_total, 2, ',', '.') }}</td>
+                    <td data-label="Valor Total" class="col-num"><x-moeda :valor="$produto->valor_total" /></td>
+                </tr>
+            @empty
+                <x-tabela-vazia :colspan="5">Nenhum produto vendido no período.</x-tabela-vazia>
+            @endforelse
+        </tbody>
+    </x-tabela-card>
 
 @endsection

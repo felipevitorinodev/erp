@@ -14,96 +14,87 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('relatorio.vendas') }}" class="form-grid form-grid--col-3">
-                <div class="form-group">
-                    <label class="form-label">Data início</label>
-                    <input type="date" name="data_inicio" class="form-control" value="{{ $filtros['data_inicio'] }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data fim</label>
-                    <input type="date" name="data_fim" class="form-control" value="{{ $filtros['data_fim'] }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <select name="situacao" class="form-control">
-                        <option value="">— Todas —</option>
-                        @foreach(['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'] as $valor => $label)
-                            <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Forma de pagamento</label>
-                    <input type="text" name="forma_pagamento" class="form-control" value="{{ $filtros['forma_pagamento'] ?? '' }}" placeholder="Forma de pagamento">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}" placeholder="Número ou cliente">
-                </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('relatorio.vendas') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-filtros :action="route('relatorio.vendas')">
+        <x-filtro-periodo :inicio="$filtros['data_inicio']" :fim="$filtros['data_fim']" />
+        <x-filtro-campo
+            label="Situação"
+            name="situacao"
+            type="select"
+            :value="$filtros['situacao'] ?? ''"
+            :options="['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada']"
+        />
+        <x-filtro-campo
+            label="Forma de pagamento"
+            name="forma_pagamento"
+            :value="$filtros['forma_pagamento'] ?? ''"
+            placeholder="Forma de pagamento"
+        />
+        <x-filtro-campo
+            label="Busca"
+            name="busca"
+            :value="$filtros['busca'] ?? ''"
+            placeholder="Número ou cliente"
+        />
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding:0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
-                    <thead>
-                        <tr>
-                            <th>Número</th>
-                            <th>Cliente</th>
-                            <th>Data</th>
-                            <th>Forma de Pagamento</th>
-                            <th class="col-num">Total</th>
-                            <th>Situação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($vendas as $venda)
-                            <tr>
-                                <td data-label="Número">#{{ $venda->numero }}</td>
-                                <td data-label="Cliente">{{ $venda->cliente->nome ?? '— Consumidor Final —' }}</td>
-                                <td data-label="Data">{{ $venda->data_venda->format('d/m/Y') }}</td>
-                                <td data-label="Forma de Pagamento">{{ $venda->forma_pagamento ?? '—' }}</td>
-                                <td data-label="Total" class="col-num">R$ {{ number_format($venda->total, 2, ',', '.') }}</td>
-                                <td data-label="Situação">
-                                    @if($venda->situacao === 'confirmada')
-                                        <span class="badge badge--success">Confirmada</span>
-                                    @elseif($venda->situacao === 'cancelada')
-                                        <span class="badge badge--error">Cancelada</span>
-                                    @else
-                                        <span class="badge badge--warning">Em andamento</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted" style="padding:2rem;">
-                                    Nenhuma venda encontrada no período.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer" style="flex-wrap:wrap; gap:0.75rem;">
-            <div style="flex:1; min-width:200px;">
-                {{ $vendas->links() }}
-            </div>
-            <span class="text-bold">Total confirmadas: R$ {{ number_format($total_confirmadas, 2, ',', '.') }}</span>
-        </div>
-    </div>
+    <x-relatorio-kpis>
+        <x-relatorio-kpi
+            label="Faturamento"
+            :valor="'R$ ' . number_format($totais['valor_confirmadas'], 2, ',', '.')"
+            :detalhe="$totais['qtd_confirmadas'] . ($totais['qtd_confirmadas'] === 1 ? ' venda confirmada' : ' vendas confirmadas')"
+            tom="success"
+            icone="trending-up"
+            destaque
+        />
+        <x-relatorio-kpi
+            label="Ticket médio"
+            :valor="'R$ ' . number_format($totais['ticket_medio'], 2, ',', '.')"
+            detalhe="Por venda confirmada"
+            icone="bar-chart"
+        />
+        <x-relatorio-kpi
+            label="Em andamento"
+            :valor="'R$ ' . number_format($totais['valor_em_andamento'], 2, ',', '.')"
+            :detalhe="$totais['qtd_em_andamento'] . ($totais['qtd_em_andamento'] === 1 ? ' venda' : ' vendas')"
+            tom="warning"
+            icone="history"
+        />
+        <x-relatorio-kpi
+            label="Canceladas"
+            :valor="'R$ ' . number_format($totais['valor_canceladas'], 2, ',', '.')"
+            :detalhe="$totais['qtd_canceladas'] . ($totais['qtd_canceladas'] === 1 ? ' venda' : ' vendas')"
+            tom="danger"
+            icone="x-circle"
+        />
+    </x-relatorio-kpis>
+
+    <x-tabela-card :paginator="$vendas">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Forma de Pagamento</th>
+                <th class="col-num">Total</th>
+                <th>Situação</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($vendas as $venda)
+                <tr>
+                    <td data-label="Número">#{{ $venda->numero }}</td>
+                    <td data-label="Cliente">{{ $venda->cliente->nome ?? '— Consumidor Final —' }}</td>
+                    <td data-label="Data">{{ $venda->data_venda->format('d/m/Y') }}</td>
+                    <td data-label="Forma de Pagamento">{{ $venda->forma_pagamento ?? '—' }}</td>
+                    <td data-label="Total" class="col-num"><x-moeda :valor="$venda->total" /></td>
+                    <td data-label="Situação">
+                        <x-badge-situacao tipo="venda" :valor="$venda->situacao" />
+                    </td>
+                </tr>
+            @empty
+                <x-tabela-vazia :colspan="6">Nenhuma venda encontrada no período.</x-tabela-vazia>
+            @endforelse
+        </tbody>
+    </x-tabela-card>
 
 @endsection

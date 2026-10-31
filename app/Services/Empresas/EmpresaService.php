@@ -4,11 +4,11 @@ namespace App\Services\Empresas;
 
 use App\Http\Requests\Empresas\EmpresaRequest;
 use App\Models\Empresas\Empresa;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Repositories\Empresas\EmpresaRepository;
+use App\Repositories\Nfes\NfeNumeracaoRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use NFePHP\Common\Certificate;
 use RuntimeException;
@@ -17,7 +17,8 @@ use Throwable;
 class EmpresaService
 {
     public function __construct(
-        protected EmpresaRepository $empresaRepository
+        protected EmpresaRepository $empresaRepository,
+        protected NfeNumeracaoRepository $numeracao,
     ) {}
 
     public function index(Request $request)
@@ -70,13 +71,25 @@ class EmpresaService
         $this->autorizarEmpresa($empresa);
 
         $dados = $request->validated();
-        unset($dados['certificado_pfx'], $dados['certificado_senha'], $dados['confirmar_ambiente']);
+        unset(
+            $dados['certificado_pfx'],
+            $dados['certificado_senha'],
+            $dados['confirmar_ambiente'],
+            $dados['nfce_csc_homologacao'],
+            $dados['nfce_id_csc_homologacao'],
+            $dados['nfce_csc_producao'],
+            $dados['nfce_id_csc_producao'],
+        );
+
+        if (filled($dados['nfce_serie'] ?? null)) {
+            $dados['nfce_serie'] = str_pad((string) $dados['nfce_serie'], 3, '0', STR_PAD_LEFT);
+        }
 
         if (isset($dados['nfe_ambiente'])
             && (int) $dados['nfe_ambiente'] !== (int) ($empresa->nfe_ambiente ?: 2)
             && ! $request->boolean('confirmar_ambiente')) {
             return back()
-                ->withInput()
+                ->withInput($request->except(Empresa::segredosForaDaSessao()))
                 ->withErrors(['confirmar_ambiente' => 'Marque a confirmação para alterar o ambiente da NF-e.']);
         }
 
@@ -84,39 +97,27 @@ class EmpresaService
             $this->aplicarCertificado($request, $empresa, $dados);
         } catch (RuntimeException $e) {
             return back()
-                ->withInput()
+                ->withInput($request->except(Empresa::segredosForaDaSessao()))
                 ->with('error', $e->getMessage());
         }
 
+        $this->aplicarCscNfce($request, $empresa);
         $this->empresaRepository->update($empresa, $dados);
+        $this->alinharSequenciaExibida($empresa);
 
         return redirect()
             ->route('empresa.index')
             ->with('success', 'Empresa editada com sucesso.');
     }
 
-    public function proximoNumeronNfe(Empresa $empresa): string
+    public function proximoNumeronNfe(Empresa $empresa, int $modelo = Nfe::MODELO_NFE): string
     {
-        return DB::transaction(function () use ($empresa) {
-            $registro = Empresa::query()
-                ->where('id', $empresa->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        return $this->numeracao->proximo($empresa, $modelo);
+    }
 
-            $maiorUsado = (int) Nfe::withTrashed()
-                ->where('empresa_id', $registro->id)
-                ->where('ambiente', (int) ($registro->nfe_ambiente ?: 2))
-                ->where('serie', $registro->nfe_serie ?: '001')
-                ->max('numero');
-
-            $sequencia = max((int) ($registro->nfe_sequencia ?: 1), $maiorUsado + 1);
-            $numero = str_pad((string) $sequencia, 9, '0', STR_PAD_LEFT);
-
-            $registro->nfe_sequencia = $sequencia + 1;
-            $registro->save();
-
-            return $numero;
-        });
+    private function alinharSequenciaExibida(Empresa $empresa): void
+    {
+        $this->numeracao->alinharSequenciaExibida($empresa);
     }
 
     private function aplicarCertificado(EmpresaRequest $request, Empresa $empresa, array &$dados): void
@@ -172,6 +173,22 @@ class EmpresaService
 
         if ($senhaInformada !== '') {
             $dados['certificado_senha'] = Crypt::encryptString($senhaInformada);
+        }
+    }
+
+    private function aplicarCscNfce(EmpresaRequest $request, Empresa $empresa): void
+    {
+        foreach (['homologacao', 'producao'] as $ambiente) {
+            $csc = trim((string) $request->input('nfce_csc_'.$ambiente, ''));
+            $id = preg_replace('/\D/', '', (string) $request->input('nfce_id_csc_'.$ambiente, '')) ?? '';
+
+            if ($csc !== '') {
+                $empresa->{'nfce_csc_'.$ambiente} = Crypt::encryptString($csc);
+            }
+
+            if ($id !== '') {
+                $empresa->{'nfce_id_csc_'.$ambiente} = str_pad($id, 6, '0', STR_PAD_LEFT);
+            }
         }
     }
 

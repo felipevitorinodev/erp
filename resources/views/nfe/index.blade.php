@@ -4,10 +4,16 @@
 @section('page_title', 'NF-e Emitidas')
 
 @section('page_actions')
+    <a href="{{ route('nfe.inutilizar') }}" class="btn btn--ghost btn--sm">Inutilizar numeração</a>
     <a href="{{ route('nfe.create') }}" class="btn btn--primary btn--sm">+ Nova NF-e</a>
 @endsection
 
 @section('content')
+
+    <div class="alert alert--warning" style="margin-bottom:1rem;">
+        Emissão atual: venda interna no Simples, sem destaque de imposto. Fora disso, a nota é recusada.
+        Com a SEFAZ indisponível, a emissão trava e o número não é consumido. Não há contingência SVC/EPEC.
+    </div>
 
     @if ($rascunhos->isNotEmpty())
         <div class="card" style="margin-bottom:1rem;">
@@ -102,16 +108,22 @@
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('nfe.show', $nfe) }}" class="btn btn--ghost btn--sm btn--icon"
-                                        title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if ($nfe->situacao === 'autorizada')
-                                        <a href="{{ route('nfe.danfe', $nfe) }}" target="_blank"
-                                            class="btn btn--ghost btn--sm" title="DANFE" aria-label="DANFE">
-                                            DANFE
-                                        </a>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:extra>
+                                            @if ($nfe->situacao === 'autorizada')
+                                                <a href="{{ route('nfe.danfe', $nfe) }}" target="_blank"
+                                                    class="btn btn--ghost btn--sm" title="DANFE" aria-label="DANFE">
+                                                    DANFE
+                                                </a>
+                                            @endif
+                                        </x-slot:extra>
+                                        <x-slot:ver>
+                                            <a href="{{ route('nfe.show', $nfe) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader
+                                                title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

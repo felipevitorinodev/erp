@@ -3,16 +3,20 @@
 namespace App\Services\Vendas;
 
 use App\Http\Requests\Vendas\VendaRequest;
+use App\Models\Clientes\Cliente;
 use App\Models\ContasReceber\ContaReceber;
+use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Repositories\Vendas\VendaRepository;
+use App\Services\Nfces\NfceService;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class VendaService
 {
@@ -55,11 +59,17 @@ class VendaService
         $empresaId = (int) auth()->user()->empresa_id;
 
         if ($request->expectsJson()) {
-            return response()->json([
+            $payload = [
                 'id'       => $venda->id,
                 'numero'   => $venda->numero,
                 'situacao' => $venda->situacao,
-            ], 201);
+            ];
+            $empresa = Empresa::query()->find($empresaId);
+            if ($situacao === 'confirmada' && $empresa?->nfce_emitir_pdv) {
+                $payload['nfce'] = $this->emitirNfceDoPdv($request, $venda);
+            }
+
+            return response()->json($payload, 201);
         }
 
         if ($situacao === 'confirmada') {
@@ -193,6 +203,16 @@ class VendaService
         }
 
         $avisoEstoque = $this->montarAvisoEstoque($itens);
+        $empresa = Empresa::query()->findOrFail($empresaId);
+
+        if ($request->expectsJson() && $situacao === 'confirmada' && $empresa->nfce_emitir_pdv) {
+            app(NfceService::class)->validarAntesDaVenda(
+                $empresa,
+                $itens,
+                (float) $totais['total'],
+                $this->documentoNfceInformado($request),
+            );
+        }
 
         $dados = [
             'empresa_id' => $empresaId,
@@ -232,6 +252,59 @@ class VendaService
             'situacao' => $situacao,
             'aviso_estoque' => $avisoEstoque,
         ];
+    }
+
+    /**
+     * @return array{ok: bool, situacao: ?string, mensagem: string, numero: ?string, chave: ?string, danfe_url: ?string}
+     */
+    private function emitirNfceDoPdv(VendaRequest $request, Venda $venda): array
+    {
+        try {
+            return app(NfceService::class)->emitir(
+                $venda,
+                $this->documentoNfceInformado($request),
+                (float) $request->input('valor_recebido', 0),
+            );
+        } catch (Throwable $e) {
+            report($e);
+
+            return [
+                'ok' => false,
+                'situacao' => null,
+                'mensagem' => 'A venda foi registrada, mas a NFC-e não foi emitida.',
+                'numero' => null,
+                'chave' => null,
+                'danfe_url' => null,
+            ];
+        }
+    }
+
+    private function documentoNfceInformado(VendaRequest $request): ?string
+    {
+        $digitos = preg_replace('/\D/', '', (string) $request->input('nfce_documento', '')) ?? '';
+        if ($digitos !== '') {
+            return $digitos;
+        }
+
+        if (! $request->filled('cliente_id')) {
+            return null;
+        }
+
+        $cliente = Cliente::query()
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->find($request->input('cliente_id'));
+        if ($cliente === null) {
+            return null;
+        }
+
+        $cnpj = preg_replace('/\D/', '', (string) $cliente->cnpj) ?? '';
+        if (strlen($cnpj) === 14) {
+            return $cnpj;
+        }
+
+        $cpf = preg_replace('/\D/', '', (string) $cliente->cpf) ?? '';
+
+        return strlen($cpf) === 11 ? $cpf : null;
     }
 
     public function show(Venda $venda)
@@ -485,7 +558,8 @@ class VendaService
             $total      = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             $somenteDigitos = static fn ($v) => preg_replace('/\D/', '', (string) $v) ?? '';
-            $ncm = substr($somenteDigitos($item['ncm'] ?? $produto->ncm), 0, 8);
+            $ncmDigitos = $somenteDigitos($item['ncm'] ?? $produto->ncm);
+            $ncm = strlen($ncmDigitos) === 8 ? $ncmDigitos : '';
             $cstPis = $somenteDigitos($item['cst_pis'] ?? $produto->cst_pis);
             $cstCofins = $somenteDigitos($item['cst_cofins'] ?? $produto->cst_cofins);
 

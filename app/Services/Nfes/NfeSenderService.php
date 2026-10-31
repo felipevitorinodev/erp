@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Nfes;
 
 use App\Models\Empresas\Empresa;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +39,7 @@ class NfeSenderService
         } catch (Throwable $e) {
             Log::error('SEFAZ response inesperado', [
                 'empresa_id' => $empresa->id,
-                'exception' => $e->getMessage(),
+                'exception' => mb_substr($e->getMessage(), 0, 200),
             ]);
 
             return [
@@ -70,7 +70,7 @@ class NfeSenderService
                 } catch (Throwable $e) {
                     Log::error('SEFAZ response inesperado', [
                         'empresa_id' => $this->empresa->id,
-                        'exception' => $e->getMessage(),
+                        'exception' => mb_substr($e->getMessage(), 0, 200),
                     ]);
                     $xmlEvento = $response;
                 }
@@ -91,7 +91,7 @@ class NfeSenderService
         } catch (Throwable $e) {
             Log::error('SEFAZ response inesperado', [
                 'empresa_id' => $this->empresa->id,
-                'exception' => $e->getMessage(),
+                'exception' => mb_substr($e->getMessage(), 0, 200),
             ]);
 
             return [
@@ -113,7 +113,7 @@ class NfeSenderService
         } catch (Throwable $e) {
             Log::error('SEFAZ response inesperado', [
                 'empresa_id' => $this->empresa->id,
-                'exception' => $e->getMessage(),
+                'exception' => mb_substr($e->getMessage(), 0, 200),
             ]);
 
             return [
@@ -217,7 +217,7 @@ class NfeSenderService
                 Log::error('SEFAZ response inesperado', [
                     'empresa_id' => $this->empresa->id,
                     'nRec' => $nRec,
-                    'exception' => $e->getMessage(),
+                    'exception' => mb_substr($e->getMessage(), 0, 200),
                 ]);
             }
         }
@@ -225,7 +225,6 @@ class NfeSenderService
         Log::error('SEFAZ response inesperado', [
             'empresa_id' => $this->empresa->id,
             'nRec' => $nRec,
-            'response' => $ultimo,
         ]);
 
         return [
@@ -284,8 +283,7 @@ class NfeSenderService
             } catch (Throwable $e) {
                 Log::error('SEFAZ response inesperado', [
                     'empresa_id' => $this->empresa->id,
-                    'exception' => $e->getMessage(),
-                    'response' => $response,
+                    'exception' => mb_substr($e->getMessage(), 0, 200),
                 ]);
 
                 return [
@@ -389,8 +387,7 @@ class NfeSenderService
         } catch (Throwable $e) {
             Log::error('SEFAZ response inesperado', [
                 'empresa_id' => $this->empresa->id,
-                'exception' => $e->getMessage(),
-                'response' => $response,
+                'exception' => mb_substr($e->getMessage(), 0, 200),
             ]);
 
             return null;
@@ -411,5 +408,105 @@ class NfeSenderService
         }
 
         return 'Falha na comunicação com a SEFAZ. Verifique o certificado, a UF e a conexão.';
+    }
+
+    /**
+     * null quando cStat 107 (serviço em operação). Qualquer outra resposta bloqueia a emissão.
+     */
+    public function motivoSeIndisponivel(): ?string
+    {
+        try {
+            $uf = strtoupper(trim((string) $this->empresa->uf));
+            $ambiente = (int) ($this->empresa->nfe_ambiente ?: 2);
+            $response = $this->tools->sefazStatus($uf, $ambiente, true);
+            $std = $this->padronizar($response);
+        } catch (Throwable $e) {
+            Log::error('SEFAZ response inesperado', [
+                'empresa_id' => $this->empresa->id,
+                'exception' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+
+            return 'Não foi possível consultar o status da SEFAZ. A emissão foi bloqueada e nenhum número foi usado.';
+        }
+
+        return self::mensagemStatus(
+            (string) ($std->cStat ?? ''),
+            (string) ($std->xMotivo ?? '')
+        );
+    }
+
+    public static function mensagemStatus(string $cStat, string $xMotivo): ?string
+    {
+        if ($cStat === '107') {
+            return null;
+        }
+
+        $motivo = trim($xMotivo);
+        $texto = $cStat === ''
+            ? 'A SEFAZ não informou o status do serviço.'
+            : 'A SEFAZ está indisponível (código '.$cStat.').';
+
+        if ($motivo !== '') {
+            $texto .= ' '.$motivo;
+        }
+
+        return $texto.' A emissão foi bloqueada e nenhum número foi usado. Contingência (SVC ou EPEC) não está habilitada: tpEmis permanece 1.';
+    }
+
+    /**
+     * @return array{status: string, codigo: string, motivo: string, protocolo: ?string, xml: ?string}
+     */
+    public function inutilizar(int $serie, int $inicio, int $fim, string $justificativa, int $ambiente, string $ano): array
+    {
+        try {
+            $this->tools->setEnvironment($ambiente);
+            $response = $this->tools->sefazInutiliza($serie, $inicio, $fim, $justificativa, $ambiente, $ano);
+            $std = $this->padronizar($response);
+            $inf = data_get($std, 'infInut') ?? $std;
+            $cStat = (string) (data_get($inf, 'cStat') ?? '');
+            $xMotivo = (string) (data_get($inf, 'xMotivo') ?? 'Retorno sem motivo.');
+            $protocolo = data_get($inf, 'nProt');
+
+            if ($cStat === '102') {
+                try {
+                    $xml = Complements::toAuthorize($this->tools->lastRequest, $response);
+                } catch (Throwable $e) {
+                    Log::error('SEFAZ response inesperado', [
+                        'empresa_id' => $this->empresa->id,
+                        'exception' => mb_substr($e->getMessage(), 0, 200),
+                    ]);
+                    $xml = $response;
+                }
+
+                return [
+                    'status' => 'autorizada',
+                    'codigo' => $cStat,
+                    'motivo' => $xMotivo,
+                    'protocolo' => $protocolo ? (string) $protocolo : null,
+                    'xml' => $xml,
+                ];
+            }
+
+            return [
+                'status' => 'rejeitada',
+                'codigo' => $cStat,
+                'motivo' => $xMotivo,
+                'protocolo' => null,
+                'xml' => null,
+            ];
+        } catch (Throwable $e) {
+            Log::error('SEFAZ response inesperado', [
+                'empresa_id' => $this->empresa->id,
+                'exception' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+
+            return [
+                'status' => 'rejeitada',
+                'codigo' => '',
+                'motivo' => $this->mensagemAmigavel($e->getMessage()),
+                'protocolo' => null,
+                'xml' => null,
+            ];
+        }
     }
 }

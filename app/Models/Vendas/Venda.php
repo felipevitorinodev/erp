@@ -8,7 +8,7 @@ use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Usuarios\User;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +35,7 @@ class Venda extends Model
         'acrescimo',
         'total',
         'forma_pagamento',
+        'nfe_tpag',
         'forma_pagamento_id',
         'observacoes',
         'natureza_operacao',

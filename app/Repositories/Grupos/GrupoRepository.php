@@ -13,7 +13,7 @@ class GrupoRepository
 
     public function index(?Request $request = null)
     {
-        $query = $this->grupo::with('parent')
+        $query = $this->grupo::with('parent:id,nome')
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderBy('nome');
 

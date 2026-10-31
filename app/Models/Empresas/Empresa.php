@@ -39,6 +39,8 @@ class Empresa extends Model
         'nfe_ambiente',
         'nfe_serie',
         'nfe_sequencia',
+        'nfce_serie',
+        'nfce_emitir_pdv',
         'nfe_csc',
         'nfe_id_csc',
         'cod_ibge',
@@ -50,6 +52,13 @@ class Empresa extends Model
         'nfe_cst_cofins_padrao',
     ];
 
+    protected $hidden = [
+        'certificado_senha',
+        'nfe_csc',
+        'nfce_csc_homologacao',
+        'nfce_csc_producao',
+    ];
+
     protected $casts = [
         'tipo_pessoa' => TipoPessoa::class,
         'ativo'       => 'boolean',
@@ -57,7 +66,27 @@ class Empresa extends Model
         'nfe_sequencia' => 'integer',
         'crt' => 'integer',
         'nfe_destino' => 'integer',
+        'nfce_emitir_pdv' => 'boolean',
     ];
+
+    /**
+     * Campos que não podem voltar para a sessão nem para a tela.
+     *
+     * @return list<string>
+     */
+    public static function segredosForaDaSessao(): array
+    {
+        return [
+            'current_password',
+            'password',
+            'password_confirmation',
+            'certificado_senha',
+            'certificado_pfx',
+            'nfe_csc',
+            'nfce_csc_homologacao',
+            'nfce_csc_producao',
+        ];
+    }
 
     public function clientes()
     {
@@ -66,12 +95,27 @@ class Empresa extends Model
 
     public function getCertificadoSenhaDecryptedAttribute(): ?string
     {
-        if ($this->certificado_senha === null || $this->certificado_senha === '') {
+        return $this->descriptografarSegredo($this->certificado_senha);
+    }
+
+    public function getNfceCscHomologacaoDecryptedAttribute(): ?string
+    {
+        return $this->descriptografarSegredo($this->nfce_csc_homologacao);
+    }
+
+    public function getNfceCscProducaoDecryptedAttribute(): ?string
+    {
+        return $this->descriptografarSegredo($this->nfce_csc_producao);
+    }
+
+    private function descriptografarSegredo(?string $valor): ?string
+    {
+        if ($valor === null || $valor === '') {
             return null;
         }
 
         try {
-            return Crypt::decryptString($this->certificado_senha);
+            return Crypt::decryptString($valor);
         } catch (Throwable) {
             return null;
         }

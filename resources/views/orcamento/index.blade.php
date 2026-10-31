@@ -75,34 +75,34 @@
                                 <td data-label="Forma Pgto.">{{ $orcamento->forma_pagamento ?? '—' }}</td>
                                 <td data-label="Total" class="col-num">R$ {{ number_format($orcamento->total, 2, ',', '.') }}</td>
                                 <td data-label="Situação">
-                                    @if($orcamento->situacao === 'aprovado')
-                                        <span class="badge badge--success">Aprovado</span>
-                                    @elseif($orcamento->situacao === 'recusado')
-                                        <span class="badge badge--error">Recusado</span>
-                                    @elseif($orcamento->situacao === 'cancelado')
-                                        <span class="badge badge--error">Cancelado</span>
-                                    @else
-                                        <span class="badge badge--warning">Pendente</span>
-                                    @endif
+                                    <x-badge-situacao tipo="orcamento" :valor="$orcamento->situacao" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('orcamento.show', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if($orcamento->situacao === 'pendente')
-                                        <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                            <x-icon name="edit" />
-                                        </a>
-                                    @endif
-                                    <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                            title="Excluir" aria-label="Excluir"
-                                            data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            <x-icon name="trash" />
-                                        </button>
-                                    </form>
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            @if($orcamento->situacao === 'pendente')
+                                                <a href="{{ route('orcamento.edit', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                    <x-icon name="edit" />
+                                                </a>
+                                            @endif
+                                        </x-slot:editar>
+                                        <x-slot:ver>
+                                            <a href="{{ route('orcamento.show', $orcamento) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                        <x-slot:excluir>
+                                            <form method="POST" action="{{ route('orcamento.destroy', $orcamento) }}" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                    title="Excluir" aria-label="Excluir"
+                                                    data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                                                    <x-icon name="trash" />
+                                                </button>
+                                            </form>
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

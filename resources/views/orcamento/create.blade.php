@@ -52,8 +52,6 @@
             <span class="venda-itens-header__count">(<span id="count-itens">0</span> itens)</span>
         </div>
 
-        @error('itens')<div class="alert alert--error" style="margin-bottom:1rem;">{{ $message }}</div>@enderror
-
         <div class="venda-itens-list" id="itens-body">
             {{-- Itens serão adicionados dinamicamente --}}
         </div>

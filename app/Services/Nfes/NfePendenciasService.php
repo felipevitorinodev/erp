@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Nfes;
 
 use App\Models\Empresas\Empresa;
 use App\Models\Vendas\Venda;
@@ -16,7 +16,8 @@ class NfePendenciasService
      */
     public function verificar(Venda $venda, Empresa $empresa): array
     {
-        $venda->loadMissing(['itens.produto', 'cliente']);
+        $venda->loadMissing(['itens.produto.perfilFiscal', 'cliente']);
+        $vinculo = NfeVinculoFiscal::daEmpresa($empresa)->usarVenda($venda);
         $pendencias = [];
 
         if (blank($venda->natureza_operacao)) {
@@ -40,19 +41,23 @@ class NfePendenciasService
                 $pendencias[] = "Item {$nome}: informe o NCM com 8 dígitos.";
             }
 
-            $cfop = $this->digitos($item->cfop ?: $produto?->cfop_padrao ?: $empresa->nfe_cfop_padrao ?: '5102');
+            $ean = $this->digitos($item->ean);
+            if ($ean !== '' && $ean !== '0' && ! NfeVinculoFiscal::gtinValido($ean)) {
+                $pendencias[] = "Item {$nome}: o código de barras é inválido. Corrija o EAN ou deixe em branco.";
+            }
+
+            $cfop = $this->digitos($vinculo->cfop($item, $produto)['valor']);
             if (strlen($cfop) !== 4 || ! str_starts_with($cfop, '5')) {
                 $pendencias[] = "Item {$nome}: o CFOP precisa ter 4 dígitos e ser da série 5 (operação interna).";
             }
 
-            $csosn = $this->digitos($item->csosn ?: $produto?->cst_icms ?: $empresa->nfe_csosn_padrao ?: '400');
+            $csosn = $this->digitos($vinculo->csosn($item, $produto)['valor']);
             if (! in_array($csosn, NfeBuilderService::CSOSN_SEM_CALCULO, true)) {
                 $pendencias[] = "Item {$nome}: CSOSN {$csosn} não é aceito (use 102, 103, 300 ou 400).";
             }
 
             foreach (['cst_pis' => 'PIS', 'cst_cofins' => 'COFINS'] as $campo => $imposto) {
-                $padrao = $empresa->{'nfe_'.$campo.'_padrao'};
-                $cst = str_pad($this->digitos($item->{$campo} ?: $produto?->{$campo} ?: $padrao ?: '07'), 2, '0', STR_PAD_LEFT);
+                $cst = $vinculo->cst($item, $produto, $campo, $campo, $campo, 'nfe_'.$campo.'_padrao')['valor'];
                 if (! in_array($cst, NfeBuilderService::CST_SEM_INCIDENCIA, true)) {
                     $pendencias[] = "Item {$nome}: CST de {$imposto} {$cst} não é aceito (use 04 a 09).";
                 }
@@ -83,6 +88,11 @@ class NfePendenciasService
             }
 
             if (count($preenchidos) === count($endereco)) {
+                $cep = $this->digitos($cliente->cep ?: $empresa->cep);
+                if (strlen($cep) !== 8) {
+                    $pendencias[] = 'Informe o CEP do cliente com 8 dígitos. Sem CEP do cliente, vale o CEP da empresa, que também precisa ter 8 dígitos.';
+                }
+
                 $ufCliente = strtoupper(trim((string) $cliente->estado));
                 if ($ufCliente !== '' && $ufCliente !== strtoupper((string) $empresa->uf)) {
                     $pendencias[] = 'O cliente é de outra UF; esta versão emite apenas operação interna.';
@@ -93,6 +103,37 @@ class NfePendenciasService
         }
 
         return array_values(array_unique($pendencias));
+    }
+
+    /**
+     * Alíquota cadastrada que esta versão não envia. Não bloqueia a emissão.
+     *
+     * @return list<string>
+     */
+    public function avisosAliquota(Venda $venda): array
+    {
+        $venda->loadMissing('itens.produto');
+        $avisos = [];
+
+        foreach ($venda->itens as $item) {
+            $produto = $item->produto;
+            if (! $produto) {
+                continue;
+            }
+
+            $nome = '"'.$item->produto_nome.'"';
+            foreach ([
+                'aliquota_icms' => 'ICMS',
+                'aliquota_pis' => 'PIS',
+                'aliquota_cofins' => 'COFINS',
+            ] as $campo => $imposto) {
+                if ((float) $produto->{$campo} > 0) {
+                    $avisos[] = "Item {$nome}: o produto tem alíquota de {$imposto} cadastrada, mas o XML desta versão envia o imposto zerado.";
+                }
+            }
+        }
+
+        return $avisos;
     }
 
     private function digitos(mixed $valor): string

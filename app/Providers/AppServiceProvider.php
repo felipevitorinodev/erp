@@ -14,12 +14,15 @@ use App\Models\Fornecedores\Fornecedor;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Grupos\Grupo;
 use App\Models\Orcamentos\Orcamento;
+use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
 use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
 use App\Services\Usuarios\PerfilService;
 use App\Models\Vendas\Venda;
+use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -44,9 +47,43 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->registrarBindingsPorEmpresa();
+        $this->registrarFiltrosDeData();
 
         Empresa::created(function (Empresa $empresa) {
             app(PerfilService::class)->garantir($empresa);
+        });
+
+        $esquecerPerfis = fn (Perfil $perfil) => User::esquecerPerfisEmCache((int) $perfil->empresa_id);
+        Perfil::saved($esquecerPerfis);
+        Perfil::deleted($esquecerPerfis);
+    }
+
+    /**
+     * Filtros por dia que comparam a coluna direto e por isso usam índice (whereDate aplica DATE() em cada linha).
+     * O limite final é exclusivo no dia seguinte: vale para colunas date, datetime e para datas gravadas com hora.
+     */
+    private function registrarFiltrosDeData(): void
+    {
+        $dia = fn ($valor) => rescue(fn () => Carbon::parse($valor)->startOfDay(), null, false);
+
+        Builder::macro('whereDataDe', function (string $coluna, $data) use ($dia) {
+            $inicio = $dia($data);
+
+            return $inicio
+                ? $this->where($coluna, '>=', $inicio->toDateString())
+                : $this->whereDate($coluna, '>=', $data);
+        });
+
+        Builder::macro('whereDataAte', function (string $coluna, $data) use ($dia) {
+            $fim = $dia($data);
+
+            return $fim
+                ? $this->where($coluna, '<', $fim->addDay()->toDateString())
+                : $this->whereDate($coluna, '<=', $data);
+        });
+
+        Builder::macro('whereDataEntre', function (string $coluna, $inicio, $fim) {
+            return $this->whereDataDe($coluna, $inicio)->whereDataAte($coluna, $fim);
         });
     }
 
@@ -76,6 +113,7 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('grupo', $porEmpresa(Grupo::class));
         Route::bind('unidadeMedida', $porEmpresa(UnidadeMedida::class));
         Route::bind('formaPagamento', $porEmpresa(FormaPagamento::class));
+        Route::bind('perfilFiscal', $porEmpresa(PerfilFiscal::class));
         Route::bind('categoriaFinanceira', $porEmpresa(CategoriaFinanceira::class));
 
         Route::bind('perfilAcesso', function ($value) {

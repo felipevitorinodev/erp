@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Empresas\Empresa;
 use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
+use App\Support\SessaoLogin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,8 +45,60 @@ class UsuariosSegurancaTest extends TestCase
         }
 
         $this->post(route('login.post'), ['email' => $this->admin->email, 'password' => 'password'])
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors('login');
         $this->assertGuest();
+    }
+
+    public function test_login_nao_revela_se_o_email_existe(): void
+    {
+        $mensagem = 'E-mail ou senha inválidos.';
+
+        $this->post(route('login.post'), [
+            'email' => $this->admin->email,
+            'password' => 'errada',
+        ])->assertSessionHasErrors(['login' => $mensagem]);
+
+        $this->post(route('login.post'), [
+            'email' => 'nao-existe@dev.com',
+            'password' => 'errada',
+        ])->assertSessionHasErrors(['login' => $mensagem]);
+    }
+
+    public function test_login_so_volta_para_endereco_interno(): void
+    {
+        $this->withSession(['url.intended' => 'https://exemplo-externo.test/roubo'])
+            ->post(route('login.post'), [
+                'email' => $this->admin->email,
+                'password' => 'password',
+            ])
+            ->assertRedirect('/');
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_login_mantem_pagina_interna_pedida(): void
+    {
+        $this->withSession(['url.intended' => '/venda'])
+            ->post(route('login.post'), [
+                'email' => $this->admin->email,
+                'password' => 'password',
+            ])
+            ->assertRedirect('/venda');
+    }
+
+    public function test_sessao_expirada_avisa_ao_abrir_o_login(): void
+    {
+        $this->withCookie(SessaoLogin::MARCADOR, '1')
+            ->get(route('login'))
+            ->assertOk()
+            ->assertSee('Sua sessão expirou. Entre novamente para continuar.');
+    }
+
+    public function test_abrir_o_login_nao_fala_de_sessao_expirada(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertDontSee('Sua sessão expirou');
     }
 
     public function test_usuario_nao_admin_nao_se_promove_a_admin(): void

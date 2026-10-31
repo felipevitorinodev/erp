@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Empresas\Empresa;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
-use App\Services\NfePendenciasService;
+use App\Services\Nfes\NfePendenciasService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -60,6 +60,31 @@ class NfeRascunhoTest extends TestCase
         ], $dados);
     }
 
+    public function test_busca_naturezas_de_operacao_predefinidas(): void
+    {
+        $todas = $this->getJson(route('api.naturezas-operacao.busca'))
+            ->assertOk()
+            ->json();
+
+        $this->assertContains('VENDA DE MERCADORIA', array_column($todas, 'nome'));
+
+        $filtradas = $this->getJson(route('api.naturezas-operacao.busca', ['q' => 'combustivel']))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(['VENDA DE COMBUSTÍVEL'], array_column($filtradas, 'nome'));
+    }
+
+    public function test_nova_nfe_mostra_as_quatro_etapas_e_o_painel_de_pendencias(): void
+    {
+        $this->get(route('nfe.create'))
+            ->assertOk()
+            ->assertSee('data-step-btn="4"', false)
+            ->assertSee('nfe-pendencias-toggle', false)
+            ->assertSee('Destinatário')
+            ->assertDontSee('Pendências da empresa para emitir', false);
+    }
+
     public function test_rascunho_com_dados_fiscais_incompletos_e_salvo_sem_estoque_nem_nfe(): void
     {
         $this->post(route('nfe.store'), $this->payload())->assertSessionHasNoErrors();
@@ -70,7 +95,11 @@ class NfeRascunhoTest extends TestCase
         $this->assertEquals(5.0, (float) $this->produto->fresh()->estoque_atual);
 
         $this->get(route('nfe.index'))->assertOk()->assertSee('Rascunho');
-        $this->get(route('nfe.rascunho.edit', $venda))->assertOk()->assertSee('Parafuso');
+        $this->get(route('nfe.rascunho.edit', $venda))
+            ->assertOk()
+            ->assertSee('Parafuso')
+            ->assertSee('id="input-natureza"', false)
+            ->assertSee('form="form-excluir-rascunho"', false);
     }
 
     public function test_rascunho_valida_o_formato_dos_campos_informados(): void

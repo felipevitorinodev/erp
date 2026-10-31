@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Vendas;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Vendas\VendaRequest;
+use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Vendas\Venda;
 use App\Services\Vendas\VendaService;
@@ -17,12 +18,15 @@ class VendaController extends Controller
 
     public function pdv(Request $request)
     {
+        $empresa = Empresa::query()->find(auth()->user()->empresa_id);
+
         return view('venda.pdv', [
             'formasPagamento' => FormaPagamento::where('empresa_id', auth()->user()->empresa_id)
                 ->where('ativo', true)
                 ->orderBy('tipo')
                 ->orderBy('nome')
                 ->get(),
+            'emitirNfce' => (bool) $empresa?->nfce_emitir_pdv,
         ]);
     }
 

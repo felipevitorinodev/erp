@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'Entrada #' . $entrada->numero)
 @section('page_title', 'Entrada #' . $entrada->numero)
@@ -64,78 +64,36 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Dados Gerais</span>
+    <x-ficha titulo="Dados Gerais">
+        <x-slot:status>
+            <x-badge-situacao tipo="entrada" :valor="$entrada->situacao" />
+        </x-slot:status>
+        <x-slot:resumo>
             <div>
-                @if($entrada->situacao === 'confirmada')
-                    <span class="badge badge--success">Confirmada</span>
-                @elseif($entrada->situacao === 'cancelada')
-                    <span class="badge badge--error">Cancelada</span>
-                @else
-                    <span class="badge badge--warning">Rascunho</span>
-                @endif
+                <span>Total</span>
+                <strong><x-moeda :valor="$entrada->total" /></strong>
             </div>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-4">
-                <div class="form-group">
-                    <label class="form-label">Número</label>
-                    <span>#{{ $entrada->numero }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Fornecedor</label>
-                    <span>{{ $entrada->fornecedor->nome ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data</label>
-                    <span>{{ $entrada->data_entrada->format('d/m/Y') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <span>
-                        @if($entrada->situacao === 'confirmada')
-                            <span class="badge badge--success">Confirmada</span>
-                        @elseif($entrada->situacao === 'cancelada')
-                            <span class="badge badge--error">Cancelada</span>
-                        @else
-                            <span class="badge badge--warning">Rascunho</span>
-                        @endif
-                    </span>
-                </div>
+            <div>
+                <span>Subtotal</span>
+                <strong><x-moeda :valor="$entrada->subtotal" /></strong>
             </div>
-            @if($entrada->observacoes)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Observações</label>
-                    <span>{{ $entrada->observacoes }}</span>
-                </div>
-            @endif
-
-            @if($entrada->chave_acesso)
-                <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
-                    <span class="text-muted text-bold" style="font-size:0.85rem;display:block;margin-bottom:0.5rem;">
-                        Nota Fiscal de Origem
-                    </span>
-                    <dl style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:0.75rem;margin:0;">
-                        <div>
-                            <dt class="text-muted" style="font-size:0.8rem;">NF-e Número/Série</dt>
-                            <dd style="margin:0;font-weight:500;">{{ $entrada->numero_nfe }} / {{ $entrada->serie_nfe }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-muted" style="font-size:0.8rem;">Data de Emissão</dt>
-                            <dd style="margin:0;">{{ $entrada->data_emissao_nfe?->format('d/m/Y') }}</dd>
-                        </div>
-                        <div style="grid-column:1/-1;">
-                            <dt class="text-muted" style="font-size:0.8rem;">Chave de Acesso</dt>
-                            <dd style="margin:0;font-family:monospace;font-size:12px;word-break:break-all;">
-                                {{ $entrada->chave_acesso }}
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
-            @endif
-        </div>
-    </div>
+            <div>
+                <span>Desconto</span>
+                <strong><x-moeda :valor="$entrada->desconto" /></strong>
+            </div>
+        </x-slot:resumo>
+        <x-ficha-campo label="Número">#{{ $entrada->numero }}</x-ficha-campo>
+        <x-ficha-campo label="Fornecedor">{{ $entrada->fornecedor->nome ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Data">{{ $entrada->data_entrada->format('d/m/Y') }}</x-ficha-campo>
+        @if($entrada->chave_acesso)
+            <x-ficha-campo label="NF-e número/série">{{ $entrada->numero_nfe }} / {{ $entrada->serie_nfe }}</x-ficha-campo>
+            <x-ficha-campo label="Data de emissão">{{ $entrada->data_emissao_nfe?->format('d/m/Y') ?? '—' }}</x-ficha-campo>
+            <x-ficha-campo label="Chave de acesso" largo mono>{{ $entrada->chave_acesso }}</x-ficha-campo>
+        @endif
+        @if($entrada->observacoes)
+            <x-ficha-campo label="Observações" largo class="ficha__item--texto">{{ $entrada->observacoes }}</x-ficha-campo>
+        @endif
+    </x-ficha>
 
     <div class="card" style="margin-top:1rem;">
         <div class="card__header">

@@ -48,23 +48,29 @@
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('permissao.edit', $perfil) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                        <x-icon name="edit" />
-                                    </a>
-                                    @if(!$perfil->sistema)
-                                        <form method="POST" action="{{ route('permissao.destroy', $perfil) }}" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                                title="Excluir" aria-label="Excluir"
-                                                data-confirm="Excluir o perfil {{ $perfil->nome }}?"
-                                                data-confirm-title="Excluir"
-                                                data-confirm-ok="Excluir"
-                                                data-confirm-variant="danger">
-                                                <x-icon name="trash" />
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            <a href="{{ route('permissao.edit', $perfil) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                <x-icon name="edit" />
+                                            </a>
+                                        </x-slot:editar>
+                                        <x-slot:excluir>
+                                            @if(!$perfil->sistema)
+                                                <form method="POST" action="{{ route('permissao.destroy', $perfil) }}" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                        title="Excluir" aria-label="Excluir"
+                                                        data-confirm="Excluir o perfil {{ $perfil->nome }}?"
+                                                        data-confirm-title="Excluir"
+                                                        data-confirm-ok="Excluir"
+                                                        data-confirm-variant="danger">
+                                                        <x-icon name="trash" />
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

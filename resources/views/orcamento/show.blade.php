@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'Orçamento #' . $orcamento->numero)
 @section('page_title', 'Orçamento #' . $orcamento->numero)
@@ -87,74 +87,48 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Dados Gerais</span>
+    <x-ficha titulo="Dados Gerais">
+        <x-slot:status>
+            <x-badge-situacao tipo="orcamento" :valor="$orcamento->situacao" />
+        </x-slot:status>
+        <x-slot:resumo>
             <div>
-                @if ($orcamento->situacao === 'aprovado')
-                    <span class="badge badge--success">Aprovado</span>
-                @elseif($orcamento->situacao === 'recusado')
-                    <span class="badge badge--error">Recusado</span>
-                @elseif($orcamento->situacao === 'cancelado')
-                    <span class="badge badge--error">Cancelado</span>
-                @else
-                    <span class="badge badge--warning">Pendente</span>
-                @endif
+                <span>Total</span>
+                <strong><x-moeda :valor="$orcamento->total" /></strong>
             </div>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-4">
-                <div class="form-group">
-                    <label class="form-label">Número</label>
-                    <span>#{{ $orcamento->numero }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data do Orçamento</label>
-                    <span>{{ $orcamento->data_orcamento->format('d/m/Y') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Previsão de Entrega</label>
-                    <span>{{ $orcamento->data_entrega ? $orcamento->data_entrega->format('d/m/Y') : '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Forma de Pagamento</label>
-                    <span>{{ $orcamento->forma_pagamento ?? '—' }}</span>
-                </div>
+            <div>
+                <span>Subtotal</span>
+                <strong><x-moeda :valor="$orcamento->subtotal" /></strong>
             </div>
-            <div class="form-grid form-grid--col-2" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label class="form-label">Cliente</label>
-                    <span>{{ $orcamento->cliente->nome ?? '— Consumidor Final —' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Vendedor</label>
-                    <span>{{ $orcamento->usuario->name ?? '—' }}</span>
-                </div>
+            <div>
+                <span>Desconto</span>
+                <strong><x-moeda :valor="$orcamento->desconto" /></strong>
             </div>
-            @if ($orcamento->venda_id && $orcamento->venda)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Venda gerada</label>
-                    <span>
-                        <a href="{{ route('venda.show', $orcamento->venda) }}">#{{ $orcamento->venda->numero }}</a>
-                    </span>
-                </div>
-            @endif
-            @if ($orcamento->ordem_servico_id && $orcamento->ordemServico)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Ordem de serviço gerada</label>
-                    <span>
-                        <a href="{{ route('ordem-servico.show', $orcamento->ordemServico) }}">OS #{{ $orcamento->ordemServico->numero }}</a>
-                    </span>
-                </div>
-            @endif
-            @if ($orcamento->observacoes)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Observações</label>
-                    <span>{{ $orcamento->observacoes }}</span>
-                </div>
-            @endif
-        </div>
-    </div>
+            <div>
+                <span>Acréscimo</span>
+                <strong><x-moeda :valor="$orcamento->acrescimo" /></strong>
+            </div>
+        </x-slot:resumo>
+        <x-ficha-campo label="Número">#{{ $orcamento->numero }}</x-ficha-campo>
+        <x-ficha-campo label="Data do orçamento">{{ $orcamento->data_orcamento->format('d/m/Y') }}</x-ficha-campo>
+        <x-ficha-campo label="Previsão de entrega">{{ $orcamento->data_entrega ? $orcamento->data_entrega->format('d/m/Y') : '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Forma de pagamento">{{ $orcamento->forma_pagamento ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Cliente">{{ $orcamento->cliente->nome ?? '— Consumidor Final —' }}</x-ficha-campo>
+        <x-ficha-campo label="Vendedor">{{ $orcamento->usuario->name ?? '—' }}</x-ficha-campo>
+        @if ($orcamento->venda_id && $orcamento->venda)
+            <x-ficha-campo label="Venda gerada">
+                <a href="{{ route('venda.show', $orcamento->venda) }}">#{{ $orcamento->venda->numero }}</a>
+            </x-ficha-campo>
+        @endif
+        @if ($orcamento->ordem_servico_id && $orcamento->ordemServico)
+            <x-ficha-campo label="Ordem de serviço gerada">
+                <a href="{{ route('ordem-servico.show', $orcamento->ordemServico) }}">OS #{{ $orcamento->ordemServico->numero }}</a>
+            </x-ficha-campo>
+        @endif
+        @if ($orcamento->observacoes)
+            <x-ficha-campo label="Observações" largo class="ficha__item--texto">{{ $orcamento->observacoes }}</x-ficha-campo>
+        @endif
+    </x-ficha>
 
     <div class="card" style="margin-top:1rem;">
         <div class="card__header">
@@ -175,17 +149,17 @@
                     <tbody>
                         @forelse($orcamento->itens as $item)
                             <tr>
-                                <td>
+                                <td data-label="Produto">
                                     {{ $item->produto_nome }}
                                     @if ($item->produto_codigo)
                                         <span class="text-muted"
                                             style="font-size:11px;">({{ $item->produto_codigo }})</span>
                                     @endif
                                 </td>
-                                <td class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
-                                <td class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
-                                <td class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
-                                <td class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
+                                <td data-label="Qtd." class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
+                                <td data-label="Preço unit." class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                                <td data-label="Desconto" class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
+                                <td data-label="Total" class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
                             </tr>
                         @empty
                             <tr>

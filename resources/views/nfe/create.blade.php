@@ -15,58 +15,44 @@
 @section('content')
 
 <div class="nfe-wizard">
-<div class="nfe-alerts">
-    @if (count($alertas))
-        <div class="alert alert--error">
-            <strong>Pendências da empresa para emitir</strong>
-            <ul class="nfe-alerts__list">
-                @foreach ($alertas as $alerta)
-                    <li>{{ $alerta }}</li>
-                @endforeach
-            </ul>
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.5rem;">
-                <a href="{{ route('empresa.edit', $empresa) }}" class="btn btn--ghost btn--sm">Abrir cadastro da empresa</a>
-                <small>Você pode preencher a nota e salvar como rascunho enquanto isso.</small>
-            </div>
+<div class="nfe-status">
+    <span class="nfe-status__chip {{ (int) ($empresa->nfe_ambiente ?? 2) === 1 ? 'nfe-status__chip--prod' : '' }}">
+        {{ (int) ($empresa->nfe_ambiente ?? 2) === 1 ? 'Produção' : 'Homologação' }}
+    </span>
+    <span class="nfe-status__chip">Série {{ $empresa->nfe_serie ?? '001' }}</span>
+    <span class="nfe-status__texto">Venda interna no Simples. Interestadual, ST e devolução ficam de fora.</span>
+    <div class="nfe-pendencias-fab" id="nfe-pendencias-fab">
+        <button type="button" class="nfe-pendencias-fab__btn" id="nfe-pendencias-toggle" aria-expanded="false" aria-controls="nfe-pendencias-pop">
+            <span class="nfe-pendencias-fab__count" id="nfe-pendencias-count" hidden>0</span>
+            <span id="nfe-pendencias-rotulo">Pendências</span>
+        </button>
+        <div class="nfe-pendencias-pop" id="nfe-pendencias-pop" hidden>
+            <div class="nfe-pendencias-pop__titulo">Pendências da nota</div>
+            <div id="nfe-pendencias"></div>
         </div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert--error" role="alert">
-            <strong>Corrija antes de continuar</strong>
-            <ul class="nfe-alerts__list">
-                @foreach ($errors->all() as $erro)
-                    <li>{{ $erro }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    @if ($avisoCertificado)
-        <div class="alert alert--warning">{{ $avisoCertificado }}</div>
-    @endif
-
-    @if ((int) ($empresa->nfe_ambiente ?? 2) === 2)
-        <div class="alert alert--warning">Homologação — sem valor fiscal.</div>
-    @else
-        <div class="alert alert--warning">Produção — a nota terá valor fiscal real.</div>
-    @endif
-
-    <div class="alert alert--error" id="nfe-aviso" hidden role="alert"></div>
+    </div>
 </div>
 
 <nav class="nfe-steps" aria-label="Passos da NF-e">
     <button type="button" class="nfe-steps__item is-active" data-step-btn="1">
         <span class="nfe-steps__num">1</span>
-        <span class="nfe-steps__label">Cabeçalho</span>
+        <span class="nfe-steps__label nfe-steps__label--longo">Nota</span>
+        <span class="nfe-steps__label nfe-steps__label--curto">Nota</span>
     </button>
     <button type="button" class="nfe-steps__item" data-step-btn="2">
         <span class="nfe-steps__num">2</span>
-        <span class="nfe-steps__label">Itens</span>
+        <span class="nfe-steps__label nfe-steps__label--longo">Destinatário</span>
+        <span class="nfe-steps__label nfe-steps__label--curto">Cliente</span>
     </button>
     <button type="button" class="nfe-steps__item" data-step-btn="3">
         <span class="nfe-steps__num">3</span>
-        <span class="nfe-steps__label">Revisão</span>
+        <span class="nfe-steps__label nfe-steps__label--longo">Itens</span>
+        <span class="nfe-steps__label nfe-steps__label--curto">Itens</span>
+    </button>
+    <button type="button" class="nfe-steps__item" data-step-btn="4">
+        <span class="nfe-steps__num">4</span>
+        <span class="nfe-steps__label nfe-steps__label--longo">Revisão</span>
+        <span class="nfe-steps__label nfe-steps__label--curto">Revisão</span>
     </button>
 </nav>
 
@@ -83,7 +69,7 @@
     <section class="nfe-step-panel is-active" data-step-panel="1">
         <div class="card">
             <div class="card__header">
-                <span class="card__title">Cabeçalho da nota</span>
+                <span class="card__title">Dados da nota</span>
             </div>
             <div class="card__body">
                 <div class="nfe-meta-row">
@@ -96,6 +82,7 @@
                         <input type="text" class="form-control"
                             value="{{ str_pad((string) ($empresa->nfe_sequencia ?? 1), 9, '0', STR_PAD_LEFT) }}" readonly
                             title="O número só é consumido na emissão; rascunhos não usam número.">
+                        <small class="text-muted">O número só é usado na emissão, na sequência deste ambiente.</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Data de emissão</label>
@@ -105,25 +92,30 @@
                     </div>
                 </div>
 
-                <div class="form-grid form-grid--col-3">
-                    <div class="form-group form-group--span-2">
-                        <label class="form-label form-label--required">Natureza da operação</label>
-                        <input type="text" name="natureza_operacao" class="form-control" maxlength="60"
+                <div class="form-group">
+                    <label class="form-label form-label--required" for="input-natureza">Natureza da operação</label>
+                    <div class="autocomplete-wrap">
+                        <input type="text" name="natureza_operacao" id="input-natureza" class="form-control" maxlength="60"
+                            autocomplete="off" placeholder="Buscar natureza..."
                             value="{{ old('natureza_operacao', $rascunho?->natureza_operacao ?? 'VENDA DE MERCADORIA') }}">
-                        @error('natureza_operacao')<span class="form-error">{{ $message }}</span>@enderror
+                        <input type="hidden" id="hidden-natureza" value="">
                     </div>
+                    <small class="text-muted">Escolha uma natureza da lista ou digite outra, com até 60 caracteres.</small>
+                    @error('natureza_operacao')<span class="form-error">{{ $message }}</span>@enderror
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- PASSO 2 — Destinatário --}}
+    <section class="nfe-step-panel" data-step-panel="2" hidden>
+        <div class="card">
+            <div class="card__header">
+                <span class="card__title">Destinatário</span>
+            </div>
+            <div class="card__body">
+                <div class="form-grid form-grid--col-2">
                     <div class="form-group">
-                        <label class="form-label form-label--required">Forma de pagamento</label>
-                        <div class="autocomplete-wrap">
-                            <input type="text" id="input-forma-pagamento" class="form-control"
-                                placeholder="Buscar forma..." autocomplete="off"
-                                value="{{ old('forma_pagamento', $rascunho?->forma_pagamento) }}">
-                            <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
-                                value="{{ old('forma_pagamento', $rascunho?->forma_pagamento) }}">
-                        </div>
-                        @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
-                    </div>
-                    <div class="form-group form-group--span-2">
                         <label class="form-label">Destinatário</label>
                         <div class="autocomplete-wrap">
                             <input type="text" id="input-cliente" class="form-control"
@@ -153,26 +145,9 @@
                         <label class="form-label">Consumidor final</label>
                         @php $indFinal = (string) old('ind_final', $rascunho?->ind_final); @endphp
                         <select name="ind_final" id="ind_final" class="form-control">
-                            <option value="">Automático (CPF=sim / CNPJ=não)</option>
-                            <option value="1" @selected($indFinal === '1')>Sim (1)</option>
-                            <option value="0" @selected($indFinal === '0')>Não (0)</option>
-                        </select>
-                    </div>
-                    <div class="form-group form-group--span-2">
-                        <label class="form-label">Modalidade do frete</label>
-                        <select name="mod_frete" class="form-control">
-                            @foreach([
-                                9 => '9 — Sem frete',
-                                0 => '0 — Por conta do remetente',
-                                1 => '1 — Por conta do destinatário',
-                                2 => '2 — Por conta de terceiros',
-                                3 => '3 — Próprio remetente',
-                                4 => '4 — Próprio destinatário',
-                            ] as $valor => $label)
-                                <option value="{{ $valor }}" @selected((int) old('mod_frete', $rascunho?->mod_frete ?? 9) === $valor)>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
+                            <option value="">Automático (CPF = sim, CNPJ = não)</option>
+                            <option value="1" @selected($indFinal === '1')>Sim</option>
+                            <option value="0" @selected($indFinal === '0')>Não</option>
                         </select>
                     </div>
                 </div>
@@ -180,10 +155,10 @@
         </div>
     </section>
 
-    {{-- PASSO 2 — Itens --}}
-    <section class="nfe-step-panel" data-step-panel="2" hidden>
+    {{-- PASSO 3 — Itens --}}
+    <section class="nfe-step-panel" data-step-panel="3" hidden>
         <div class="card">
-            <div class="card__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+            <div class="card__header nfe-itens-head">
                 <span class="card__title">Itens e impostos</span>
                 <button type="button" class="btn btn--primary btn--sm" id="btn-abrir-item">
                     + Adicionar item <kbd class="nfe-kbd">Ins</kbd>
@@ -206,21 +181,53 @@
                 </div>
                 <div id="itens-hidden"></div>
             </div>
-            <div class="card__footer" style="justify-content:space-between;">
+            <div class="card__footer nfe-itens-foot">
                 <span class="text-muted"><span id="count-itens">0</span> item(ns)</span>
                 <strong id="label-subtotal-itens">Subtotal R$ 0,00</strong>
             </div>
         </div>
     </section>
 
-    {{-- PASSO 3 — Revisão --}}
-    <section class="nfe-step-panel" data-step-panel="3" hidden>
+    {{-- PASSO 4 — Revisão --}}
+    <section class="nfe-step-panel" data-step-panel="4" hidden>
         <div class="card">
             <div class="card__header">
-                <span class="card__title">Totais e observações</span>
+                <span class="card__title">Pagamento, totais e observações</span>
             </div>
             <div class="card__body">
-                <div class="nfe-pendencias" id="nfe-pendencias"></div>
+                <div class="form-grid form-grid--col-2" style="margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label class="form-label form-label--required">Forma de pagamento</label>
+                        <div class="autocomplete-wrap">
+                            <input type="text" id="input-forma-pagamento" class="form-control"
+                                placeholder="Buscar forma..." autocomplete="off"
+                                value="{{ old('forma_pagamento', $rascunho?->forma_pagamento) }}">
+                            <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
+                                value="{{ old('forma_pagamento', $rascunho?->forma_pagamento) }}">
+                        </div>
+                        @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Modalidade do frete</label>
+                        <select name="mod_frete" class="form-control">
+                            @foreach([
+                                9 => '9 — Sem frete',
+                                0 => '0 — Por conta do remetente',
+                                1 => '1 — Por conta do destinatário',
+                                2 => '2 — Por conta de terceiros',
+                                3 => '3 — Próprio remetente',
+                                4 => '4 — Próprio destinatário',
+                            ] as $valor => $label)
+                                <option value="{{ $valor }}" @selected((int) old('mod_frete', $rascunho?->mod_frete ?? 9) === $valor)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size:13px;margin:0 0 1rem;">
+                    CFOP e CSOSN de cada item aparecem na etapa Itens. O imposto desta versão sai zerado.
+                </p>
 
                 <div class="form-grid form-grid--col-3">
                     <div class="form-group">
@@ -270,16 +277,24 @@
                         placeholder="Opcional">{{ old('inf_ad_fisco', $rascunho?->inf_ad_fisco) }}</textarea>
                 </div>
 
-                <div class="alert alert--warning" style="margin-top:1rem;">
-                    <strong>Salvar rascunho</strong> guarda a nota sem mexer no estoque e sem enviar nada.
-                    <strong>Emitir</strong> confirma a venda (estoque e financeiro) e envia a NF-e à SEFAZ.
-                </div>
+                <p class="text-muted" style="margin-top:1rem;font-size:13px;">
+                    Rascunho não mexe no estoque nem envia a nota. Emitir confirma a venda e manda a NF-e à SEFAZ.
+                </p>
             </div>
         </div>
     </section>
 
     <div class="nfe-wizard-actions">
-        <button type="button" class="btn btn--ghost" id="btn-voltar" hidden>Voltar</button>
+        <div class="nfe-wizard-actions__left">
+            <button type="button" class="btn btn--ghost" id="btn-voltar" hidden>Voltar</button>
+            @if ($editando)
+                <button type="submit" class="btn btn--danger" form="form-excluir-rascunho"
+                    data-confirm="Excluir este rascunho? Nada foi emitido nem movimentado."
+                    data-confirm-title="Excluir rascunho"
+                    data-confirm-ok="Excluir"
+                    data-confirm-variant="danger">Excluir rascunho</button>
+            @endif
+        </div>
         <div class="nfe-wizard-actions__right">
             <a href="{{ route('nfe.index') }}" class="btn btn--ghost">{{ $editando ? 'Fechar' : 'Cancelar' }}</a>
             <button type="submit" class="btn btn--outline" id="btn-rascunho" data-acao="rascunho">Salvar rascunho</button>
@@ -297,14 +312,9 @@
 </form>
 
 @if ($editando)
-    <form method="POST" action="{{ route('nfe.rascunho.destroy', $rascunho) }}" style="margin-top:0.75rem;text-align:right;">
+    <form id="form-excluir-rascunho" method="POST" action="{{ route('nfe.rascunho.destroy', $rascunho) }}" hidden>
         @csrf
         @method('DELETE')
-        <button type="submit" class="btn btn--danger btn--sm"
-            data-confirm="Excluir este rascunho? Nada foi emitido nem movimentado."
-            data-confirm-title="Excluir rascunho"
-            data-confirm-ok="Excluir"
-            data-confirm-variant="danger">Excluir rascunho</button>
     </form>
 @endif
 </div>{{-- /.nfe-wizard --}}
@@ -317,8 +327,6 @@
             <button type="button" class="btn btn--ghost btn--sm" data-modal-item-close aria-label="Fechar">&times;</button>
         </div>
         <div class="modal-box__body">
-            <div class="alert alert--error" id="modal-item-aviso" hidden role="alert" style="margin-bottom:0.85rem;"></div>
-
             <div class="nfe-item-busca" id="item-busca-wrap">
                 <label class="form-label form-label--required" for="busca-produto-item">Produto</label>
                 <input type="text" id="busca-produto-item" class="form-control nfe-item-busca__input"
@@ -496,7 +504,8 @@ document.addEventListener('DOMContentLoaded', function () {
         produtos: @json(route('api.produtos.busca')),
         clientes: @json(route('api.clientes.busca')),
         formas: @json(route('api.formas-pagamento.busca')),
-        funcionarios: @json(route('api.funcionarios.busca'))
+        funcionarios: @json(route('api.funcionarios.busca')),
+        naturezas: @json(route('api.naturezas-operacao.busca'))
     };
     var CFOPS_LISTA = ['5101', '5102', '5405', '5656', '5910'];
     var CSOSN_OK = ['102', '103', '300', '400'];
@@ -514,9 +523,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return it;
     });
     var editIndex = null;
-    var avisoEl = document.getElementById('nfe-aviso');
-    var avisoModalEl = document.getElementById('modal-item-aviso');
-    var avisoTimer = null;
 
     function parseBR(val) {
         if (typeof window.parseBR === 'function') return window.parseBR(val);
@@ -554,27 +560,14 @@ document.addEventListener('DOMContentLoaded', function () {
         try { el.focus(); } catch (e) {}
     }
 
-    function mostrarAviso(msg, opts) {
-        opts = opts || {};
-        var target = opts.modal ? avisoModalEl : avisoEl;
-        if (!target) return;
-        target.textContent = msg;
-        target.hidden = false;
-        if (!opts.modal) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    function mostrarAviso(msg) {
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(msg, 'error');
         }
-        clearTimeout(avisoTimer);
-        avisoTimer = setTimeout(function () {
-            if (target) target.hidden = true;
-        }, 6000);
     }
 
-    function limparAviso(modal) {
-        var target = modal ? avisoModalEl : avisoEl;
-        if (target) {
-            target.hidden = true;
-            target.textContent = '';
-        }
+    function limparAviso() {
+        document.querySelectorAll('#toast-stack .toast--error').forEach(function (t) { t.remove(); });
     }
 
     if (typeof initAutocomplete === 'function') {
@@ -585,10 +578,14 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('cliente-doc-hint').textContent = i
                 ? ((i.cnpj ? 'CNPJ ' + i.cnpj : (i.cpf ? 'CPF ' + i.cpf : 'Sem documento')))
                 : '';
+            destinoCliente = i || null;
         });
         initAutocomplete('#input-forma-pagamento', '#hidden-forma-pagamento', urls.formas, function (i) {
             return i.nome;
-        }, null, null, 'nome');
+        }, function () { renderPendencias(); }, null, 'nome');
+        initAutocomplete('#input-natureza', '#hidden-natureza', urls.naturezas, function (i) {
+            return i.nome;
+        }, function () { renderPendencias(); }, null, 'nome');
     }
 
     document.getElementById('btn-novo-cliente')?.addEventListener('click', function () {
@@ -611,9 +608,9 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.classList.toggle('is-done', num < n);
         });
         document.getElementById('btn-voltar').hidden = n === 1;
-        document.getElementById('btn-avancar').hidden = n === 3;
-        document.getElementById('btn-emitir').hidden = n !== 3;
-        if (n === 3) atualizarResumo();
+        document.getElementById('btn-avancar').hidden = n === 4;
+        document.getElementById('btn-emitir').hidden = n !== 4;
+        if (n === 4) atualizarResumo();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -640,50 +637,161 @@ document.addEventListener('DOMContentLoaded', function () {
         return p;
     }
 
+    var destinoCliente = null;
+    var extraFiscal = { motivo: '', aliquota_icms: 0, aliquota_pis: 0, aliquota_cofins: 0 };
+    var ufEmpresa = @json(strtoupper((string) ($empresa->uf ?? '')));
+
+    function contextoFiscal() {
+        var natureza = (document.querySelector('[name="natureza_operacao"]').value || '').toLowerCase();
+        var uf = destinoCliente && destinoCliente.estado ? String(destinoCliente.estado).toUpperCase() : ufEmpresa;
+        return {
+            operacao: natureza.indexOf('devolu') >= 0 ? 'devolucao' : 'venda',
+            uf_destino: uf
+        };
+    }
+
+    function listarAvisos() {
+        var lista = [];
+        itens.forEach(function (it) {
+            if ((parseFloat(it.aliquota_icms) || 0) > 0) {
+                lista.push('Item "' + it.nome + '": alíquota de ICMS cadastrada no produto. O XML desta versão envia o imposto zerado.');
+            }
+            if ((parseFloat(it.aliquota_pis) || 0) > 0) {
+                lista.push('Item "' + it.nome + '": alíquota de PIS cadastrada no produto. O XML desta versão envia o imposto zerado.');
+            }
+            if ((parseFloat(it.aliquota_cofins) || 0) > 0) {
+                lista.push('Item "' + it.nome + '": alíquota de COFINS cadastrada no produto. O XML desta versão envia o imposto zerado.');
+            }
+        });
+        var frete = document.querySelector('[name="mod_frete"]');
+        if (frete) {
+            lista.push('Frete no XML: ' + frete.options[frete.selectedIndex].text + '.');
+        }
+        return lista;
+    }
+
     function listarPendencias() {
         var lista = [];
         if (!document.querySelector('[name="natureza_operacao"]').value.trim()) {
             lista.push({ msg: 'Informe a natureza da operação.', passo: 1, campo: '[name="natureza_operacao"]' });
         }
         if (!document.getElementById('hidden-forma-pagamento').value) {
-            lista.push({ msg: 'Selecione a forma de pagamento.', passo: 1, campo: '#input-forma-pagamento' });
+            lista.push({ msg: 'Selecione a forma de pagamento.', passo: 4, campo: '#input-forma-pagamento' });
         }
         if (!itens.length) {
-            lista.push({ msg: 'Adicione pelo menos um item.', passo: 2 });
+            lista.push({ msg: 'Adicione pelo menos um item.', passo: 3 });
         }
         itens.forEach(function (it, idx) {
             var faltas = pendenciasDoItem(it);
             if (faltas.length) {
-                lista.push({ msg: 'Item "' + it.nome + '": falta ' + faltas.join(', ') + '.', passo: 2, item: idx });
+                lista.push({ msg: 'Item "' + it.nome + '": falta ' + faltas.join(', ') + '.', passo: 3, item: idx });
             }
         });
         var sub = itens.reduce(function (s, it) { return s + totalItem(it); }, 0);
         if (parseBR(document.getElementById('input-desconto').value) > sub + 0.001) {
-            lista.push({ msg: 'O desconto é maior que o subtotal dos itens.', passo: 3, campo: '#input-desconto' });
+            lista.push({ msg: 'O desconto é maior que o subtotal dos itens.', passo: 4, campo: '#input-desconto' });
         }
         return lista;
+    }
+
+    var alertasEmpresa = @json(array_values($alertas));
+    var avisoCertificado = @json($avisoCertificado);
+    var linkEmpresa = @json(route('empresa.edit', $empresa));
+
+    function abrirPainelPendencias() {
+        var pop = document.getElementById('nfe-pendencias-pop');
+        var btn = document.getElementById('nfe-pendencias-toggle');
+        pop.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+    }
+
+    function fecharPainelPendencias() {
+        var pop = document.getElementById('nfe-pendencias-pop');
+        var btn = document.getElementById('nfe-pendencias-toggle');
+        pop.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
     }
 
     function renderPendencias() {
         var box = document.getElementById('nfe-pendencias');
         var lista = listarPendencias();
-        if (!lista.length) {
-            box.innerHTML = '<div class="alert alert--success">Tudo pronto para emitir.</div>';
-            return lista;
+        var avisos = listarAvisos();
+        var html = '';
+
+        if (alertasEmpresa.length || avisoCertificado) {
+            html += '<p class="nfe-pendencias-pop__grupo">Empresa</p><ul class="nfe-pendencias-pop__lista">';
+            alertasEmpresa.forEach(function (msg) {
+                html += '<li class="is-erro">' + esc(msg) + '</li>';
+            });
+            if (avisoCertificado) html += '<li class="is-aviso">' + esc(avisoCertificado) + '</li>';
+            html += '</ul><a class="nfe-pendencias-pop__link" href="' + linkEmpresa + '">Abrir cadastro da empresa</a>';
         }
-        box.innerHTML = '<div class="alert alert--warning"><strong>Falta completar para emitir</strong>' +
-            '<ul class="nfe-alerts__list">' + lista.map(function (p, i) {
-                return '<li>' + esc(p.msg) + ' <button type="button" class="btn btn--ghost btn--sm" data-corrigir="' + i + '">Corrigir</button></li>';
-            }).join('') + '</ul><small>Você pode salvar como rascunho e completar depois.</small></div>';
+
+        if (!lista.length && !alertasEmpresa.length) {
+            html += '<p class="nfe-pendencias-pop__ok">A nota não tem pendência de preenchimento.</p>';
+        } else if (lista.length) {
+            html += '<p class="nfe-pendencias-pop__grupo">Para emitir</p><ul class="nfe-pendencias-pop__lista">';
+            lista.forEach(function (p, i) {
+                html += '<li class="is-erro"><span>' + esc(p.msg) + '</span> <button type="button" data-corrigir="' + i + '">Corrigir</button></li>';
+            });
+            html += '</ul>';
+        }
+
+        if (avisos.length) {
+            html += '<p class="nfe-pendencias-pop__grupo">Conferir</p><ul class="nfe-pendencias-pop__lista">';
+            avisos.forEach(function (msg) {
+                html += '<li class="is-aviso">' + esc(msg) + '</li>';
+            });
+            html += '</ul>';
+        }
+
+        html += '<p class="nfe-pendencias-pop__nota">Esta versão emite só venda interna no Simples. Se a SEFAZ estiver fora, a emissão para e nenhum número é usado.</p>';
+        box.innerHTML = html;
+
+        var total = lista.length + alertasEmpresa.length;
+        var count = document.getElementById('nfe-pendencias-count');
+        var rotulo = document.getElementById('nfe-pendencias-rotulo');
+        var fabBtn = document.getElementById('nfe-pendencias-toggle');
+        count.textContent = String(total);
+        count.hidden = total === 0;
+        rotulo.textContent = total === 0 ? 'Sem pendências' : (total === 1 ? '1 pendência' : total + ' pendências');
+        fabBtn.classList.toggle('is-ok', total === 0);
+        fabBtn.classList.toggle('is-erro', total > 0);
+
+        var passosComErro = {};
+        lista.forEach(function (p) { passosComErro[p.passo] = true; });
+        document.querySelectorAll('[data-step-btn]').forEach(function (btn) {
+            btn.classList.toggle('has-pendencia', !!passosComErro[parseInt(btn.dataset.stepBtn, 10)]);
+        });
+
         box.querySelectorAll('[data-corrigir]').forEach(function (btn) {
-            btn.addEventListener('click', function () { corrigir(lista[parseInt(btn.dataset.corrigir, 10)]); });
+            btn.addEventListener('click', function () {
+                fecharPainelPendencias();
+                corrigir(lista[parseInt(btn.dataset.corrigir, 10)]);
+            });
         });
         return lista;
     }
 
+    document.getElementById('nfe-pendencias-toggle').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var aberto = document.getElementById('nfe-pendencias-toggle').getAttribute('aria-expanded') === 'true';
+        if (aberto) fecharPainelPendencias();
+        else abrirPainelPendencias();
+    });
+    document.addEventListener('click', function (e) {
+        var fab = document.getElementById('nfe-pendencias-fab');
+        if (!fab.contains(e.target)) fecharPainelPendencias();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') fecharPainelPendencias();
+    });
+    document.getElementById('form-nfe').addEventListener('input', renderPendencias);
+    document.getElementById('form-nfe').addEventListener('change', renderPendencias);
+
     function corrigir(p) {
         if (typeof p.item === 'number') {
-            irPara(2);
+            irPara(3);
             abrirModalItem(p.item, true);
             return;
         }
@@ -707,6 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('label-subtotal-itens').textContent = 'Subtotal ' + formatBR(sub);
         document.getElementById('label-total').textContent = formatBR(tot);
         document.getElementById('count-itens').textContent = String(itens.length);
+        if (typeof renderPendencias === 'function') renderPendencias();
     }
 
     function atualizarResumo() {
@@ -725,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function () {
         hidden.innerHTML = '';
 
         if (!itens.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted empty-state">Nenhum item. Clique em “Adicionar item” ou tecle Insert.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted empty-state">Nenhum item. Toque em Adicionar item.</td></tr>';
             atualizarTotais();
             return;
         }
@@ -743,12 +852,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         : '') +
                     '<span class="badge badge--neutral">NCM ' + esc(it.ncm || '—') + '</span> ' +
                     '<span class="badge badge--neutral">CFOP ' + esc(it.cfop) + '</span> ' +
-                    '<span class="badge badge--neutral">CSOSN ' + esc(it.csosn) + '</span></td>' +
+                    '<span class="badge badge--neutral">CSOSN ' + esc(it.csosn) + '</span>' +
+                    (it.vinculo_motivo ? '<div class="text-muted" style="font-size:11px;">' + esc(it.vinculo_motivo) + '</div>' : '') +
+                    '</td>' +
                 '<td data-label="Qtd" class="col-num">' + formatQtd(it.quantidade) + '</td>' +
                 '<td data-label="Total" class="col-num">' + formatBR(totalItem(it)) + '</td>' +
                 '<td data-label="Ações" class="col-actions">' +
                     '<button type="button" class="btn btn--ghost btn--sm" data-edit="' + idx + '">Editar</button>' +
-                    '<button type="button" class="btn btn--danger btn--sm btn--icon" data-del="' + idx + '" title="Remover">✕</button>' +
+                    '<button type="button" class="btn btn--danger btn--sm" data-del="' + idx + '">Remover</button>' +
                 '</td>';
             tbody.appendChild(tr);
 
@@ -899,6 +1010,12 @@ document.addEventListener('DOMContentLoaded', function () {
         selecionarOpcao(el('item-csosn'), it.csosn || defaults.csosn);
         selecionarOpcao(el('item-cst-pis'), it.cst_pis || defaults.cstPis);
         selecionarOpcao(el('item-cst-cofins'), it.cst_cofins || defaults.cstCofins);
+        extraFiscal = {
+            motivo: it.vinculo_motivo || '',
+            aliquota_icms: it.aliquota_icms || 0,
+            aliquota_pis: it.aliquota_pis || 0,
+            aliquota_cofins: it.aliquota_cofins || 0
+        };
         atualizarTotalModalItem();
         atualizarResumoFiscal();
     }
@@ -919,7 +1036,11 @@ document.addEventListener('DOMContentLoaded', function () {
             origem: parseInt(el('item-origem').value, 10) || 0,
             csosn: el('item-csosn').value,
             cst_pis: el('item-cst-pis').value,
-            cst_cofins: el('item-cst-cofins').value
+            cst_cofins: el('item-cst-cofins').value,
+            vinculo_motivo: extraFiscal.motivo,
+            aliquota_icms: extraFiscal.aliquota_icms,
+            aliquota_pis: extraFiscal.aliquota_pis,
+            aliquota_cofins: extraFiscal.aliquota_cofins
         };
     }
 
@@ -1014,7 +1135,12 @@ document.addEventListener('DOMContentLoaded', function () {
         clearTimeout(timeoutProd);
         timeoutProd = setTimeout(function () {
             var id = ++ultimaBusca;
-            fetch(urls.produtos + '?q=' + encodeURIComponent(q || ''), { headers: { 'Accept': 'application/json' } })
+            var ctx = contextoFiscal();
+            var params = new URLSearchParams();
+            if (q) params.set('q', q);
+            params.set('operacao', ctx.operacao);
+            if (ctx.uf_destino) params.set('uf_destino', ctx.uf_destino);
+            fetch(urls.produtos + '?' + params.toString(), { headers: { 'Accept': 'application/json' } })
                 .then(function (r) { return r.ok ? r.json() : []; })
                 .then(function (data) {
                     if (id !== ultimaBusca || buscaWrap.hidden) return;
@@ -1041,11 +1167,17 @@ document.addEventListener('DOMContentLoaded', function () {
         el('item-preco').value = formatInput(p.preco_venda || 0);
         el('item-ncm').value = digits(p.ncm, 8);
         el('item-cest').value = digits(p.cest, 9);
-        definirCfop(digits(p.cfop_padrao || defaults.cfop, 4) || defaults.cfop);
+        definirCfop(digits(p.cfop_padrao || p.cfop_sugerido || defaults.cfop, 4) || defaults.cfop);
         el('item-origem').value = String(p.origem ?? 0);
-        selecionarOpcao(el('item-csosn'), digits(p.cst_icms || defaults.csosn, 3) || defaults.csosn);
-        selecionarOpcao(el('item-cst-pis'), (digits(p.cst_pis || defaults.cstPis, 2) || defaults.cstPis).padStart(2, '0'));
-        selecionarOpcao(el('item-cst-cofins'), (digits(p.cst_cofins || defaults.cstCofins, 2) || defaults.cstCofins).padStart(2, '0'));
+        selecionarOpcao(el('item-csosn'), digits(p.cst_icms || p.csosn_sugerido || defaults.csosn, 3) || defaults.csosn);
+        selecionarOpcao(el('item-cst-pis'), (digits(p.cst_pis || p.cst_pis_sugerido || defaults.cstPis, 2) || defaults.cstPis).padStart(2, '0'));
+        selecionarOpcao(el('item-cst-cofins'), (digits(p.cst_cofins || p.cst_cofins_sugerido || defaults.cstCofins, 2) || defaults.cstCofins).padStart(2, '0'));
+        extraFiscal = {
+            motivo: p.vinculo_motivo || '',
+            aliquota_icms: p.aliquota_icms || 0,
+            aliquota_pis: p.aliquota_pis || 0,
+            aliquota_cofins: p.aliquota_cofins || 0
+        };
         atualizarTotalModalItem();
         atualizarResumoFiscal();
         fiscalBox.open = pendenciasDoItem(lerItemDoModal()).length > 0;
@@ -1130,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Insert abre o modal na etapa de itens
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Insert' && passo === 2 && !modalAberto()) {
+        if (e.key === 'Insert' && passo === 3 && !modalAberto()) {
             e.preventDefault();
             abrirModalItem(null);
         }
@@ -1146,10 +1278,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     el('btn-emitir').addEventListener('click', function () {
         if (!podeEmitir) return;
-        irPara(3);
+        irPara(4);
         var pendencias = renderPendencias();
-        if (pendencias.length) {
-            mostrarAviso('A nota ainda tem ' + pendencias.length + ' pendência(s). Corrija ou salve como rascunho.');
+        if (pendencias.length || alertasEmpresa.length) {
+            abrirPainelPendencias();
+            mostrarAviso('A nota ainda tem pendência. Abra a lista, corrija ou salve como rascunho.');
             return;
         }
         inputAcao.value = 'emitir';
@@ -1163,18 +1296,26 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!itens.length) {
             e.preventDefault();
             mostrarAviso('Adicione pelo menos um item antes de salvar.');
-            irPara(2);
+            irPara(3);
+            abrirPainelPendencias();
             return;
         }
-        if (acao === 'emitir' && listarPendencias().length) {
+        if (acao === 'emitir' && (listarPendencias().length || alertasEmpresa.length)) {
             e.preventDefault();
-            irPara(3);
+            irPara(4);
             renderPendencias();
+            abrirPainelPendencias();
+            return;
+        }
+
+        if (acao === 'emitir' && el('form-nfe').dataset.confirmApproved === '1') {
+            el('btn-emitir').disabled = true;
+            el('btn-rascunho').disabled = true;
         }
     });
 
     renderItens();
-    irPara(@json($errors->has('itens') || $errors->has('itens.*') ? 2 : ($errors->has('pendencias') || $errors->has('pendencias.*') ? 3 : 1)));
+    irPara(@json($errors->has('itens') || $errors->has('itens.*') ? 3 : ($errors->has('pendencias') || $errors->has('pendencias.*') || $errors->has('forma_pagamento') ? 4 : 1)));
 });
 </script>
 @endpush

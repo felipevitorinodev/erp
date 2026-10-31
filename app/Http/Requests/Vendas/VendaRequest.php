@@ -30,6 +30,8 @@ class VendaRequest extends FormRequest
             'desconto'        => 'nullable|numeric|min:0',
             'acrescimo'       => 'nullable|numeric|min:0',
             'observacoes'     => 'nullable|string',
+            'nfce_documento'  => 'nullable|string|max:18',
+            'valor_recebido'  => 'nullable|numeric|min:0',
             'itens'           => 'required|array|min:1',
             'itens.*.produto_id'     => 'required|exists:produtos,id',
             'itens.*.quantidade'     => 'required|numeric|min:0.001',
@@ -119,7 +121,7 @@ class VendaRequest extends FormRequest
         }
 
         $merge = ['itens' => $items];
-        foreach (['desconto', 'acrescimo', 'subtotal', 'total'] as $field) {
+        foreach (['desconto', 'acrescimo', 'subtotal', 'total', 'valor_recebido'] as $field) {
             if ($this->filled($field)) {
                 $merge[$field] = $this->normalizarNumero((string) $this->input($field));
             }

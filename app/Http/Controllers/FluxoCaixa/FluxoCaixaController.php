@@ -100,28 +100,12 @@ class FluxoCaixaController extends Controller
             $dataFim = $dataInicio->copy()->addDays(90);
         }
 
-        $entradasRaw = ContaReceberBaixa::query()
-            ->where('empresa_id', $empresaId)
-            ->whereDate('data_pagamento', '>=', $dataInicio->toDateString())
-            ->whereDate('data_pagamento', '<=', $dataFim->toDateString())
-            ->whereHas('conta', fn ($query) => $query->whereIn('situacao', ['paga', 'parcial']))
-            ->selectRaw('DATE(data_pagamento) as dia, SUM(valor) as total')
-            ->groupBy('dia')
-            ->pluck('total', 'dia');
-
-        $entradas = $entradasRaw->all();
+        $entradas = $this->baixasPorDia(ContaReceberBaixa::class, $empresaId, $dataInicio, $dataFim);
         foreach ($this->entradasDeVendasAvista($empresaId, $dataInicio, $dataFim) as $dia => $total) {
             $entradas[$dia] = (float) ($entradas[$dia] ?? 0) + $total;
         }
 
-        $saidasRaw = ContaPagarBaixa::query()
-            ->where('empresa_id', $empresaId)
-            ->whereDate('data_pagamento', '>=', $dataInicio->toDateString())
-            ->whereDate('data_pagamento', '<=', $dataFim->toDateString())
-            ->whereHas('conta', fn ($query) => $query->whereIn('situacao', ['paga', 'parcial']))
-            ->selectRaw('DATE(data_pagamento) as dia, SUM(valor) as total')
-            ->groupBy('dia')
-            ->pluck('total', 'dia');
+        $saidasRaw = $this->baixasPorDia(ContaPagarBaixa::class, $empresaId, $dataInicio, $dataFim);
 
         $dias = [];
         $cursor = $dataInicio->copy();
@@ -157,6 +141,31 @@ class FluxoCaixaController extends Controller
     }
 
     /**
+     * @param class-string<ContaReceberBaixa|ContaPagarBaixa> $modelo
+     * @return array<string, float>
+     */
+    private function baixasPorDia(string $modelo, int $empresaId, Carbon $dataInicio, Carbon $dataFim): array
+    {
+        $totais = [];
+
+        $linhas = $modelo::query()
+            ->where('empresa_id', $empresaId)
+            ->whereDataEntre('data_pagamento', $dataInicio, $dataFim)
+            ->whereHas('conta', fn ($query) => $query->whereIn('situacao', ['paga', 'parcial']))
+            ->toBase()
+            ->selectRaw('data_pagamento as dia, SUM(valor) as total')
+            ->groupBy('data_pagamento')
+            ->get();
+
+        foreach ($linhas as $linha) {
+            $dia = Carbon::parse($linha->dia)->toDateString();
+            $totais[$dia] = ($totais[$dia] ?? 0) + (float) $linha->total;
+        }
+
+        return $totais;
+    }
+
+    /**
      * Vendas à vista não geram conta a receber. Entram no caixa na data da venda.
      *
      * @return array<string, float>
@@ -166,38 +175,47 @@ class FluxoCaixaController extends Controller
         $nomesPrazo = FormaPagamento::query()
             ->where('empresa_id', $empresaId)
             ->where('ativo', true)
-            ->get()
+            ->get(['nome', 'tipo', 'gera_conta_receber'])
             ->filter(fn (FormaPagamento $forma) => $forma->isPrazo())
             ->map(fn (FormaPagamento $forma) => mb_strtolower($forma->nome))
             ->all();
 
         $totais = [];
 
-        $vendas = Venda::query()
+        // Agregado no banco por dia e forma: o número de linhas depende de dias x formas, não de vendas.
+        $grupos = Venda::query()
             ->where('empresa_id', $empresaId)
             ->where('situacao', 'confirmada')
-            ->whereDate('data_venda', '>=', $dataInicio->toDateString())
-            ->whereDate('data_venda', '<=', $dataFim->toDateString())
+            ->whereDataEntre('data_venda', $dataInicio, $dataFim)
             ->whereDoesntHave('contasReceber', function ($query) {
                 $query->where('situacao', '!=', 'cancelada');
             })
-            ->with('formaPagamento')
-            ->get(['id', 'data_venda', 'total', 'forma_pagamento', 'forma_pagamento_id']);
+            ->toBase()
+            ->selectRaw('data_venda, forma_pagamento_id, forma_pagamento, SUM(total) as total')
+            ->groupBy('data_venda', 'forma_pagamento_id', 'forma_pagamento')
+            ->get();
 
-        foreach ($vendas as $venda) {
-            if ($venda->formaPagamento) {
-                if ($venda->formaPagamento->isPrazo()) {
+        $formas = FormaPagamento::withTrashed()
+            ->whereIn('id', $grupos->pluck('forma_pagamento_id')->filter()->unique())
+            ->get(['id', 'tipo', 'gera_conta_receber'])
+            ->keyBy('id');
+
+        foreach ($grupos as $grupo) {
+            $forma = $grupo->forma_pagamento_id ? $formas->get($grupo->forma_pagamento_id) : null;
+
+            if ($forma) {
+                if ($forma->isPrazo()) {
                     continue;
                 }
             } else {
-                $nome = mb_strtolower(trim((string) $venda->forma_pagamento));
+                $nome = mb_strtolower(trim((string) $grupo->forma_pagamento));
                 if ($nome !== '' && in_array($nome, $nomesPrazo, true)) {
                     continue;
                 }
             }
 
-            $dia = $venda->data_venda->toDateString();
-            $totais[$dia] = ($totais[$dia] ?? 0) + (float) $venda->total;
+            $dia = Carbon::parse($grupo->data_venda)->toDateString();
+            $totais[$dia] = ($totais[$dia] ?? 0) + (float) $grupo->total;
         }
 
         return $totais;

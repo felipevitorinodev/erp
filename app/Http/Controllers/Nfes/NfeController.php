@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Nfes;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Nfes\NfeCreateRequest;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
-use App\Services\NfeService;
+use App\Services\Nfes\NfeService;
 use Illuminate\Http\Request;
 
 class NfeController extends Controller
@@ -54,6 +55,11 @@ class NfeController extends Controller
         return $this->nfeService->show($nfe);
     }
 
+    public function limparCodigos(Nfe $nfe)
+    {
+        return $this->nfeService->limparCodigosFiscais($nfe);
+    }
+
     public function cancelar(Request $request, Nfe $nfe)
     {
         $dados = $request->validate([
@@ -75,6 +81,16 @@ class NfeController extends Controller
     public function consultar(Nfe $nfe)
     {
         return $this->nfeService->consultar($nfe);
+    }
+
+    public function inutilizarFormulario()
+    {
+        return $this->nfeService->formularioInutilizacao();
+    }
+
+    public function inutilizarSalvar(Request $request)
+    {
+        return $this->nfeService->inutilizar($request);
     }
 
     public function xml(Request $request, Nfe $nfe)

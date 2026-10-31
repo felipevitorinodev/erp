@@ -1,11 +1,15 @@
 <?php
 
+use App\Models\Empresas\Empresa;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Support\SessaoLogin;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Arr;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +23,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->hasSession() && $request->cookie(SessaoLogin::MARCADOR) === '1') {
+                SessaoLogin::esquecer();
+                $request->session()->flash('warning', 'Sua sessão expirou. Entre novamente para continuar.');
+            }
+
+            return route('login');
+        });
         $middleware->alias([
             'perfil' => \App\Http\Middleware\CheckPerfil::class,
             'permissao' => \App\Http\Middleware\CheckPermissao::class,
@@ -29,6 +41,27 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+        $exceptions->dontFlash(Empresa::segredosForaDaSessao());
+
+        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Sua sessão expirou. Atualize a página e tente novamente.',
+                ], 419);
+            }
+
+            if ($request->user()) {
+                return redirect()->back(fallback: url('/'))->with(
+                    'warning',
+                    'A página expirou. Atualize e tente novamente.'
+                );
+            }
+
+            return redirect()->route('login')->with(
+                'warning',
+                'Sua sessão expirou. Entre novamente para continuar.'
+            );
+        });
 
         // Handler global para violação de constraint única
         $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
@@ -53,7 +86,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['error' => $message], 422);
             }
 
-            return back()->withInput()->with('error', $message);
+            return back()
+                ->withInput(Arr::except($request->input(), Empresa::segredosForaDaSessao()))
+                ->with('error', $message);
         });
 
         // Handler para erros de query genéricos (foreign key, etc)
@@ -79,7 +114,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 if ($request->expectsJson()) {
                     return response()->json(['error' => $message], 422);
                 }
-                return back()->withInput()->with('error', $message);
+                return back()
+                    ->withInput(Arr::except($request->input(), Empresa::segredosForaDaSessao()))
+                    ->with('error', $message);
             }
 
             return null; // Deixa o handler padrão tratar outros erros

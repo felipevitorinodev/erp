@@ -11,7 +11,7 @@ class ProdutoRepository
 {
     public function index(?Request $request = null)
     {
-        $query = Produto::with(['grupos', 'unidadeMedida'])
+        $query = Produto::with(['grupos:id,nome', 'unidadeMedida:id,sigla'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderBy('nome');
 
@@ -32,7 +32,15 @@ class ProdutoRepository
             }
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, [
+            'id',
+            'grupo_id',
+            'unidade_medida_id',
+            'nome',
+            'preco_venda',
+            'estoque_atual',
+            'ativo',
+        ]);
     }
 
     public function store(array $data)

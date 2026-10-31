@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Nfes;
 
 use App\Models\Empresas\Empresa;
 use App\Models\Vendas\Venda;
@@ -12,11 +12,16 @@ class Nfe extends Model
 {
     use SoftDeletes;
 
+    public const MODELO_NFE = 55;
+
+    public const MODELO_NFCE = 65;
+
     protected $table = 'nfes';
 
     protected $fillable = [
         'empresa_id',
         'venda_id',
+        'modelo',
         'numero',
         'serie',
         'chave_acesso',
@@ -34,6 +39,7 @@ class Nfe extends Model
     ];
 
     protected $casts = [
+        'modelo' => 'integer',
         'ambiente' => 'integer',
         'data_autorizacao' => 'datetime',
         'data_cancelamento' => 'datetime',

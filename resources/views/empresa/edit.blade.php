@@ -111,6 +111,17 @@
                 <div class="form-section">
                     <div class="form-section__title">Endereço</div>
                     <div class="form-grid form-grid--col-4">
+                        <div class="form-group">
+                            <label class="form-label">CEP</label>
+                            <input type="text" name="cep" class="form-control @error('cep') is-invalid @enderror"
+                                value="{{ old('cep', $empresa->cep) }}" maxlength="9" placeholder="00000-000">
+                            <small class="text-muted">Ao sair do campo, o endereço e o código IBGE são preenchidos.</small>
+                            @error('cep')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid--col-4" style="margin-top: 1rem;">
                         <div class="form-group form-group--span-2">
                             <label class="form-label">Logradouro</label>
                             <input type="text" name="logradouro" class="form-control @error('logradouro') is-invalid @enderror"
@@ -157,7 +168,7 @@
                         <div class="form-group">
                             <label class="form-label">Bairro</label>
                             <input type="text" name="bairro" class="form-control @error('bairro') is-invalid @enderror"
-                                value="{{ $empresa->bairro }}" maxlength="255">
+                                value="{{ old('bairro', $empresa->bairro) }}" maxlength="100">
                             @error('bairro')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -234,7 +245,7 @@
                             <input type="text" name="cod_ibge" maxlength="7" inputmode="numeric"
                                 class="form-control @error('cod_ibge') is-invalid @enderror"
                                 value="{{ old('cod_ibge', $empresa->cod_ibge) }}">
-                            <small class="text-muted">Código IBGE do município (7 dígitos). Consulte: ibge.gov.br</small>
+                            <small class="text-muted">7 dígitos. Preenchido pelo CEP; confira antes de salvar.</small>
                             @error('cod_ibge')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -348,6 +359,89 @@
                                 class="form-control @error('nfe_cst_cofins_padrao') is-invalid @enderror"
                                 value="{{ old('nfe_cst_cofins_padrao', $empresa->nfe_cst_cofins_padrao ?? '07') }}">
                             @error('nfe_cst_cofins_padrao')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section__title">NFC-e</div>
+                    <p class="text-muted" style="margin-bottom: 1rem;">
+                        O CSC é gravado criptografado e a tela só mostra se está preenchido ou vazio.
+                        A série 001 é provisória até o contador informar a série definitiva. Ela não altera a série da NF-e.
+                    </p>
+                    <label style="display:flex; gap:.5rem; align-items:flex-start; margin-bottom: 1rem;">
+                        <input type="hidden" name="nfce_emitir_pdv" value="0">
+                        <input type="checkbox" name="nfce_emitir_pdv" value="1" @checked(old('nfce_emitir_pdv', $empresa->nfce_emitir_pdv))>
+                        <span>Emitir NFC-e ao finalizar a venda no PDV</span>
+                    </label>
+                    <div class="form-grid form-grid--col-3">
+                        <div class="form-group">
+                            <label class="form-label">Série da NFC-e</label>
+                            <input type="text" name="nfce_serie" maxlength="3" inputmode="numeric"
+                                class="form-control @error('nfce_serie') is-invalid @enderror"
+                                value="{{ old('nfce_serie', $empresa->nfce_serie ?? '001') }}">
+                            @error('nfce_serie')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid--col-2" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+                                CSC de homologação
+                                @if (filled($empresa->nfce_csc_homologacao))
+                                    <span class="badge badge--success">Preenchido</span>
+                                @else
+                                    <span class="badge badge--neutral">Vazio</span>
+                                @endif
+                            </label>
+                            <input type="password" name="nfce_csc_homologacao" autocomplete="new-password" maxlength="36"
+                                class="form-control @error('nfce_csc_homologacao') is-invalid @enderror">
+                            <small class="text-muted">Deixe em branco para manter o CSC atual. O valor gravado não volta para a tela.</small>
+                            @error('nfce_csc_homologacao')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">idCSC de homologação</label>
+                            <input type="text" name="nfce_id_csc_homologacao" maxlength="6" inputmode="numeric" autocomplete="off"
+                                class="form-control @error('nfce_id_csc_homologacao') is-invalid @enderror"
+                                value="{{ old('nfce_id_csc_homologacao', $empresa->nfce_id_csc_homologacao) }}">
+                            <small class="text-muted">Até 6 dígitos. Este identificador entra no QR Code. O CSC não.</small>
+                            @error('nfce_id_csc_homologacao')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid--col-2" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+                                CSC de produção
+                                @if (filled($empresa->nfce_csc_producao))
+                                    <span class="badge badge--success">Preenchido</span>
+                                @else
+                                    <span class="badge badge--neutral">Vazio</span>
+                                @endif
+                            </label>
+                            <input type="password" name="nfce_csc_producao" autocomplete="new-password" maxlength="36"
+                                class="form-control @error('nfce_csc_producao') is-invalid @enderror">
+                            <small class="text-muted">Deixe em branco para manter o CSC atual. O valor gravado não volta para a tela.</small>
+                            @error('nfce_csc_producao')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">idCSC de produção</label>
+                            <input type="text" name="nfce_id_csc_producao" maxlength="6" inputmode="numeric" autocomplete="off"
+                                class="form-control @error('nfce_id_csc_producao') is-invalid @enderror"
+                                value="{{ old('nfce_id_csc_producao', $empresa->nfce_id_csc_producao) }}">
+                            @error('nfce_id_csc_producao')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
                         </div>

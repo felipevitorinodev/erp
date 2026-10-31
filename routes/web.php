@@ -20,7 +20,9 @@ use App\Http\Controllers\Produtos\ProdutoController;
 use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
 use App\Http\Controllers\Usuarios\PerfilController;
 use App\Http\Controllers\Usuarios\UsuarioController;
-use App\Http\Controllers\NfeController;
+use App\Http\Controllers\Nfces\NfceController;
+use App\Http\Controllers\Nfes\NfeController;
+use App\Http\Controllers\PerfisFiscais\PerfilFiscalController;
 use App\Http\Controllers\Vendas\VendaController;
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
@@ -44,27 +46,27 @@ Route::middleware('auth')->group(function () {
         $hoje = now()->toDateString();
         $em7Dias = now()->addDays(7)->toDateString();
 
-        $vendasHoje = Venda::where('empresa_id', $empresaId)
-            ->whereDate('data_venda', $hoje)
-            ->count();
+        $resumoVendasHoje = Venda::where('empresa_id', $empresaId)
+            ->whereDataEntre('data_venda', $hoje, $hoje)
+            ->toBase()
+            ->selectRaw("COUNT(*) as quantidade, COALESCE(SUM(CASE WHEN situacao = 'confirmada' THEN total END), 0) as faturamento")
+            ->first();
 
-        $faturamentoHoje = (float) Venda::where('empresa_id', $empresaId)
-            ->where('situacao', 'confirmada')
-            ->whereDate('data_venda', $hoje)
-            ->sum('total');
+        $vendasHoje = (int) $resumoVendasHoje->quantidade;
+        $faturamentoHoje = (float) $resumoVendasHoje->faturamento;
 
         $contasReceberVencidas = ContaReceber::where('empresa_id', $empresaId)
-            ->whereDate('data_vencimento', '<', $hoje)
+            ->where('data_vencimento', '<', $hoje)
             ->whereIn('situacao', ['aberta', 'parcial'])
             ->count();
 
         $contasPagarVencidas = ContaPagar::where('empresa_id', $empresaId)
-            ->whereDate('data_vencimento', '<', $hoje)
+            ->where('data_vencimento', '<', $hoje)
             ->whereIn('situacao', ['aberta', 'parcial'])
             ->count();
 
         $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
-            ->whereBetween('data_vencimento', [$hoje, $em7Dias])
+            ->whereDataEntre('data_vencimento', $hoje, $em7Dias)
             ->whereIn('situacao', ['aberta', 'parcial'])
             ->sum(DB::raw('valor - COALESCE(valor_pago, 0)'));
 
@@ -74,6 +76,103 @@ Route::middleware('auth')->group(function () {
             ->whereColumn('estoque_atual', '<=', 'estoque_minimo')
             ->count();
 
+        $inicioMes = now()->startOfMonth();
+        $fimMes = $inicioMes->copy()->endOfMonth();
+        $inicioMesSql = $inicioMes->toDateString();
+        $fimMesSql = $fimMes->toDateString();
+        $usuario = auth()->user();
+
+        $faturamentoMes = null;
+        if ($usuario->pode('vendas') || $usuario->pode('relatorios')) {
+            $linhas = Venda::where('empresa_id', $empresaId)
+                ->where('situacao', 'confirmada')
+                ->whereDataEntre('data_venda', $inicioMesSql, $fimMesSql)
+                ->toBase()
+                ->selectRaw('DATE(data_venda) as dia, COUNT(*) as qtd, COALESCE(SUM(total), 0) as total')
+                ->groupByRaw('DATE(data_venda)')
+                ->get();
+
+            $porDia = [];
+            foreach ($linhas as $linha) {
+                $porDia[substr((string) $linha->dia, 0, 10)] = $linha;
+            }
+
+            $dias = [];
+            $totalMes = 0.0;
+            $qtdMes = 0;
+            $maximo = 0.0;
+            $cursor = $inicioMes->copy();
+            while ($cursor->lte($fimMes)) {
+                $chave = $cursor->toDateString();
+                $linha = $porDia[$chave] ?? null;
+                $total = round((float) ($linha->total ?? 0), 2);
+                $qtd = (int) ($linha->qtd ?? 0);
+                $totalMes += $total;
+                $qtdMes += $qtd;
+                $maximo = max($maximo, $total);
+                $dias[] = [
+                    'n' => $cursor->day,
+                    'total' => $total,
+                    'qtd' => $qtd,
+                    'hoje' => $chave === $hoje,
+                    'futuro' => $chave > $hoje,
+                    'eixo' => false,
+                ];
+                $cursor->addDay();
+            }
+
+            foreach ($dias as $i => &$dia) {
+                $dia['altura'] = $maximo > 0 ? round($dia['total'] / $maximo * 100, 1) : 0;
+                $dia['eixo'] = $dia['n'] === 1 || $dia['n'] % 5 === 0 || $dia['hoje'];
+            }
+            unset($dia);
+            foreach ($dias as $i => $dia) {
+                if (! $dia['hoje']) {
+                    continue;
+                }
+                foreach ([-1, 1] as $vizinho) {
+                    $j = $i + $vizinho;
+                    if (isset($dias[$j]) && ! $dias[$j]['hoje']) {
+                        $dias[$j]['eixo'] = false;
+                    }
+                }
+            }
+
+            $faturamentoMes = [
+                'dias' => $dias,
+                'total' => round($totalMes, 2),
+                'qtd' => $qtdMes,
+                'ticket' => $qtdMes > 0 ? round($totalMes / $qtdMes, 2) : 0.0,
+                'inicio' => $inicioMesSql,
+                'fim' => $fimMesSql,
+            ];
+        }
+
+        $contasMes = null;
+        if ($usuario->pode('financeiro')) {
+            $resumoConta = function (string $model) use ($empresaId, $inicioMesSql, $fimMesSql): array {
+                $linha = $model::where('empresa_id', $empresaId)
+                    ->whereDataEntre('data_vencimento', $inicioMesSql, $fimMesSql)
+                    ->where('situacao', '!=', 'cancelada')
+                    ->toBase()
+                    ->selectRaw('COALESCE(SUM(COALESCE(valor_pago, 0)), 0) as pago')
+                    ->selectRaw("COALESCE(SUM(CASE WHEN situacao IN ('aberta', 'parcial') THEN valor - COALESCE(valor_pago, 0) ELSE 0 END), 0) as aberto")
+                    ->first();
+
+                return [
+                    'pago' => round((float) ($linha->pago ?? 0), 2),
+                    'aberto' => round((float) ($linha->aberto ?? 0), 2),
+                ];
+            };
+
+            $contasMes = [
+                'receber' => $resumoConta(ContaReceber::class),
+                'pagar' => $resumoConta(ContaPagar::class),
+                'inicio' => $inicioMesSql,
+                'fim' => $fimMesSql,
+            ];
+        }
+
         return view('welcome', [
             'vendasHoje'            => $vendasHoje,
             'faturamentoHoje'       => $faturamentoHoje,
@@ -81,6 +180,8 @@ Route::middleware('auth')->group(function () {
             'contasPagarVencidas'   => $contasPagarVencidas,
             'aReceber7Dias'         => $aReceber7Dias,
             'estoqueCritico'        => $estoqueCritico,
+            'faturamentoMes'        => $faturamentoMes,
+            'contasMes'             => $contasMes,
         ]);
     });
 
@@ -186,6 +287,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
         Route::post('/salvar', [VendaController::class, 'store'])->name('venda.store');
         Route::get('{venda}/pdf', [VendaController::class, 'pdf'])->name('venda.pdf');
+        Route::get('{venda}/nfce', [NfceController::class, 'danfe'])->name('venda.nfce.danfe');
         Route::get('{venda}/ver', [VendaController::class, 'show'])->name('venda.show');
         Route::get('{venda}/editar', [VendaController::class, 'edit'])->name('venda.edit');
         Route::put('{venda}/editar/salvar', [VendaController::class, 'update'])->name('venda.update');
@@ -194,8 +296,19 @@ Route::middleware('auth')->group(function () {
         Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
     });
 
+    Route::prefix('perfil-fiscal')->middleware('permissao:nfe')->group(function () {
+        Route::get('/', [PerfilFiscalController::class, 'index'])->name('perfilFiscal.index');
+        Route::get('/novo', [PerfilFiscalController::class, 'create'])->name('perfilFiscal.create');
+        Route::post('/salvar', [PerfilFiscalController::class, 'store'])->name('perfilFiscal.store');
+        Route::get('{perfilFiscal}/editar', [PerfilFiscalController::class, 'edit'])->name('perfilFiscal.edit');
+        Route::put('{perfilFiscal}/editar/salvar', [PerfilFiscalController::class, 'update'])->name('perfilFiscal.update');
+        Route::delete('{perfilFiscal}/excluir', [PerfilFiscalController::class, 'destroy'])->name('perfilFiscal.destroy');
+    });
+
     Route::prefix('nfe')->middleware('permissao:nfe')->group(function () {
         Route::get('/', [NfeController::class, 'index'])->name('nfe.index');
+        Route::get('inutilizar', [NfeController::class, 'inutilizarFormulario'])->name('nfe.inutilizar');
+        Route::post('inutilizar', [NfeController::class, 'inutilizarSalvar'])->name('nfe.inutilizar.store');
         Route::get('/nova', [NfeController::class, 'create'])->name('nfe.create');
         Route::post('/salvar', [NfeController::class, 'store'])->name('nfe.store');
         Route::get('rascunho/{venda}/editar', [NfeController::class, 'editarRascunho'])->name('nfe.rascunho.edit');
@@ -204,6 +317,7 @@ Route::middleware('auth')->group(function () {
         Route::post('{venda}/emitir', [NfeController::class, 'emitir'])->name('nfe.emitir');
         Route::get('{nfe}/ver', [NfeController::class, 'show'])->name('nfe.show');
         Route::post('{nfe}/cancelar', [NfeController::class, 'cancelar'])->name('nfe.cancelar');
+        Route::post('{nfe}/limpar-codigos', [NfeController::class, 'limparCodigos'])->name('nfe.limpar-codigos');
         Route::get('{nfe}/danfe', [NfeController::class, 'danfe'])->name('nfe.danfe');
         Route::post('{nfe}/consultar', [NfeController::class, 'consultar'])->name('nfe.consultar');
         Route::get('{nfe}/xml', [NfeController::class, 'xml'])->name('nfe.xml');

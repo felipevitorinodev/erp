@@ -110,6 +110,27 @@
                 <div class="form-section">
                     <div class="form-section__title">Endereço</div>
                     <div class="form-grid form-grid--col-4">
+                        <div class="form-group">
+                            <label class="form-label">CEP</label>
+                            <input type="text" name="cep" class="form-control @error('cep') is-invalid @enderror"
+                                value="{{ old('cep') }}" maxlength="9" placeholder="00000-000">
+                            <small class="text-muted">Ao sair do campo, o endereço e o código IBGE são preenchidos.</small>
+                            @error('cep')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Código IBGE</label>
+                            <input type="text" name="cod_ibge" maxlength="7" inputmode="numeric"
+                                class="form-control @error('cod_ibge') is-invalid @enderror"
+                                value="{{ old('cod_ibge') }}">
+                            <small class="text-muted">7 dígitos do município. Preenchido pelo CEP.</small>
+                            @error('cod_ibge')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid--col-4" style="margin-top: 1rem;">
                         <div class="form-group form-group--span-2">
                             <label class="form-label">Logradouro</label>
                             <input type="text" name="logradouro" class="form-control @error('logradouro') is-invalid @enderror"
@@ -156,7 +177,7 @@
                         <div class="form-group">
                             <label class="form-label">Bairro</label>
                             <input type="text" name="bairro" class="form-control @error('bairro') is-invalid @enderror"
-                                value="{{ old('bairro') }}" maxlength="255">
+                                value="{{ old('bairro') }}" maxlength="100">
                             @error('bairro')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror

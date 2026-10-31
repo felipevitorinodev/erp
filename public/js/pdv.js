@@ -7,10 +7,10 @@
     var sugestoes = [];
     var sugestaoAtiva = -1;
     var debounceTimer = null;
-    var alertTimer = null;
     var toastTimer = null;
     var scannerTimer = null;
     var finalizando = false;
+    var recebidoAcompanhaTotal = true;
     var buscandoCodigo = false;
     var ultimoProdutoId = null;
     var lastKeyTs = 0;
@@ -38,9 +38,6 @@
         formaRotulo: document.getElementById('pdv-btn-finalizar-forma'),
         formasGrid: document.getElementById('pdv-formas-grid'),
         sucessoPagamento: document.getElementById('pdv-sucesso-pagamento'),
-        alert: document.getElementById('pdv-alert-erro'),
-        alertMsg: document.getElementById('pdv-alert-erro-msg'),
-        alertFechar: document.getElementById('pdv-alert-erro-fechar'),
         sucessoTotal: document.getElementById('pdv-sucesso-total'),
         sucessoNumero: document.getElementById('pdv-sucesso-numero'),
         btnNova: document.getElementById('pdv-btn-nova-venda'),
@@ -51,7 +48,6 @@
         telaPequena: document.getElementById('pdv-tela-pequena'),
         larguraAtual: document.getElementById('pdv-largura-atual'),
         pagamento: document.getElementById('pdv-pagamento'),
-        pagErro: document.getElementById('pdv-pag-erro'),
         pagSubtotal: document.getElementById('pdv-pag-subtotal'),
         pagQtdItens: document.getElementById('pdv-pag-qtd-itens'),
         pagTotal: document.getElementById('pdv-pag-total'),
@@ -67,6 +63,9 @@
         ajuda: document.getElementById('pdv-ajuda'),
         btnAjuda: document.getElementById('pdv-btn-ajuda'),
         sucessoTroco: document.getElementById('pdv-sucesso-troco'),
+        sucessoNfce: document.getElementById('pdv-sucesso-nfce'),
+        linkNfce: document.getElementById('pdv-link-nfce'),
+        documentoNfce: document.getElementById('pdv-nfce-documento'),
     };
 
     function pagamentoAberto() {
@@ -194,25 +193,13 @@
     }
 
     function mostrarErro(msg) {
-        if (pagamentoAberto() && el.pagErro) {
-            el.pagErro.textContent = msg || 'Ocorreu um erro. Tente novamente.';
-            el.pagErro.style.display = 'flex';
-            return;
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(msg || 'Ocorreu um erro. Tente novamente.', 'error');
         }
-        if (!el.alert || !el.alertMsg) return;
-        el.alertMsg.textContent = msg || 'Ocorreu um erro. Tente novamente.';
-        el.alert.style.display = 'flex';
-        el.alert.classList.add('pdv-alert-erro--visivel');
-        clearTimeout(alertTimer);
-        alertTimer = setTimeout(esconderErro, 6000);
     }
 
     function esconderErro() {
-        if (el.pagErro) el.pagErro.style.display = 'none';
-        if (!el.alert) return;
-        el.alert.style.display = 'none';
-        el.alert.classList.remove('pdv-alert-erro--visivel');
-        clearTimeout(alertTimer);
+        document.querySelectorAll('#toast-stack .toast--error').forEach(function (t) { t.remove(); });
     }
 
     function mostrarToast(msg) {
@@ -528,6 +515,9 @@
         if (el.pagQtdItens) el.pagQtdItens.textContent = String(carrinho.length);
         if (el.pagTotal) el.pagTotal.textContent = formatMoney(totais.total);
         if (el.btnConfirmarValor) el.btnConfirmarValor.textContent = formatMoney(totais.total);
+        if (pagamentoAberto() && recebidoAcompanhaTotal && el.recebido && !formaAtualEhPrazo()) {
+            el.recebido.value = formatBR(totais.total);
+        }
         atualizarTroco(totais.total);
         return totais;
     }
@@ -572,8 +562,8 @@
             return;
         }
         fecharSugestoes();
+        recebidoAcompanhaTotal = true;
         el.pagamento.hidden = false;
-        if (el.recebido) el.recebido.value = '0,00';
         atualizarResumoPagamento();
         setTimeout(function () {
             if (!formaAtualEhPrazo() && el.recebido) {
@@ -825,6 +815,8 @@
                     desconto: formatBR(item.desconto || 0),
                 };
             }),
+            valor_recebido: formatBR(recebido),
+            nfce_documento: el.documentoNfce ? String(el.documentoNfce.value || '').replace(/\D/g, '') : '',
         };
 
         finalizando = true;
@@ -897,6 +889,26 @@
         }
         if (el.linkVer && data && data.id) {
             el.linkVer.href = (urls.vendaShowBase || '/venda') + '/' + data.id + '/ver';
+        }
+        if (el.sucessoNfce) {
+            var nfce = data && data.nfce ? data.nfce : null;
+            if (nfce && nfce.mensagem) {
+                el.sucessoNfce.hidden = false;
+                el.sucessoNfce.textContent = nfce.mensagem;
+                el.sucessoNfce.classList.toggle('pdv-sucesso__nfce--erro', !nfce.ok);
+            } else {
+                el.sucessoNfce.hidden = true;
+                el.sucessoNfce.textContent = '';
+            }
+        }
+        if (el.linkNfce) {
+            if (data && data.nfce && data.nfce.ok && data.nfce.danfe_url) {
+                el.linkNfce.hidden = false;
+                el.linkNfce.href = data.nfce.danfe_url;
+            } else {
+                el.linkNfce.hidden = true;
+                el.linkNfce.removeAttribute('href');
+            }
         }
 
         if (el.wrap) el.wrap.hidden = true;
@@ -1232,7 +1244,10 @@
         }
 
         if (el.recebido) {
-            el.recebido.addEventListener('input', function () { atualizarTroco(calcularTotais().total); });
+            el.recebido.addEventListener('input', function () {
+                recebidoAcompanhaTotal = false;
+                atualizarTroco(calcularTotais().total);
+            });
         }
         if (el.btnConfirmar) el.btnConfirmar.addEventListener('click', finalizarVenda);
         if (el.pagamento) {
@@ -1263,7 +1278,6 @@
         }
 
         if (el.btnFinalizar) el.btnFinalizar.addEventListener('click', abrirPagamento);
-        if (el.alertFechar) el.alertFechar.addEventListener('click', esconderErro);
         if (el.btnNova) {
             el.btnNova.addEventListener('click', function () {
                 window.location.reload();

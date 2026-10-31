@@ -130,6 +130,23 @@
             @error('cfop_padrao')
                 <span class="form-error">{{ $message }}</span>
             @enderror
+            <small class="text-muted">Se preenchido, este CFOP vence o perfil fiscal.</small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Perfil fiscal</label>
+            <select name="perfil_fiscal_id" class="form-control @error('perfil_fiscal_id') is-invalid @enderror">
+                <option value="">— Nenhum —</option>
+                @foreach (($perfisFiscais ?? []) as $perfil)
+                    <option value="{{ $perfil->id }}" @selected((string) old('perfil_fiscal_id', $produto->perfil_fiscal_id ?? '') === (string) $perfil->id)>
+                        {{ $perfil->nome }} (CFOP {{ $perfil->cfop }} · CSOSN {{ $perfil->csosn }})
+                    </option>
+                @endforeach
+            </select>
+            @error('perfil_fiscal_id')
+                <span class="form-error">{{ $message }}</span>
+            @enderror
+            <small class="text-muted">Usado só quando CFOP, CSOSN ou CST deste produto estiverem em branco.</small>
         </div>
     </div>
 

@@ -34,8 +34,6 @@
     @endif
 </div>
 
-@error('permissoes')<div class="alert alert--error">{{ $message }}</div>@enderror
-
 @foreach(\App\Support\CatalogoPermissoes::grupos() as $grupo => $permissoes)
     <div class="form-section">
         <div class="form-section__title">{{ $grupo }}</div>

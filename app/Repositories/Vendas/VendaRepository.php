@@ -7,7 +7,7 @@ use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Estoque\MovimentacaoEstoque;
 use App\Models\OrdensServico\OrdemServico;
@@ -25,7 +25,7 @@ class VendaRepository
 
     public function index(?Request $request = null)
     {
-        $query = Venda::with(['cliente', 'funcionario'])
+        $query = Venda::with(['cliente:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -45,10 +45,10 @@ class VendaRepository
                 }
             }
             if ($request->filled('data_inicio')) {
-                $query->whereDate('data_venda', '>=', $request->data_inicio);
+                $query->whereDataDe('data_venda', $request->data_inicio);
             }
             if ($request->filled('data_fim')) {
-                $query->whereDate('data_venda', '<=', $request->data_fim);
+                $query->whereDataAte('data_venda', $request->data_fim);
             }
         }
 
@@ -71,7 +71,7 @@ class VendaRepository
      */
     public function proximoNumero(int $empresaId): string
     {
-        Empresa::whereKey($empresaId)->lockForUpdate()->first();
+        Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
         $ultimo = Venda::withTrashed()
             ->where('empresa_id', $empresaId)

@@ -20,6 +20,7 @@ class ProdutoRequest extends FormRequest
             'grupo_id'           => ['nullable', $this->existeNaEmpresa('grupos')],
             'unidade_medida_id'  => ['nullable', $this->existeNaEmpresa('unidades_medida')],
             'fornecedor_id'      => ['nullable', $this->existeNaEmpresa('fornecedores')],
+            'perfil_fiscal_id'   => ['nullable', $this->existeNaEmpresa('perfis_fiscais')],
 
             'codigo'             => 'nullable|string|max:50',
             'codigo_barras'      => 'nullable|string|max:50',
@@ -85,6 +86,10 @@ class ProdutoRequest extends FormRequest
             'peso','altura','largura','profundidade',
             'aliquota_icms','aliquota_pis','aliquota_cofins'
         ];
+
+        if ($this->input('perfil_fiscal_id') === '') {
+            $this->merge(['perfil_fiscal_id' => null]);
+        }
 
         foreach ($fields as $f) {
             if ($this->filled($f)) {

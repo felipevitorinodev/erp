@@ -11,7 +11,11 @@ class ComissaoRepository
     public function index(Request $request)
     {
         $query = $this->filtrar($request)
-            ->with(['funcionario', 'venda.cliente', 'venda.ordemServico'])
+            ->with([
+                'funcionario:id,nome',
+                'venda:id,numero,data_venda',
+                'venda.ordemServico:id,venda_id,numero',
+            ])
             ->orderByDesc('id');
 
         return $query->paginate(20);
@@ -19,11 +23,15 @@ class ComissaoRepository
 
     public function totais(Request $request): array
     {
-        $base = $this->filtrar($request);
+        $somas = $this->filtrar($request)
+            ->toBase()
+            ->selectRaw("COALESCE(SUM(CASE WHEN situacao = 'pendente' THEN valor END), 0) as pendentes")
+            ->selectRaw("COALESCE(SUM(CASE WHEN situacao = 'paga' THEN valor END), 0) as pagas")
+            ->first();
 
         return [
-            'pendentes' => (clone $base)->where('situacao', 'pendente')->sum('valor'),
-            'pagas'     => (clone $base)->where('situacao', 'paga')->sum('valor'),
+            'pendentes' => (float) $somas->pendentes,
+            'pagas'     => (float) $somas->pagas,
         ];
     }
 
@@ -49,12 +57,15 @@ class ComissaoRepository
             $query->where('situacao', $request->situacao);
         }
 
-        if ($request->filled('data_inicio')) {
-            $query->whereHas('venda', fn ($q) => $q->whereDate('data_venda', '>=', $request->data_inicio));
-        }
-
-        if ($request->filled('data_fim')) {
-            $query->whereHas('venda', fn ($q) => $q->whereDate('data_venda', '<=', $request->data_fim));
+        if ($request->filled('data_inicio') || $request->filled('data_fim')) {
+            $query->whereHas('venda', function ($q) use ($request) {
+                if ($request->filled('data_inicio')) {
+                    $q->whereDataDe('data_venda', $request->data_inicio);
+                }
+                if ($request->filled('data_fim')) {
+                    $q->whereDataAte('data_venda', $request->data_fim);
+                }
+            });
         }
 
         return $query;

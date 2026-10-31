@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Empresas\Empresa;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;

@@ -15,7 +15,7 @@ class EntradaEstoqueRepository
 {
     public function index(Request $request)
     {
-        $query = EntradaEstoque::with(['fornecedor'])
+        $query = EntradaEstoque::with(['fornecedor:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -32,11 +32,11 @@ class EntradaEstoqueRepository
         }
 
         if ($request->filled('data_inicio')) {
-            $query->whereDate('data_entrada', '>=', $request->data_inicio);
+            $query->whereDataDe('data_entrada', $request->data_inicio);
         }
 
         if ($request->filled('data_fim')) {
-            $query->whereDate('data_entrada', '<=', $request->data_fim);
+            $query->whereDataAte('data_entrada', $request->data_fim);
         }
 
         return $query->paginate(20);

@@ -11,7 +11,7 @@ class ContaPagarRepository
 {
     public function index(?Request $request = null)
     {
-        $query = ContaPagar::with(['fornecedor'])
+        $query = ContaPagar::with(['fornecedor:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -28,7 +28,7 @@ class ContaPagarRepository
             }
 
             if ($request->filled('data_vencimento')) {
-                $query->whereDate('data_vencimento', $request->data_vencimento);
+                $query->whereDataEntre('data_vencimento', $request->data_vencimento, $request->data_vencimento);
             }
         }
 

@@ -12,7 +12,7 @@ class OrdemServicoRepository
 {
     public function index(?Request $request = null)
     {
-        $query = OrdemServico::with(['cliente', 'tecnico'])
+        $query = OrdemServico::with(['cliente:id,nome', 'tecnico:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -33,10 +33,10 @@ class OrdemServicoRepository
                 $query->where('funcionario_id', $request->funcionario_id);
             }
             if ($request->filled('data_inicio')) {
-                $query->whereDate('data_abertura', '>=', $request->data_inicio);
+                $query->whereDataDe('data_abertura', $request->data_inicio);
             }
             if ($request->filled('data_fim')) {
-                $query->whereDate('data_abertura', '<=', $request->data_fim);
+                $query->whereDataAte('data_abertura', $request->data_fim);
             }
         }
 
@@ -45,7 +45,7 @@ class OrdemServicoRepository
 
     public function proximoNumero(int $empresaId): string
     {
-        Empresa::whereKey($empresaId)->lockForUpdate()->first();
+        Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
         $ultimo = OrdemServico::withTrashed()
             ->where('empresa_id', $empresaId)

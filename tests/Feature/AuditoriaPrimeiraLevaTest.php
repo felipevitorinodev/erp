@@ -9,7 +9,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Fornecedores\Fornecedor;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;

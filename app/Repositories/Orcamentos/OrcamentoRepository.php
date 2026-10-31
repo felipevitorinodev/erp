@@ -12,7 +12,7 @@ class OrcamentoRepository
 {
     public function index(?Request $request = null)
     {
-        $query = Orcamento::with(['cliente'])
+        $query = Orcamento::with(['cliente:id,nome'])
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -28,10 +28,10 @@ class OrcamentoRepository
                 $query->where('situacao', $request->situacao);
             }
             if ($request->filled('data_inicio')) {
-                $query->whereDate('data_orcamento', '>=', $request->data_inicio);
+                $query->whereDataDe('data_orcamento', $request->data_inicio);
             }
             if ($request->filled('data_fim')) {
-                $query->whereDate('data_orcamento', '<=', $request->data_fim);
+                $query->whereDataAte('data_orcamento', $request->data_fim);
             }
         }
 
@@ -47,7 +47,7 @@ class OrcamentoRepository
 
     public function proximoNumero(int $empresaId): string
     {
-        Empresa::whereKey($empresaId)->lockForUpdate()->first();
+        Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
         $ultimo = Orcamento::withTrashed()
             ->where('empresa_id', $empresaId)

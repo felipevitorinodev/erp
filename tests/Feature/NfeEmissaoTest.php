@@ -3,14 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Empresas\Empresa;
-use App\Models\Nfe;
+use App\Models\Nfes\Nfe;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
-use App\Services\NfeBuilderService;
+use App\Services\Nfes\NfeBuilderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class NfeEmissaoTest extends TestCase
@@ -211,6 +212,79 @@ class NfeEmissaoTest extends TestCase
         $this->assertSame(1, $empresa->fresh()->nfe_ambiente);
     }
 
+    public function test_cep_da_empresa_preenche_o_codigo_ibge(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response([
+                'ibge' => '3550308',
+                'localidade' => 'São Paulo',
+                'uf' => 'SP',
+            ], 200),
+        ]);
+
+        $empresa = $this->empresa(['cod_ibge' => null, 'cep' => null]);
+
+        $this->actingAs($this->admin($empresa))
+            ->put(route('empresa.update', $empresa), [
+                'razao_social' => 'Empresa Teste LTDA',
+                'cnpj' => '11.222.333/0001-81',
+                'cep' => '01001-000',
+                'logradouro' => 'Praça da Sé',
+                'numero' => '1',
+                'bairro' => 'Sé',
+                'cidade' => 'São Paulo',
+                'uf' => 'SP',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $empresa->refresh();
+        $this->assertSame('3550308', $empresa->cod_ibge);
+        $this->assertSame('01001-000', $empresa->cep);
+        $this->assertSame('Sé', $empresa->bairro);
+    }
+
+    public function test_codigo_ibge_informado_e_mantido(): void
+    {
+        Http::fake();
+
+        $empresa = $this->empresa();
+
+        $this->actingAs($this->admin($empresa))
+            ->put(route('empresa.update', $empresa), [
+                'razao_social' => 'Empresa Teste LTDA',
+                'cnpj' => '11.222.333/0001-81',
+                'cep' => '01001000',
+                'cidade' => 'São Paulo',
+                'uf' => 'SP',
+                'cod_ibge' => '3550308',
+            ])
+            ->assertSessionHasNoErrors();
+
+        Http::assertNothingSent();
+        $this->assertSame('3550308', $empresa->fresh()->cod_ibge);
+    }
+
+    public function test_endereco_sem_codigo_ibge_resolvido_pede_o_codigo(): void
+    {
+        Http::fake([
+            'viacep.com.br/*' => Http::response(['erro' => true], 200),
+        ]);
+
+        $empresa = $this->empresa(['cod_ibge' => null]);
+
+        $this->actingAs($this->admin($empresa))
+            ->put(route('empresa.update', $empresa), [
+                'razao_social' => 'Empresa Teste LTDA',
+                'cnpj' => '11.222.333/0001-81',
+                'cep' => '01001000',
+                'cidade' => 'São Paulo',
+                'uf' => 'SP',
+            ])
+            ->assertSessionHasErrors('cod_ibge');
+
+        $this->assertNull($empresa->fresh()->cod_ibge);
+    }
+
     public function test_totais_da_nfe_somam_valor_bruto_e_descontos_dos_itens(): void
     {
         $empresa = $this->empresaComCertificado();
@@ -254,6 +328,7 @@ class NfeEmissaoTest extends TestCase
         $this->assertSame('3.00', (string) $tot->vDesc);
         $this->assertSame('17.00', (string) $tot->vNF);
         $this->assertSame('17.00', (string) $dom->xpath('//n:detPag/n:vPag')[0]);
+        $this->assertSame('9', (string) $dom->xpath('//n:transp/n:modFrete')[0]);
     }
 
     private function empresaComCertificado(): Empresa

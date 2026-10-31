@@ -3,6 +3,7 @@
 namespace App\Models\Produtos;
 
 use App\Models\Empresas\Empresa;
+use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Grupos\Grupo;
 use App\Models\UnidadesMedida\UnidadeMedida;
@@ -22,6 +23,7 @@ class Produto extends Model
         'grupo_id',
         'unidade_medida_id',
         'fornecedor_id',
+        'perfil_fiscal_id',
         'codigo',
         'codigo_barras',
         'referencia',
@@ -84,5 +86,10 @@ class Produto extends Model
     public function fornecedor()
     {
         return $this->belongsTo(Fornecedor::class);
+    }
+
+    public function perfilFiscal()
+    {
+        return $this->belongsTo(PerfilFiscal::class, 'perfil_fiscal_id');
     }
 }

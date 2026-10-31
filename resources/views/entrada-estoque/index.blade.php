@@ -74,37 +74,39 @@
                                 <td data-label="Data">{{ $entrada->data_entrada->format('d/m/Y') }}</td>
                                 <td data-label="Total" class="col-num">R$ {{ number_format($entrada->total, 2, ',', '.') }}</td>
                                 <td data-label="Situação">
-                                    @if($entrada->situacao === 'confirmada')
-                                        <span class="badge badge--success">Confirmada</span>
-                                    @elseif($entrada->situacao === 'cancelada')
-                                        <span class="badge badge--error">Cancelada</span>
-                                    @else
-                                        <span class="badge badge--warning">Rascunho</span>
-                                    @endif
+                                    <x-badge-situacao tipo="entrada" :valor="$entrada->situacao" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('entrada-estoque.show', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if($entrada->situacao === 'rascunho')
-                                        <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                            <x-icon name="edit" />
-                                        </a>
-                                    @endif
-                                    <form method="POST" action="{{ route('entrada-estoque.destroy', $entrada) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                            title="Excluir" aria-label="Excluir"
-                                            data-confirm="{{ $entrada->situacao === 'confirmada'
-                                                ? 'Excluir a compra #' . $entrada->numero . '? O estoque e a conta a pagar serão revertidos.'
-                                                : 'Confirmar exclusão da compra #' . $entrada->numero . '?' }}"
-                                            data-confirm-title="Excluir compra"
-                                            data-confirm-ok="Excluir"
-                                            data-confirm-variant="danger">
-                                            <x-icon name="trash" />
-                                        </button>
-                                    </form>
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            @if($entrada->situacao === 'rascunho')
+                                                <a href="{{ route('entrada-estoque.edit', $entrada) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                    <x-icon name="edit" />
+                                                </a>
+                                            @endif
+                                        </x-slot:editar>
+                                        <x-slot:ver>
+                                            <a href="{{ route('entrada-estoque.show', $entrada) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                        <x-slot:excluir>
+                                            <form method="POST" action="{{ route('entrada-estoque.destroy', $entrada) }}" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                    title="Excluir" aria-label="Excluir"
+                                                    data-confirm="{{ $entrada->situacao === 'confirmada'
+                                                        ? 'Excluir a compra #' . $entrada->numero . '? O estoque e a conta a pagar serão revertidos.'
+                                                        : 'Confirmar exclusão da compra #' . $entrada->numero . '?' }}"
+                                                    data-confirm-title="Excluir compra"
+                                                    data-confirm-ok="Excluir"
+                                                    data-confirm-variant="danger">
+                                                    <x-icon name="trash" />
+                                                </button>
+                                            </form>
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

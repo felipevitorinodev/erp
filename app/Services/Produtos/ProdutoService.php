@@ -3,6 +3,7 @@
 namespace App\Services\Produtos;
 
 use App\Models\Grupos\Grupo;
+use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Produtos\Produto;
 use App\Repositories\Produtos\ProdutoRepository;
 use Illuminate\Http\Request;
@@ -29,7 +30,9 @@ class ProdutoService
 
     public function create()
     {
-        return view('produto.create');
+        return view('produto.create', [
+            'perfisFiscais' => $this->perfisFiscais(),
+        ]);
     }
 
     public function store($request)
@@ -48,7 +51,10 @@ class ProdutoService
 
         $produto->load(['grupos.parent', 'unidadeMedida', 'fornecedor']);
 
-        return view('produto.edit', ['produto' => $produto]);
+        return view('produto.edit', [
+            'produto' => $produto,
+            'perfisFiscais' => $this->perfisFiscais(),
+        ]);
     }
 
     public function update($request, Produto $produto)
@@ -62,6 +68,15 @@ class ProdutoService
         return redirect()
             ->route('produto.index')
             ->with('success', 'Produto editado com sucesso.');
+    }
+
+    private function perfisFiscais()
+    {
+        return PerfilFiscal::query()
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'cfop', 'csosn']);
     }
 
     public function destroy($id)

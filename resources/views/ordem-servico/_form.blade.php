@@ -4,17 +4,6 @@
     $fmt = fn ($v, $d = 2) => number_format((float) $v, $d, ',', '.');
 @endphp
 
-@if ($errors->any())
-    <div class="alert alert--error" style="margin-bottom:1rem;">
-        Corrija os campos destacados:
-        <ul style="margin:0.25rem 0 0 1.25rem;">
-            @foreach ($errors->all() as $erro)
-                <li>{{ $erro }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
 <div class="card">
     <div class="card__header">
         <span class="card__title">Cliente e atendimento</span>

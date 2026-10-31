@@ -9,47 +9,30 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('conta-receber.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
-                        placeholder="Descrição ou cliente">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <select name="situacao" class="form-control">
-                        <option value="">— Todas —</option>
-                        @foreach(['aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada'] as $valor => $label)
-                            <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Vencimento</label>
-                    <input type="date" name="data_vencimento" class="form-control"
-                        value="{{ $filtros['data_vencimento'] ?? '' }}">
-                </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('conta-receber.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-filtros :action="route('conta-receber.index')">
+        <x-filtro-campo
+            label="Busca"
+            name="busca"
+            :value="$filtros['busca'] ?? ''"
+            placeholder="Descrição ou cliente"
+            :span="2"
+        />
+        <x-filtro-campo
+            label="Situação"
+            name="situacao"
+            type="select"
+            :value="$filtros['situacao'] ?? ''"
+            :options="['aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada']"
+        />
+        <x-filtro-campo
+            label="Vencimento"
+            name="data_vencimento"
+            type="date"
+            :value="$filtros['data_vencimento'] ?? ''"
+        />
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Listagem</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Listagem" :paginator="$contas">
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -75,53 +58,43 @@
                                 <td data-label="Vencimento" class="{{ $vencido ? 'text--danger' : '' }}">
                                     {{ $conta->data_vencimento->format('d/m/Y') }}
                                 </td>
-                                <td data-label="Valor" class="col-num">R$ {{ number_format($conta->valor, 2, ',', '.') }}</td>
-                                <td data-label="Pago" class="col-num">R$ {{ number_format($conta->valor_pago, 2, ',', '.') }}</td>
+                                <td data-label="Valor" class="col-num"><x-moeda :valor="$conta->valor" /></td>
+                                <td data-label="Pago" class="col-num"><x-moeda :valor="$conta->valor_pago" /></td>
                                 <td data-label="Situação">
-                                    @if($conta->situacao === 'paga')
-                                        <span class="badge badge--success">Paga</span>
-                                    @elseif($conta->situacao === 'parcial')
-                                        <span class="badge badge--info">Parcial</span>
-                                    @elseif($conta->situacao === 'cancelada')
-                                        <span class="badge badge--error">Cancelada</span>
-                                    @else
-                                        <span class="badge badge--warning">Aberta</span>
-                                    @endif
+                                    <x-badge-situacao tipo="conta" :valor="$conta->situacao" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('conta-receber.show', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
-                                        <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                            <x-icon name="edit" />
-                                        </a>
-                                    @endif
-                                    <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                            title="Excluir" aria-label="Excluir"
-                                            data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            <x-icon name="trash" />
-                                        </button>
-                                    </form>
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            @if(!in_array($conta->situacao, ['paga', 'cancelada'], true))
+                                                <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                    <x-icon name="edit" />
+                                                </a>
+                                            @endif
+                                        </x-slot:editar>
+                                        <x-slot:ver>
+                                            <a href="{{ route('conta-receber.show', $conta) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                        <x-slot:excluir>
+                                            <form method="POST" action="{{ route('conta-receber.destroy', $conta) }}" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                    title="Excluir" aria-label="Excluir"
+                                                    data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                                                    <x-icon name="trash" />
+                                                </button>
+                                            </form>
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="8" class="empty-state">
-                                    Nenhuma conta a receber cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia :colspan="8">Nenhuma conta a receber cadastrada.</x-tabela-vazia>
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $contas->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

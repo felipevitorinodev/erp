@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Usuarios\User;
+use App\Support\SessaoLogin;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,11 +14,17 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    public function showLogin(Request $request)
     {
         if (Auth::check()) {
             return redirect('/');
         }
+
+        if ($request->cookie(SessaoLogin::MARCADOR) === '1') {
+            SessaoLogin::esquecer();
+            $request->session()->now('warning', 'Sua sessão expirou. Entre novamente para continuar.');
+        }
+
         return view('auth.login');
     }
 
@@ -34,7 +41,7 @@ class AuthController extends Controller
 
         if (RateLimiter::tooManyAttempts($chaveLimite, 5)) {
             return back()->withErrors([
-                'email' => 'Muitas tentativas de login. Tente novamente em ' . RateLimiter::availableIn($chaveLimite) . ' segundos.',
+                'login' => 'Muitas tentativas. Aguarde ' . RateLimiter::availableIn($chaveLimite) . ' segundos e tente novamente.',
             ])->withInput($request->only('email'));
         }
 
@@ -45,20 +52,23 @@ class AuthController extends Controller
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+                SessaoLogin::esquecer();
 
                 return back()->withErrors([
-                    'email' => 'Usuário inativo. Entre em contato com o administrador.',
+                    'login' => 'Usuário inativo. Entre em contato com o administrador.',
                 ])->withInput($request->only('email'));
             }
 
             $request->session()->regenerate();
-            return redirect()->intended('/');
+            SessaoLogin::marcar();
+
+            return SessaoLogin::redirecionar();
         }
 
         RateLimiter::hit($chaveLimite, 60);
 
         return back()->withErrors([
-            'email' => 'E-mail ou senha incorretos.',
+            'login' => 'E-mail ou senha inválidos.',
         ])->withInput($request->only('email'));
     }
 
@@ -67,6 +77,8 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        SessaoLogin::esquecer();
+
         return redirect()->route('login');
     }
 

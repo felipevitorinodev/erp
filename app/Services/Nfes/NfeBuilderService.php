@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Nfes;
 
 use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Produtos\Produto;
+use App\Repositories\Nfes\NfeRepository;
 use App\Models\Vendas\Venda;
 use Carbon\Carbon;
 use NFePHP\Common\Certificate;
@@ -18,17 +19,20 @@ use Throwable;
 
 class NfeBuilderService
 {
-    private const SCHEME = 'PL_010_V1.30';
+    protected const SCHEME = 'PL_010_V1.30';
 
     public const CSOSN_SEM_CALCULO = ['102', '103', '300', '400'];
 
     public const CST_SEM_INCIDENCIA = ['04', '05', '06', '07', '08', '09'];
 
-    private Tools $tools;
+    protected Tools $tools;
 
-    public function __construct(private readonly Empresa $empresa)
-    {
-        $this->tools = new Tools($this->configuracaoJson(), $this->lerCertificado());
+    protected NfeVinculoFiscal $vinculo;
+
+    public function __construct(
+        protected readonly Empresa $empresa,
+    ) {
+        $this->iniciarTools();
     }
 
     public function tools(): Tools
@@ -44,8 +48,10 @@ class NfeBuilderService
     public function buildAndSign(Venda $venda): string
     {
         $this->validarEmissaoInterna();
+        $this->antesDeMontar();
 
-        $venda->loadMissing(['itens.produto.unidadeMedida', 'cliente']);
+        app(NfeRepository::class)->carregarParaMontagem($venda);
+        $this->vinculo = NfeVinculoFiscal::daEmpresa($this->empresa)->usarVenda($venda);
 
         if ($venda->itens->isEmpty()) {
             throw new RuntimeException('A venda não possui itens para emitir a NF-e.');
@@ -73,7 +79,21 @@ class NfeBuilderService
         return $this->tools->signNFe($xml);
     }
 
-    private function validarEmissaoInterna(): void
+    protected function iniciarTools(): void
+    {
+        $this->tools = new Tools($this->configuracaoJson(), $this->lerCertificado());
+        $this->ajustarModelo();
+    }
+
+    protected function ajustarModelo(): void
+    {
+    }
+
+    protected function antesDeMontar(): void
+    {
+    }
+
+    protected function validarEmissaoInterna(): void
     {
         if ((int) $this->empresa->nfe_destino !== 1) {
             throw new RuntimeException('A emissão desta versão cobre apenas operação interna. Ajuste o destino da operação na empresa para Interna.');
@@ -88,7 +108,7 @@ class NfeBuilderService
         }
     }
 
-    private function lerCertificado(): Certificate
+    protected function lerCertificado(): Certificate
     {
         $caminho = $this->empresa->certificado_path;
         $senha = $this->empresa->certificado_senha_decrypted;
@@ -105,7 +125,7 @@ class NfeBuilderService
         }
     }
 
-    private function configuracaoJson(): string
+    protected function configuracaoJson(): string
     {
         $uf = strtoupper(trim((string) $this->empresa->uf));
         $cnpj = $this->somenteDigitos($this->empresa->cnpj);
@@ -128,7 +148,7 @@ class NfeBuilderService
         ], JSON_THROW_ON_ERROR);
     }
 
-    private function montarIdentificacao(Make $make, Venda $venda, string $numero): void
+    protected function montarIdentificacao(Make $make, Venda $venda, string $numero): void
     {
         $cliente = $venda->cliente;
         $cnpjDestino = $cliente ? $this->somenteDigitos($cliente->cnpj) : '';
@@ -163,24 +183,10 @@ class NfeBuilderService
         ]));
     }
 
-    private function montarEmitente(Make $make): void
+    protected function montarEmitente(Make $make): void
     {
+        $this->exigirEmitente();
         $ie = strtoupper(trim((string) $this->empresa->ie));
-
-        if ($ie === '') {
-            throw new RuntimeException('Informe a inscrição estadual da empresa antes de emitir a NF-e.');
-        }
-
-        foreach ([
-            'logradouro' => 'o logradouro',
-            'bairro' => 'o bairro',
-            'cidade' => 'a cidade',
-            'uf' => 'a UF',
-        ] as $campo => $rotulo) {
-            if (trim((string) $this->empresa->{$campo}) === '') {
-                throw new RuntimeException('Informe '.$rotulo.' da empresa antes de emitir a NF-e.');
-            }
-        }
 
         $make->tagEmit($this->dados([
             'CNPJ' => $this->somenteDigitos($this->empresa->cnpj),
@@ -198,14 +204,14 @@ class NfeBuilderService
             'cMun' => $this->somenteDigitos($this->empresa->cod_ibge),
             'xMun' => $this->limitar($this->empresa->cidade, 60),
             'UF' => strtoupper((string) $this->empresa->uf),
-            'CEP' => $this->somenteDigitos($this->empresa->cep),
+            'CEP' => $this->cepEmitente(),
             'cPais' => '1058',
             'xPais' => 'Brasil',
             'fone' => $this->somenteDigitos($this->empresa->telefone ?: $this->empresa->celular),
         ]));
     }
 
-    private function montarDestinatario(Make $make, Venda $venda): void
+    protected function montarDestinatario(Make $make, Venda $venda): void
     {
         $cliente = $venda->cliente;
 
@@ -249,7 +255,7 @@ class NfeBuilderService
         $this->montarEnderecoDestinatario($make, $cliente);
     }
 
-    private function montarEnderecoDestinatario(Make $make, Cliente $cliente): void
+    protected function montarEnderecoDestinatario(Make $make, Cliente $cliente): void
     {
         $logradouro = trim((string) $cliente->logradouro);
         $numero = trim((string) $cliente->numero);
@@ -279,7 +285,7 @@ class NfeBuilderService
             'cMun' => $this->somenteDigitos($this->empresa->cod_ibge),
             'xMun' => $this->limitar($cidade, 60),
             'UF' => $ufEmpresa,
-            'CEP' => $this->somenteDigitos($cliente->cep ?: $this->empresa->cep),
+            'CEP' => $this->cepDestinatario($cliente),
             'cPais' => '1058',
             'xPais' => 'Brasil',
             'fone' => $this->somenteDigitos($cliente->telefone ?: $cliente->celular),
@@ -289,7 +295,7 @@ class NfeBuilderService
     /**
      * @return array{vProd: float, vDesc: float, vOutro: float, vNF: float}
      */
-    private function montarItens(Make $make, Venda $venda): array
+    protected function montarItens(Make $make, Venda $venda): array
     {
         $itens = $venda->itens->values();
         $ultimo = $itens->count();
@@ -303,8 +309,8 @@ class NfeBuilderService
             $produto = $item->produto;
             $cfop = $this->cfopDoItem($item, $produto);
             $csosn = $this->csosnDoItem($item, $produto);
-            $cstPis = $this->cstDoItem($item->cst_pis ?: $produto?->cst_pis, $this->empresa->nfe_cst_pis_padrao, 'PIS');
-            $cstCofins = $this->cstDoItem($item->cst_cofins ?: $produto?->cst_cofins, $this->empresa->nfe_cst_cofins_padrao, 'COFINS');
+            $cstPis = $this->cstResolvido($item, $produto, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao', 'PIS');
+            $cstCofins = $this->cstResolvido($item, $produto, 'cst_cofins', 'cst_cofins', 'cst_cofins', 'nfe_cst_cofins_padrao', 'COFINS');
             $unidade = $item->unidade ?: ($produto?->unidadeMedida?->sigla ?: 'UN');
             $ean = $this->eanDoItem($item);
             $descricao = $homologacao && $nItem === 1
@@ -380,7 +386,7 @@ class NfeBuilderService
     /**
      * @param  array{vProd: float, vDesc: float, vOutro: float, vNF: float}  $totais
      */
-    private function montarTotais(Make $make, Venda $venda, array $totais): void
+    protected function montarTotais(Make $make, Venda $venda, array $totais): void
     {
         $make->tagICMSTot($this->dados([
             'vBC' => '0.00',
@@ -406,16 +412,16 @@ class NfeBuilderService
         ]));
     }
 
-    private function montarTransporte(Make $make, Venda $venda): void
+    protected function montarTransporte(Make $make, Venda $venda): void
     {
         $make->tagtransp($this->dados([
-            'modFrete' => (int) ($venda->mod_frete ?? 9),
+            'modFrete' => self::modFrete($venda->mod_frete),
         ]));
     }
 
-    private function montarPagamento(Make $make, Venda $venda, float $vNF): void
+    protected function montarPagamento(Make $make, Venda $venda, float $vNF): void
     {
-        $tPag = $this->codigoPagamento((string) $venda->forma_pagamento);
+        $tPag = self::tPag((string) $venda->forma_pagamento);
 
         $make->tagpag($this->dados([]));
         $make->tagdetPag($this->dados([
@@ -425,7 +431,7 @@ class NfeBuilderService
         ]));
     }
 
-    private function montarInformacoes(Make $make, Venda $venda): void
+    protected function montarInformacoes(Make $make, Venda $venda): void
     {
         $texto = trim((string) $venda->observacoes);
         $fisco = trim((string) $venda->inf_ad_fisco);
@@ -440,7 +446,7 @@ class NfeBuilderService
         ]));
     }
 
-    private function numeroNfe(Venda $venda): string
+    protected function numeroNfe(Venda $venda): string
     {
         $numero = $this->somenteDigitos($venda->nfe_numero ?? null);
 
@@ -451,12 +457,12 @@ class NfeBuilderService
         return str_pad($numero, 9, '0', STR_PAD_LEFT);
     }
 
-    private function codigoNumerico(string $numero): string
+    protected function codigoNumerico(string $numero): string
     {
         return Keys::random($numero);
     }
 
-    private function ratearDesconto(float $desconto, $itens): array
+    protected function ratearDesconto(float $desconto, $itens): array
     {
         $restante = round($desconto, 2);
         $mapa = [];
@@ -482,7 +488,7 @@ class NfeBuilderService
         return $mapa;
     }
 
-    private function codigoUf(string $uf): int
+    protected function codigoUf(string $uf): int
     {
         try {
             return UFList::getCodeByUF(strtoupper(trim($uf)));
@@ -491,14 +497,14 @@ class NfeBuilderService
         }
     }
 
-    private function fuso(int $cUf): string
+    protected function fuso(int $cUf): string
     {
         return \NFePHP\Common\TimeZoneByUF::get($cUf);
     }
 
-    private function cfopDoItem($item, ?Produto $produto): string
+    protected function cfopDoItem($item, ?Produto $produto): string
     {
-        $cfop = $this->somenteDigitos($item->cfop ?: $produto?->cfop_padrao ?: $this->empresa->nfe_cfop_padrao ?: '5102');
+        $cfop = $this->somenteDigitos($this->vinculo->cfop($item, $produto)['valor']);
 
         if (strlen($cfop) !== 4 || ! str_starts_with($cfop, '5')) {
             throw new RuntimeException('Para operação interna o CFOP precisa ser da série 5. Ajuste o item, o produto ou o CFOP padrão da empresa.');
@@ -507,9 +513,9 @@ class NfeBuilderService
         return $cfop;
     }
 
-    private function csosnDoItem($item, ?Produto $produto): string
+    protected function csosnDoItem($item, ?Produto $produto): string
     {
-        $csosn = $this->somenteDigitos($item->csosn ?: $produto?->cst_icms ?: $this->empresa->nfe_csosn_padrao ?: '400');
+        $csosn = $this->somenteDigitos($this->vinculo->csosn($item, $produto)['valor']);
 
         if (! in_array($csosn, self::CSOSN_SEM_CALCULO, true)) {
             throw new RuntimeException('O CSOSN '.$csosn.' exige crédito ou substituição tributária. Esta emissão aceita 102, 103, 300 ou 400.');
@@ -518,7 +524,7 @@ class NfeBuilderService
         return $csosn;
     }
 
-    private function eanDoItem($item): string
+    protected function eanDoItem($item): string
     {
         $ean = $this->somenteDigitos($item->ean ?? null);
 
@@ -526,12 +532,16 @@ class NfeBuilderService
             return 'SEM GTIN';
         }
 
+        if (! NfeVinculoFiscal::gtinValido($ean)) {
+            throw new RuntimeException('O código de barras do item "'.$item->produto_nome.'" é inválido. Corrija o EAN ou deixe o campo em branco.');
+        }
+
         return $ean;
     }
 
-    private function cstDoItem(?string $doProduto, ?string $daEmpresa, string $imposto): string
+    protected function cstResolvido($item, ?Produto $produto, string $campoItem, string $campoProduto, string $campoPerfil, string $campoEmpresa, string $imposto): string
     {
-        $cst = str_pad($this->somenteDigitos($doProduto ?: $daEmpresa ?: '07'), 2, '0', STR_PAD_LEFT);
+        $cst = $this->vinculo->cst($item, $produto, $campoItem, $campoProduto, $campoPerfil, $campoEmpresa)['valor'];
 
         if (! in_array($cst, self::CST_SEM_INCIDENCIA, true)) {
             throw new RuntimeException('O CST de '.$imposto.' informado exige base de cálculo. Esta emissão aceita apenas os CST 04 a 09.');
@@ -540,25 +550,54 @@ class NfeBuilderService
         return $cst;
     }
 
-    private function ncmDoItem($item, ?Produto $produto): string
+    protected function ncmDoItem($item, ?Produto $produto): string
     {
         $ncm = $this->somenteDigitos($item->ncm ?: $produto?->ncm);
 
-        if ($ncm === '') {
-            throw new RuntimeException('Informe o NCM de todos os itens da NF-e.');
+        if (strlen($ncm) !== 8) {
+            throw new RuntimeException('Informe o NCM com 8 dígitos em todos os itens da NF-e.');
         }
 
-        return str_pad(substr($ncm, 0, 8), 8, '0', STR_PAD_LEFT);
+        return $ncm;
     }
 
-    private function origemDoItem($item, ?Produto $produto): string
+    protected function cepEmitente(): string
+    {
+        $cep = $this->somenteDigitos($this->empresa->cep);
+
+        if (strlen($cep) !== 8) {
+            throw new RuntimeException('Informe o CEP da empresa com 8 dígitos antes de emitir a NF-e.');
+        }
+
+        return $cep;
+    }
+
+    protected function cepDestinatario(Cliente $cliente): string
+    {
+        $cep = $this->somenteDigitos($cliente->cep ?: $this->empresa->cep);
+
+        if (strlen($cep) !== 8) {
+            throw new RuntimeException('O CEP do destinatário precisa ter 8 dígitos.');
+        }
+
+        return $cep;
+    }
+
+    protected function origemDoItem($item, ?Produto $produto): string
     {
         $origem = $this->somenteDigitos($item->origem ?? $produto?->origem);
 
         return $origem === '' ? '0' : substr($origem, 0, 1);
     }
 
-    private function codigoPagamento(string $forma): string
+    public static function modFrete(mixed $valor): int
+    {
+        $mod = $valor === null || $valor === '' ? 9 : (int) $valor;
+
+        return in_array($mod, [0, 1, 2, 3, 4, 9], true) ? $mod : 9;
+    }
+
+    public static function tPag(string $forma): string
     {
         $nome = mb_strtolower(trim($forma));
 
@@ -572,7 +611,7 @@ class NfeBuilderService
         };
     }
 
-    private function ehConsumidorSemDocumento(?Cliente $cliente): bool
+    protected function ehConsumidorSemDocumento(?Cliente $cliente): bool
     {
         if ($cliente === null) {
             return true;
@@ -582,22 +621,22 @@ class NfeBuilderService
             && $this->somenteDigitos($cliente->cpf) === '';
     }
 
-    private function somenteDigitos(mixed $valor): string
+    protected function somenteDigitos(mixed $valor): string
     {
         return preg_replace('/\D/', '', (string) $valor) ?? '';
     }
 
-    private function valor(mixed $valor): string
+    protected function valor(mixed $valor): string
     {
         return number_format((float) $valor, 2, '.', '');
     }
 
-    private function quantidade(mixed $valor): string
+    protected function quantidade(mixed $valor): string
     {
         return number_format((float) $valor, 4, '.', '');
     }
 
-    private function limitar(?string $texto, int $tamanho): string
+    protected function limitar(?string $texto, int $tamanho): string
     {
         $texto = trim((string) $texto);
 
@@ -608,8 +647,30 @@ class NfeBuilderService
         return mb_substr($texto, 0, $tamanho);
     }
 
-    private function dados(array $valores): stdClass
+    protected function dados(array $valores): stdClass
     {
         return (object) $valores;
     }
+
+    protected function exigirEmitente(): void
+    {
+        $ie = strtoupper(trim((string) $this->empresa->ie));
+        if ($ie === '') {
+            throw new RuntimeException('Informe a inscrição estadual da empresa antes de emitir a nota.');
+        }
+
+        $this->cepEmitente();
+
+        foreach ([
+            'logradouro' => 'o logradouro',
+            'bairro' => 'o bairro',
+            'cidade' => 'a cidade',
+            'uf' => 'a UF',
+        ] as $campo => $rotulo) {
+            if (trim((string) $this->empresa->{$campo}) === '') {
+                throw new RuntimeException('Informe '.$rotulo.' da empresa antes de emitir a nota.');
+            }
+        }
+    }
+
 }

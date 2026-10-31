@@ -6,7 +6,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
-use App\Services\NfeBuilderService;
+use App\Services\Nfes\NfeBuilderService;
 use Illuminate\Console\Command;
 use RuntimeException;
 use Throwable;

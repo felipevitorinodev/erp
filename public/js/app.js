@@ -277,7 +277,10 @@
                     // elemento com data-confirm encontrado; evitar comportamento padrão
                     e.preventDefault();
                     // determinar o formulário alvo: elemento pode ser botão dentro de form ou o próprio form
-                    var form = trg.closest && trg.closest('form') ? trg.closest('form') : (trg.tagName === 'FORM' ? trg : null);
+                    var formId = trg.getAttribute('form');
+                    var form = formId ? document.getElementById(formId) : null;
+                    if (!form && trg.closest) form = trg.closest('form');
+                    if (!form && trg.tagName === 'FORM') form = trg;
                     pendingForm = form;
                     pendingSubmitter = trg.tagName === 'BUTTON' || trg.tagName === 'INPUT' ? trg : null;
                     abrir({
@@ -828,16 +831,8 @@ window.addEventListener('pageshow', function (e) {
     });
 });
 
-// Toast auto-dismiss + ViaCEP + mascaras
+// ViaCEP + mascaras
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.toast').forEach(function (toast) {
-        setTimeout(function () {
-            toast.style.transition = 'opacity 0.3s';
-            toast.style.opacity = '0';
-            setTimeout(function () { toast.remove(); }, 300);
-        }, 4500);
-    });
-
     document.querySelectorAll('[name="cep"]').forEach(function (cepEl) {
         cepEl.addEventListener('blur', function () {
             var cep = String(this.value || '').replace(/\D/g, '');
@@ -856,6 +851,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     set('cidade', d.localidade);
                     var uf = form.querySelector('[name="estado"]') || form.querySelector('[name="uf"]');
                     if (uf) uf.value = d.uf || '';
+                    var ibge = String(d.ibge || '').replace(/\D/g, '');
+                    if (ibge.length === 7) set('cod_ibge', ibge);
                 })
                 .catch(function () {});
         });
@@ -956,5 +953,126 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeAllExportDropdowns();
+    });
+})();
+
+/* Ficha das rotas de ver, aberta pelo icone do olho */
+(function initModalVer() {
+    var modal = document.getElementById('modal-ver');
+    if (!modal) return;
+
+    var corpo = document.getElementById('modal-ver-corpo');
+    var titulo = document.getElementById('modal-ver-titulo');
+    var pedido = 0;
+
+    function fechar() {
+        modal.hidden = true;
+        document.body.classList.remove('modal-ver-aberto');
+    }
+
+    function abrir() {
+        modal.hidden = false;
+        document.body.classList.add('modal-ver-aberto');
+        var botao = modal.querySelector('[data-ver-fechar]');
+        if (botao) botao.focus();
+    }
+
+    function executarScripts(raiz) {
+        raiz.querySelectorAll('script').forEach(function (antigo) {
+            var novo = document.createElement('script');
+            novo.text = antigo.text;
+            antigo.replaceWith(novo);
+        });
+    }
+
+    function mostrarErro(href) {
+        titulo.textContent = 'Detalhe';
+        corpo.replaceChildren();
+        var aviso = document.createElement('p');
+        aviso.className = 'text-muted';
+        aviso.style.margin = '0';
+        aviso.append('Não foi possível abrir este registro. ');
+        var link = document.createElement('a');
+        link.href = href;
+        link.textContent = 'Abrir a página';
+        aviso.append(link);
+        corpo.append(aviso);
+    }
+
+    function carregar(href) {
+        var url;
+        try {
+            url = new URL(href, window.location.origin);
+        } catch (erro) {
+            window.location.href = href;
+            return;
+        }
+        if (url.origin !== window.location.origin) {
+            window.location.href = href;
+            return;
+        }
+
+        url.searchParams.set('modal', '1');
+        var id = ++pedido;
+        titulo.textContent = 'Carregando…';
+        corpo.textContent = 'Carregando…';
+        abrir();
+
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        }).then(function (resposta) {
+            if (!resposta.ok) throw new Error('falha');
+            return resposta.text();
+        }).then(function (html) {
+            if (id !== pedido) return;
+            corpo.innerHTML = html;
+            var fragmento = corpo.querySelector('.ver-fragment');
+            var nome = fragmento ? fragmento.getAttribute('data-titulo') : '';
+            titulo.textContent = nome || 'Detalhe';
+            executarScripts(corpo);
+        }).catch(function () {
+            if (id !== pedido) return;
+            mostrarErro(href);
+        });
+    }
+
+    modal.querySelectorAll('[data-ver-fechar]').forEach(function (el) {
+        el.addEventListener('click', fechar);
+    });
+
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) fechar();
+    });
+
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest ? e.target.closest('a.js-ver') : null;
+        if (!link) return;
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        carregar(link.href);
+    }, true);
+
+    document.addEventListener('click', function (e) {
+        if (modal.hidden) return;
+        var voltar = e.target.closest ? e.target.closest('#modal-ver [aria-label="Voltar"]') : null;
+        if (!voltar) return;
+        e.preventDefault();
+        fechar();
+    }, true);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || modal.hidden) return;
+        var confirmacao = document.getElementById('modal-confirm');
+        if (confirmacao && !confirmacao.hidden) return;
+        var interno = modal.querySelector('.modal-overlay:not([hidden])');
+        if (interno) {
+            interno.hidden = true;
+            return;
+        }
+        fechar();
     });
 })();

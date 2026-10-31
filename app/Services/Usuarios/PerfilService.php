@@ -131,7 +131,15 @@ class PerfilService
 
     private function garantirEmpresaAtual(): void
     {
-        $empresa = auth()->user()->empresa;
+        $empresaId = (int) (auth()->user()->empresa_id ?? 0);
+        if ($empresaId === 0) {
+            return;
+        }
+
+        $empresa = auth()->user()->relationLoaded('empresa')
+            ? auth()->user()->empresa
+            : Empresa::query()->whereKey($empresaId)->first(['id']);
+
         if ($empresa) {
             $this->garantir($empresa);
         }

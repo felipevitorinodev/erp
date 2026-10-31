@@ -61,23 +61,29 @@
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('usuario.edit', $usuario) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                        <x-icon name="edit" />
-                                    </a>
-                                    @if((int) $usuario->id !== (int) auth()->id())
-                                        <form method="POST" action="{{ route('usuario.destroy', $usuario) }}" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                                title="Excluir" aria-label="Excluir"
-                                                data-confirm="Confirmar exclusão do usuário {{ $usuario->name }}?"
-                                                data-confirm-title="Excluir"
-                                                data-confirm-ok="Excluir"
-                                                data-confirm-variant="danger">
-                                                <x-icon name="trash" />
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            <a href="{{ route('usuario.edit', $usuario) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                <x-icon name="edit" />
+                                            </a>
+                                        </x-slot:editar>
+                                        <x-slot:excluir>
+                                            @if((int) $usuario->id !== (int) auth()->id())
+                                                <form method="POST" action="{{ route('usuario.destroy', $usuario) }}" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                        title="Excluir" aria-label="Excluir"
+                                                        data-confirm="Confirmar exclusão do usuário {{ $usuario->name }}?"
+                                                        data-confirm-title="Excluir"
+                                                        data-confirm-ok="Excluir"
+                                                        data-confirm-variant="danger">
+                                                        <x-icon name="trash" />
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

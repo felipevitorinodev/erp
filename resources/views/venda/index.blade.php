@@ -9,52 +9,32 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('venda.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
-                        placeholder="Número ou cliente">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <select name="situacao" class="form-control">
-                        <option value="">— Todas —</option>
-                        @foreach((auth()->user()->pode('vendas.ver_canceladas') ? ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'] : ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada']) as $valor => $label)
-                            <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data (início)</label>
-                    <input type="date" name="data_inicio" class="form-control"
-                        value="{{ $filtros['data_inicio'] ?? '' }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data (fim)</label>
-                    <input type="date" name="data_fim" class="form-control"
-                        value="{{ $filtros['data_fim'] ?? '' }}">
-                </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-filtros :action="route('venda.index')">
+        <x-filtro-campo
+            label="Busca"
+            name="busca"
+            :value="$filtros['busca'] ?? ''"
+            placeholder="Número ou cliente"
+            :span="2"
+        />
+        <x-filtro-campo
+            label="Situação"
+            name="situacao"
+            type="select"
+            :value="$filtros['situacao'] ?? ''"
+            :options="auth()->user()->pode('vendas.ver_canceladas')
+                ? ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada']
+                : ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada']"
+        />
+        <x-filtro-periodo
+            :inicio="$filtros['data_inicio'] ?? ''"
+            :fim="$filtros['data_fim'] ?? ''"
+            label-inicio="Data (início)"
+            label-fim="Data (fim)"
+        />
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Listagem de Vendas</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Listagem de Vendas" :paginator="$vendas">
                     <thead>
                         <tr>
                             <th style="width:80px;">Número</th>
@@ -73,52 +53,44 @@
                                 <td data-label="Cliente">{{ $venda->cliente->nome ?? '— Consumidor Final —' }}</td>
                                 <td data-label="Data">{{ $venda->data_venda->format('d/m/Y') }}</td>
                                 <td data-label="Forma Pgto.">{{ $venda->forma_pagamento ?? '—' }}</td>
-                                <td data-label="Total" class="col-num">R$ {{ number_format($venda->total, 2, ',', '.') }}</td>
+                                <td data-label="Total" class="col-num"><x-moeda :valor="$venda->total" /></td>
                                 <td data-label="Situação">
-                                    @if($venda->situacao === 'confirmada')
-                                        <span class="badge badge--success">Confirmada</span>
-                                    @elseif($venda->situacao === 'cancelada')
-                                        <span class="badge badge--error">Cancelada</span>
-                                    @else
-                                        <span class="badge badge--warning">Em andamento</span>
-                                    @endif
+                                    <x-badge-situacao tipo="venda" :valor="$venda->situacao" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('venda.show', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if($venda->situacao === 'em_andamento')
-                                        <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                            <x-icon name="edit" />
-                                        </a>
-                                    @endif
-                                    @if(auth()->user()->pode('vendas.cancelar') || $venda->situacao === 'em_andamento')
-                                    <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn--danger btn--sm btn--icon"
-                                            title="Excluir" aria-label="Excluir"
-                                            data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
-                                            <x-icon name="trash" />
-                                        </button>
-                                    </form>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            @if($venda->situacao === 'em_andamento')
+                                                <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                    <x-icon name="edit" />
+                                                </a>
+                                            @endif
+                                        </x-slot:editar>
+                                        <x-slot:ver>
+                                            <a href="{{ route('venda.show', $venda) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                        <x-slot:excluir>
+                                            @if(auth()->user()->pode('vendas.cancelar') || $venda->situacao === 'em_andamento')
+                                                <form method="POST" action="{{ route('venda.destroy', $venda) }}" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn--danger btn--sm btn--icon"
+                                                        title="Excluir" aria-label="Excluir"
+                                                        data-confirm="Confirmar exclusão?" data-confirm-title="Excluir" data-confirm-ok="Excluir" data-confirm-variant="danger">
+                                                        <x-icon name="trash" />
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted empty-state">
-                                    Nenhuma venda cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia :colspan="7">Nenhuma venda cadastrada.</x-tabela-vazia>
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $vendas->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

@@ -91,14 +91,20 @@
                                     <span class="badge {{ $os->situacaoBadge() }}">{{ $os->situacaoLabel() }}</span>
                                 </td>
                                 <td class="col-actions" data-label="Ações">
-                                    <a href="{{ route('ordem-servico.show', $os) }}" class="btn btn--ghost btn--sm btn--icon" title="Ver" aria-label="Ver">
-                                        <x-icon name="eye" />
-                                    </a>
-                                    @if ($os->estaAberta())
-                                        <a href="{{ route('ordem-servico.edit', $os) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
-                                            <x-icon name="edit" />
-                                        </a>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:editar>
+                                            @if ($os->estaAberta())
+                                                <a href="{{ route('ordem-servico.edit', $os) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                                    <x-icon name="edit" />
+                                                </a>
+                                            @endif
+                                        </x-slot:editar>
+                                        <x-slot:ver>
+                                            <a href="{{ route('ordem-servico.show', $os) }}" class="btn btn--ghost btn--sm btn--icon js-ver" data-no-loader title="Ver" aria-label="Ver">
+                                                <x-icon name="eye" />
+                                            </a>
+                                        </x-slot:ver>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty

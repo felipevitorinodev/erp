@@ -23,6 +23,9 @@ class User extends Authenticatable
     /** @var list<string>|null */
     protected ?array $chavesPermissao = null;
 
+    /** Mapa de perfis da empresa, reaproveitado na mesma requisição (listagem de usuários chama o nome do perfil em cada linha). */
+    private const CACHE_PERFIS = 'perfis.por.empresa';
+
     protected static function newFactory(): UserFactory
     {
         return UserFactory::new();
@@ -83,10 +86,7 @@ class User extends Authenticatable
         }
 
         $slug = $this->perfil === 'operador' ? 'vendedor' : (string) $this->perfil;
-        $perfil = Perfil::query()
-            ->where('empresa_id', $this->empresa_id)
-            ->where('slug', $slug)
-            ->first();
+        $perfil = $this->perfilPorSlug($slug);
 
         if ($perfil && ! $perfil->ativo) {
             return $this->chavesPermissao = [];
@@ -100,10 +100,7 @@ class User extends Authenticatable
     public function nomeDoPerfil(): string
     {
         $slug = $this->perfil === 'operador' ? 'vendedor' : (string) $this->perfil;
-        $nome = Perfil::query()
-            ->where('empresa_id', $this->empresa_id)
-            ->where('slug', $slug)
-            ->value('nome');
+        $nome = $this->perfilPorSlug($slug)?->nome;
 
         return $nome ?: match ($slug) {
             'admin' => 'Administrador',
@@ -111,5 +108,32 @@ class User extends Authenticatable
             'vendedor' => 'Vendedor',
             default => ucfirst($slug),
         };
+    }
+
+    public static function esquecerPerfisEmCache(int $empresaId): void
+    {
+        if (! app()->bound(self::CACHE_PERFIS)) {
+            return;
+        }
+
+        $mapas = app(self::CACHE_PERFIS);
+        unset($mapas[$empresaId]);
+        app()->instance(self::CACHE_PERFIS, $mapas);
+    }
+
+    private function perfilPorSlug(string $slug): ?Perfil
+    {
+        $empresaId = (int) $this->empresa_id;
+        $mapas = app()->bound(self::CACHE_PERFIS) ? app(self::CACHE_PERFIS) : [];
+
+        if (! array_key_exists($empresaId, $mapas)) {
+            $mapas[$empresaId] = Perfil::query()
+                ->where('empresa_id', $this->empresa_id)
+                ->get()
+                ->keyBy('slug');
+            app()->instance(self::CACHE_PERFIS, $mapas);
+        }
+
+        return $mapas[$empresaId]->get($slug);
     }
 }

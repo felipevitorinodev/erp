@@ -1,14 +1,12 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Nfes;
 
 use App\Http\Requests\Nfes\NfeCreateRequest;
-use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
-use App\Models\Funcionarios\Funcionario;
-use App\Models\Nfe;
-use App\Models\Produtos\Produto;
+use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
+use App\Repositories\Nfes\NfeRepository;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Vendas\VendaService;
 use Carbon\Carbon;
@@ -27,26 +25,16 @@ class NfeService
     public function __construct(
         protected EmpresaService $empresaService,
         protected VendaService $vendaService,
-        protected NfePendenciasService $pendenciasService
+        protected NfePendenciasService $pendenciasService,
+        protected NfeRepository $repository,
     ) {}
 
     public function index(Request $request)
     {
         $empresaId = (int) auth()->user()->empresa_id;
 
-        $nfes = Nfe::query()
-            ->where('empresa_id', $empresaId)
-            ->with('venda')
-            ->orderByDesc('id')
-            ->paginate(30);
-
-        $rascunhos = Venda::query()
-            ->where('empresa_id', $empresaId)
-            ->where('nfe_rascunho', true)
-            ->where('situacao', 'em_andamento')
-            ->with('cliente')
-            ->orderByDesc('id')
-            ->get();
+        $nfes = $this->repository->paginar($empresaId);
+        $rascunhos = $this->repository->rascunhos($empresaId);
 
         return view('nfe.index', [
             'nfes' => $nfes,
@@ -56,7 +44,7 @@ class NfeService
 
     public function create(?Venda $rascunho = null)
     {
-        $empresa = Empresa::query()->findOrFail((int) auth()->user()->empresa_id);
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
         $alertas = $this->alertasConfiguracao($empresa);
         $avisoCertificado = null;
 
@@ -67,7 +55,9 @@ class NfeService
             }
         }
 
-        $rascunho?->load(['itens', 'cliente', 'funcionario']);
+        if ($rascunho) {
+            $this->repository->carregarRascunho($rascunho);
+        }
 
         $clienteId = old('cliente_id', $rascunho?->cliente_id);
         $funcionarioId = old('funcionario_id', $rascunho?->funcionario_id);
@@ -80,10 +70,10 @@ class NfeService
             'rascunho' => $rascunho,
             'itensIniciais' => $this->itensIniciais($rascunho),
             'clienteInicial' => $clienteId
-                ? Cliente::where('empresa_id', $empresa->id)->find($clienteId, ['id', 'nome', 'cpf', 'cnpj'])
+                ? $this->repository->clienteDaEmpresa((int) $empresa->id, (int) $clienteId)
                 : null,
             'funcionarioInicial' => $funcionarioId
-                ? Funcionario::where('empresa_id', $empresa->id)->find($funcionarioId, ['id', 'nome'])
+                ? $this->repository->funcionarioDaEmpresa((int) $empresa->id, (int) $funcionarioId)
                 : null,
         ]);
     }
@@ -102,10 +92,10 @@ class NfeService
         $enviados = old('itens');
 
         if (is_array($enviados)) {
-            $produtos = Produto::where('empresa_id', (int) auth()->user()->empresa_id)
-                ->whereIn('id', array_filter(array_column($enviados, 'produto_id')))
-                ->get(['id', 'nome', 'codigo'])
-                ->keyBy('id');
+            $produtos = $this->repository->produtosDaEmpresa(
+                (int) auth()->user()->empresa_id,
+                array_filter(array_column($enviados, 'produto_id')),
+            );
 
             return collect($enviados)
                 ->filter(fn ($item) => isset($item['produto_id']) && $produtos->has((int) $item['produto_id']))
@@ -170,7 +160,7 @@ class NfeService
             $this->autorizarVenda($rascunho);
         }
 
-        $empresa = Empresa::query()->findOrFail((int) auth()->user()->empresa_id);
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
 
         if ($request->ehRascunho()) {
             try {
@@ -190,6 +180,10 @@ class NfeService
             return back()
                 ->withInput()
                 ->with('error', $alertas[0]);
+        }
+
+        if ($bloqueio = $this->mensagemSefazIndisponivel($empresa)) {
+            return back()->withInput()->with('error', $bloqueio);
         }
 
         try {
@@ -229,7 +223,7 @@ class NfeService
             return redirect()->route('nfe.index')->with('error', 'Somente rascunhos ainda não emitidos podem ser excluídos.');
         }
 
-        $venda->delete();
+        $this->repository->excluirVenda($venda);
 
         return redirect()->route('nfe.index')->with('success', 'Rascunho da NF-e excluído.');
     }
@@ -255,6 +249,10 @@ class NfeService
             } elseif ($validade->isPast()) {
                 $alertas[] = 'O certificado digital venceu em '.$validade->format('d/m/Y').'. Envie um certificado válido na empresa.';
             }
+        }
+
+        if (strlen(preg_replace('/\D/', '', (string) $empresa->cep) ?? '') !== 8) {
+            $alertas[] = 'Informe o CEP da empresa com 8 dígitos.';
         }
 
         if (strlen(preg_replace('/\D/', '', (string) $empresa->cod_ibge) ?? '') !== 7) {
@@ -297,7 +295,7 @@ class NfeService
     public function show(Nfe $nfe)
     {
         $this->autorizarNfe($nfe);
-        $nfe->load('venda');
+        $this->repository->carregarVenda($nfe);
 
         return view('nfe.show', [
             'nfe' => $nfe,
@@ -308,20 +306,20 @@ class NfeService
     {
         $this->autorizarVenda($venda);
 
-        $empresa = Empresa::query()->findOrFail($venda->empresa_id);
+        $empresa = $this->repository->empresa((int) $venda->empresa_id);
+
+        if ($bloqueio = $this->mensagemSefazIndisponivel($empresa)) {
+            return back()->with('error', $bloqueio);
+        }
 
         $nfe = DB::transaction(function () use ($venda, $empresa) {
-            $venda = Venda::query()->whereKey($venda->id)->lockForUpdate()->firstOrFail();
+            $venda = $this->repository->travarVenda((int) $venda->id);
 
             if ($venda->situacao !== 'confirmada') {
                 return 'Apenas vendas confirmadas podem ter NF-e emitida.';
             }
 
-            $nfes = Nfe::query()
-                ->where('empresa_id', $venda->empresa_id)
-                ->where('venda_id', $venda->id)
-                ->orderByDesc('id')
-                ->get();
+            $nfes = $this->repository->notasDaVenda((int) $venda->empresa_id, (int) $venda->id);
 
             if ($nfes->contains('situacao', 'autorizada')) {
                 return 'Esta venda já possui NF-e autorizada.';
@@ -333,7 +331,7 @@ class NfeService
 
             $ambiente = (int) ($empresa->nfe_ambiente ?: 2);
             $serie = $empresa->nfe_serie ?: '001';
-            $ultima = $nfes->first();
+            $ultima = $nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFE);
 
             // Nota rejeitada não consome o número na SEFAZ: reaproveita para não abrir buraco na numeração.
             // 539 = o número já foi usado por outra chave na SEFAZ, então não pode ser reaproveitado.
@@ -342,52 +340,42 @@ class NfeService
                 && (int) $ultima->ambiente === $ambiente
                 && $ultima->serie === $serie
                 && $ultima->codigo_status !== '539') {
-                $ultima->update([
-                    'situacao' => 'pendente',
-                    'chave_acesso' => null,
-                    'xml_assinado' => null,
-                    'xml_autorizado' => null,
-                    'protocolo' => null,
-                    'recibo' => null,
-                    'codigo_status' => null,
-                    'motivo_status' => null,
-                    'data_autorizacao' => null,
-                ]);
-                $venda->update(['nfe_numero' => $ultima->numero]);
+                $this->repository->reabrirRejeitada($ultima);
+                $this->repository->definirNumeroDaVenda($venda, (string) $ultima->numero);
 
                 return $ultima;
             }
 
             $numero = $this->empresaService->proximoNumeronNfe($empresa);
 
-            $venda->update(['nfe_numero' => $numero]);
+            $this->repository->definirNumeroDaVenda($venda, $numero);
 
-            return Nfe::query()->create([
-                'empresa_id' => $empresa->id,
-                'venda_id' => $venda->id,
-                'numero' => $numero,
-                'serie' => $serie,
-                'situacao' => 'pendente',
-                'ambiente' => $ambiente,
-            ]);
+            return $this->repository->criarPendente(
+                (int) $empresa->id,
+                (int) $venda->id,
+                $numero,
+                $serie,
+                $ambiente,
+            );
         });
 
         if (is_string($nfe)) {
             return back()->with('error', $nfe);
         }
 
-        $venda->refresh();
+        $venda = $this->repository->recarregarVenda($venda);
+        $this->gravarCodigosResolvidos($venda, $empresa);
 
         try {
             $builder = new NfeBuilderService($empresa);
-            $signedXml = $builder->buildAndSign($venda->load(['itens.produto.unidadeMedida', 'cliente']));
+            $signedXml = $builder->buildAndSign($this->repository->carregarParaMontagem($venda));
 
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'xml_assinado' => $signedXml,
                 'chave_acesso' => $this->extrairChave($signedXml),
             ]);
         } catch (RuntimeException $e) {
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
                 'motivo_status' => mb_substr($e->getMessage(), 0, 255),
             ]);
@@ -401,7 +389,7 @@ class NfeService
                 'exception' => $e->getMessage(),
             ]);
 
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
                 'motivo_status' => 'Não foi possível montar a NF-e.',
             ]);
@@ -428,7 +416,7 @@ class NfeService
 
         if (blank($nfe->chave_acesso) || blank($nfe->xml_assinado)) {
             // Sem XML assinado a nota nunca foi transmitida.
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
                 'motivo_status' => 'A NF-e não chegou a ser transmitida à SEFAZ.',
             ]);
@@ -438,7 +426,7 @@ class NfeService
                 ->with('error', 'A NF-e não chegou a ser transmitida. Você pode emitir novamente pela venda.');
         }
 
-        $empresa = Empresa::query()->findOrFail($nfe->empresa_id);
+        $empresa = $this->repository->empresa((int) $nfe->empresa_id);
 
         try {
             $sender = new NfeSenderService($empresa);
@@ -481,7 +469,7 @@ class NfeService
             return back()->with('error', 'NF-e sem chave ou protocolo para cancelamento.');
         }
 
-        $empresa = Empresa::query()->findOrFail($nfe->empresa_id);
+        $empresa = $this->repository->empresa((int) $nfe->empresa_id);
 
         try {
             $sender = new NfeSenderService($empresa);
@@ -492,7 +480,7 @@ class NfeService
         $resultado = $sender->cancelar($nfe->chave_acesso, $justificativa, $nfe->protocolo, (int) $nfe->ambiente);
 
         if (($resultado['status'] ?? '') === 'cancelada') {
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => 'cancelada',
                 'codigo_status' => $resultado['codigo'] ?? '101',
                 'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Cancelamento homologado'), 0, 255),
@@ -520,9 +508,13 @@ class NfeService
             return back()->with('error', 'NF-e ainda não autorizada.');
         }
 
+        return $this->pdfDaNota($nfe);
+    }
+
+    private function pdfDaNota(Nfe $nfe)
+    {
         try {
-            $danfe = new Danfe($nfe->xml_autorizado);
-            $pdf = $danfe->render();
+            $pdf = (new Danfe($nfe->xml_autorizado))->render();
         } catch (Throwable $e) {
             Log::error('Falha ao gerar DANFE', [
                 'nfe_id' => $nfe->id,
@@ -540,6 +532,7 @@ class NfeService
         ]);
     }
 
+
     private function aplicarResultadoEnvio(Nfe $nfe, array $resultado)
     {
         $status = $resultado['status'] ?? 'erro';
@@ -547,7 +540,7 @@ class NfeService
         $codigo = $resultado['codigo'] ?? null;
 
         if ($status === 'autorizada' || $status === 'denegada') {
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => $status,
                 'chave_acesso' => $resultado['chave'] ?? $nfe->chave_acesso,
                 'protocolo' => $resultado['protocolo'] ?? null,
@@ -569,7 +562,7 @@ class NfeService
         }
 
         if ($status === 'rejeitada' || $status === 'nao_encontrada') {
-            $nfe->update([
+            $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
                 'chave_acesso' => $resultado['chave'] ?? $nfe->chave_acesso,
                 'codigo_status' => $codigo,
@@ -585,7 +578,7 @@ class NfeService
 
         // Timeout, lote em processamento, retorno ilegível, duplicidade: a situação real na SEFAZ é desconhecida.
         // A nota continua pendente para impedir reemissão com outro número antes de consultar.
-        $nfe->update([
+        $this->repository->atualizar($nfe, [
             'codigo_status' => $codigo,
             'motivo_status' => mb_substr($motivo, 0, 255),
             'recibo' => $resultado['recibo'] ?? $nfe->recibo,
@@ -609,7 +602,7 @@ class NfeService
 
     private function autorizarNfe(Nfe $nfe): void
     {
-        if ((int) $nfe->empresa_id !== (int) auth()->user()->empresa_id) {
+        if ((int) $nfe->empresa_id !== (int) auth()->user()->empresa_id || (int) $nfe->modelo === Nfe::MODELO_NFCE) {
             abort(404);
         }
     }
@@ -619,5 +612,146 @@ class NfeService
         if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
             abort(404);
         }
+    }
+
+    private function mensagemSefazIndisponivel(Empresa $empresa): ?string
+    {
+        if (app()->bound('nfe.sefaz.status')) {
+            return app('nfe.sefaz.status')($empresa);
+        }
+
+        try {
+            return (new NfeSenderService($empresa))->motivoSeIndisponivel();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function gravarCodigosResolvidos(Venda $venda, Empresa $empresa): void
+    {
+        $this->repository->carregarItensFiscais($venda);
+        $vinculo = NfeVinculoFiscal::daEmpresa($empresa)->usarVenda($venda);
+
+        foreach ($venda->itens as $item) {
+            $produto = $item->produto;
+            $dados = [];
+            $campos = [
+                'cfop' => $vinculo->cfop($item, $produto)['valor'],
+                'csosn' => $vinculo->csosn($item, $produto)['valor'],
+                'cst_pis' => $vinculo->cst($item, $produto, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao')['valor'],
+                'cst_cofins' => $vinculo->cst($item, $produto, 'cst_cofins', 'cst_cofins', 'cst_cofins', 'nfe_cst_cofins_padrao')['valor'],
+            ];
+
+            foreach ($campos as $campo => $valor) {
+                if (blank($item->{$campo}) && $valor !== '') {
+                    $dados[$campo] = $valor;
+                }
+            }
+
+            if ($dados !== []) {
+                $this->repository->atualizarItem($item, $dados);
+            }
+        }
+
+        if (blank($venda->nfe_tpag)) {
+            $this->repository->gravarTpag($venda, NfeBuilderService::tPag((string) $venda->forma_pagamento));
+        }
+    }
+
+    public function limparCodigosFiscais(Nfe $nfe)
+    {
+        $this->autorizarNfe($nfe);
+
+        if ($nfe->situacao !== 'rejeitada' || ! $nfe->venda_id) {
+            return redirect()
+                ->route('nfe.show', $nfe)
+                ->with('error', 'Só uma NF-e rejeitada, ainda sem autorização, pode ter os códigos da venda limpos.');
+        }
+
+        if ($this->repository->vendaTemNotaBloqueandoLimpeza((int) $nfe->empresa_id, (int) $nfe->venda_id)) {
+            return redirect()
+                ->route('nfe.show', $nfe)
+                ->with('error', 'Esta venda tem nota autorizada, pendente ou cancelada. Os códigos não foram alterados.');
+        }
+
+        $venda = $this->repository->vendaDaEmpresa((int) $nfe->empresa_id, (int) $nfe->venda_id);
+        $this->repository->limparCodigosDaVenda($venda);
+
+        return redirect()
+            ->route('nfe.show', $nfe)
+            ->with('success', 'CFOP, CSOSN e CST dos itens foram limpos. A próxima emissão usa o perfil atual. O XML desta nota rejeitada não mudou.');
+    }
+
+    public function formularioInutilizacao()
+    {
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
+
+        return view('nfe.inutilizar', [
+            'empresa' => $empresa,
+            'inutilizacoes' => $this->repository->inutilizacoes((int) $empresa->id),
+        ]);
+    }
+
+    public function inutilizar(Request $request)
+    {
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
+        $dados = $request->validate([
+            'serie' => ['required', 'regex:/^\d{1,3}$/'],
+            'ano' => ['required', 'regex:/^\d{2}$/'],
+            'numero_inicial' => ['required', 'integer', 'min:1', 'max:999999999'],
+            'numero_final' => ['required', 'integer', 'min:1', 'max:999999999', 'gte:numero_inicial'],
+            'justificativa' => ['required', 'string', 'min:15', 'max:255'],
+        ], [
+            'justificativa.min' => 'A justificativa deve ter no mínimo 15 caracteres.',
+            'numero_final.gte' => 'O número final precisa ser maior ou igual ao inicial.',
+        ]);
+
+        $serie = str_pad($dados['serie'], 3, '0', STR_PAD_LEFT);
+        $inicio = (int) $dados['numero_inicial'];
+        $fim = (int) $dados['numero_final'];
+        $ambiente = (int) ($empresa->nfe_ambiente ?: 2);
+
+        if ($fim - $inicio > 1000) {
+            return back()->withInput()->with('error', 'A faixa pode ter no máximo 1000 números por envio.');
+        }
+
+        if ($this->repository->faixaOcupada((int) $empresa->id, $ambiente, $serie, $inicio, $fim)) {
+            return back()->withInput()->with('error', 'Essa faixa tem uma NF-e já gravada nesta série e ambiente. Número rejeitado com código 539 continua sem reaproveitamento e não entra na inutilização por aqui.');
+        }
+
+        try {
+            $resultado = (new NfeSenderService($empresa))->inutilizar(
+                (int) $serie,
+                $inicio,
+                $fim,
+                trim($dados['justificativa']),
+                $ambiente,
+                $dados['ano']
+            );
+        } catch (Throwable $e) {
+            return back()->withInput()->with('error', 'Não foi possível inutilizar. Verifique o certificado e a conexão com a SEFAZ.');
+        }
+
+        $this->repository->criarInutilizacao([
+            'empresa_id' => $empresa->id,
+            'modelo' => Nfe::MODELO_NFE,
+            'ambiente' => $ambiente,
+            'serie' => $serie,
+            'ano' => $dados['ano'],
+            'numero_inicial' => $inicio,
+            'numero_final' => $fim,
+            'justificativa' => trim($dados['justificativa']),
+            'situacao' => $resultado['status'],
+            'protocolo' => $resultado['protocolo'],
+            'codigo_status' => $resultado['codigo'] !== '' ? $resultado['codigo'] : null,
+            'motivo_status' => mb_substr($resultado['motivo'], 0, 255),
+            'xml' => $resultado['xml'],
+        ]);
+
+        if ($resultado['status'] === 'autorizada') {
+            return redirect()->route('nfe.inutilizar')->with('success', 'Faixa inutilizada. Protocolo '.$resultado['protocolo'].'.');
+        }
+
+        return redirect()->route('nfe.inutilizar')->with('error', $resultado['motivo']);
     }
 }

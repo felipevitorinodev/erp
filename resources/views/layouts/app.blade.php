@@ -12,32 +12,11 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 
     @stack('styles')
-
-    {{-- Chrome/Edge buscam a página ao parar o mouse ~200 ms num link, e o clique abre quase na hora.
-         Requisições de prefetch não alteram a "URL anterior" da sessão (StartSession ignora prefetch). --}}
-    <script type="speculationrules">
-    {
-        "prefetch": [{
-            "where": {
-                "and": [
-                    { "href_matches": "/*" },
-                    { "not": { "href_matches": "/*/pdf" } },
-                    { "not": { "href_matches": "/*/csv" } },
-                    { "not": { "href_matches": "/*/xml" } },
-                    { "not": { "href_matches": "/*/danfe" } },
-                    { "not": { "href_matches": "/*limpar*" } },
-                    { "not": { "href_matches": "/logout" } },
-                    { "not": { "selector_matches": "[download], [data-no-loader], [data-no-prefetch], [target=_blank]" } }
-                ]
-            },
-            "eagerness": "moderate"
-        }]
-    }
-    </script>
 </head>
 
 <body>
-    @include('partials.page-loader', ['area' => 'conteudo'])
+    <a href="#conteudo" class="skip-link">Ir para o conteúdo</a>
+    @include('partials.page-loader')
 
     <header class="header">
         <button type="button" class="header__menu" id="btn-sidebar-toggle" aria-label="Abrir menu"
@@ -60,7 +39,11 @@
                 'operador' => 'Operador',
                 default => 'Usuário',
             };
-            $empresa = $user->empresa;
+            $empresa = $user->relationLoaded('empresa')
+                ? $user->getRelation('empresa')
+                : ($user->empresa_id
+                    ? \App\Models\Empresas\Empresa::query()->whereKey($user->empresa_id)->first(['nome_fantasia', 'razao_social'])
+                    : null);
             $userEmpresa = $empresa?->nome_fantasia ?: ($empresa?->razao_social ?: null);
             $userInitials = collect(preg_split('/\s+/', trim($userName)))
                 ->filter()
@@ -194,6 +177,10 @@
                         <a href="{{ route('nfe.index') }}"
                             class="sidebar__link {{ request()->routeIs('nfe.*') ? 'sidebar__link--active' : '' }}">
                             NF-e
+                        </a>
+                        <a href="{{ route('perfilFiscal.index') }}"
+                            class="sidebar__link {{ request()->routeIs('perfilFiscal.*') ? 'sidebar__link--active' : '' }}">
+                            Perfis fiscais
                         </a>
                     </div>
                 </div>
@@ -477,7 +464,7 @@
             })();
         </script>
 
-        <main class="main">
+        <main class="main" id="conteudo">
 
             <div class="page-bar">
                 <div class="page-bar__title">
@@ -490,30 +477,6 @@
                     @yield('page_actions')
                 </div>
             </div>
-
-            @if (session('success') || session('error') || session('warning'))
-                <div class="toast-stack" id="toast-stack" aria-live="polite">
-                    @if (session('success'))
-                        <div class="toast toast--success" role="alert">{{ session('success') }}</div>
-                    @endif
-                    @if (session('error'))
-                        <div class="toast toast--error" role="alert">{{ session('error') }}</div>
-                    @endif
-                    @if (session('warning'))
-                        <div class="toast toast--warning" role="alert">{{ session('warning') }}</div>
-                    @endif
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="alert alert--error">
-                    <ul style="margin:0; padding-left: 1rem;">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
 
             <div class="page-content">
                 @yield('content')
@@ -529,11 +492,13 @@
         <span>&copy; {{ date('Y') }} · Visys · Gestão empresarial</span>
     </footer>
 
+    <x-modal-ver />
+
     <div class="modal-overlay" id="modal-confirm" hidden>
         <div class="modal-box">
             <div class="modal-box__header">
                 <span class="card__title" id="modal-confirm-title">Confirmar</span>
-                <button type="button" class="btn btn--ghost btn--sm" data-confirm-close>✕</button>
+                <button type="button" class="btn btn--ghost btn--sm" data-confirm-close aria-label="Fechar">✕</button>
             </div>
             <div class="modal-box__body">
                 <p id="modal-confirm-message" style="margin:0; font-size:13px; color:var(--color-text);"></p>
@@ -549,6 +514,7 @@
     <script src="{{ asset('js/autocomplete.js') }}?v={{ filemtime(public_path('js/autocomplete.js')) }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
     @include('partials.page-loader-script')
+    @include('partials.toast-stack')
 
     {{-- Modais são colocados fora de qualquer form --}}
     @stack('modals')

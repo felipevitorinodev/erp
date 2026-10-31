@@ -5,74 +5,47 @@
 
 @section('content')
 
-    <div class="form-grid form-grid--col-2 mb-2">
-        <div class="card">
-            <div class="card__body">
-                <p class="text-muted" style="margin:0 0 .25rem;">Total pendente</p>
-                <p class="card__title" style="margin:0;">R$ {{ number_format($totais['pendentes'], 2, ',', '.') }}</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card__body">
-                <p class="text-muted" style="margin:0 0 .25rem;">Total pago</p>
-                <p class="card__title" style="margin:0;">R$ {{ number_format($totais['pagas'], 2, ',', '.') }}</p>
-            </div>
-        </div>
-    </div>
+    <x-filtros :action="route('comissao.index')">
+        <x-filtro-campo
+            label="Vendedor"
+            name="funcionario_id"
+            type="select"
+            :value="$filtros['funcionario_id'] ?? ''"
+            :options="$funcionarios->pluck('nome', 'id')"
+            vazio="— Todos —"
+        />
+        <x-filtro-campo
+            label="Situação"
+            name="situacao"
+            type="select"
+            :value="$filtros['situacao'] ?? ''"
+            :options="['pendente' => 'Pendente', 'paga' => 'Paga']"
+        />
+        <x-filtro-periodo
+            :inicio="$filtros['data_inicio'] ?? ''"
+            :fim="$filtros['data_fim'] ?? ''"
+            label-inicio="Data da venda (início)"
+            label-fim="Data da venda (fim)"
+        />
+    </x-filtros>
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('comissao.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group">
-                    <label class="form-label">Vendedor</label>
-                    <select name="funcionario_id" class="form-control">
-                        <option value="">— Todos —</option>
-                        @foreach($funcionarios as $funcionario)
-                            <option value="{{ $funcionario->id }}"
-                                {{ (string) ($filtros['funcionario_id'] ?? '') === (string) $funcionario->id ? 'selected' : '' }}>
-                                {{ $funcionario->nome }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <select name="situacao" class="form-control">
-                        <option value="">— Todas —</option>
-                        @foreach(['pendente' => 'Pendente', 'paga' => 'Paga'] as $valor => $label)
-                            <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data da venda (início)</label>
-                    <input type="date" name="data_inicio" class="form-control"
-                        value="{{ $filtros['data_inicio'] ?? '' }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data da venda (fim)</label>
-                    <input type="date" name="data_fim" class="form-control"
-                        value="{{ $filtros['data_fim'] ?? '' }}">
-                </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('comissao.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-relatorio-kpis>
+        <x-relatorio-kpi
+            label="Total pendente"
+            :valor="'R$ ' . number_format($totais['pendentes'], 2, ',', '.')"
+            tom="warning"
+            icone="history"
+        />
+        <x-relatorio-kpi
+            label="Total pago"
+            :valor="'R$ ' . number_format($totais['pagas'], 2, ',', '.')"
+            tom="success"
+            icone="check"
+            destaque
+        />
+    </x-relatorio-kpis>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Listagem</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Listagem" :paginator="$comissoes">
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -105,44 +78,36 @@
                                 <td data-label="Data venda">{{ $comissao->venda?->data_venda?->format('d/m/Y') ?? '—' }}</td>
                                 <td data-label="Base" class="col-num">{{ $comissao->base_calculo !== null ? 'R$ ' . number_format($comissao->base_calculo, 2, ',', '.') : '—' }}</td>
                                 <td data-label="%" class="col-num">{{ number_format($comissao->percentual, 2, ',', '.') }}%</td>
-                                <td data-label="Valor" class="col-num">R$ {{ number_format($comissao->valor, 2, ',', '.') }}</td>
+                                <td data-label="Valor" class="col-num"><x-moeda :valor="$comissao->valor" /></td>
                                 <td data-label="Situação">
-                                    @if($comissao->situacao === 'paga')
-                                        <span class="badge badge--success">Paga</span>
-                                    @else
-                                        <span class="badge badge--warning">Pendente</span>
-                                    @endif
+                                    <x-badge-situacao tipo="comissao" :valor="$comissao->situacao" />
                                 </td>
                                 <td data-label="Pagamento">{{ $comissao->data_pagamento ? $comissao->data_pagamento->format('d/m/Y') : '—' }}</td>
                                 <td class="col-actions" data-label="Ações">
-                                    @if($comissao->situacao === 'pendente')
-                                        <form method="POST" action="{{ route('comissao.pagar', $comissao) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn--primary btn--sm btn--icon"
-                                                title="Pagar" aria-label="Pagar"
-                                                data-confirm="Marcar esta comissão como paga?"
-                                                data-confirm-title="Pagar comissão"
-                                                data-confirm-ok="Confirmar">
-                                                <x-icon name="dollar" />
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
+                                    <x-acoes>
+                                        <x-slot:excluir>
+                                            @if($comissao->situacao === 'pendente')
+                                                <form method="POST" action="{{ route('comissao.pagar', $comissao) }}" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn--primary btn--sm btn--icon"
+                                                        title="Pagar" aria-label="Pagar"
+                                                        data-confirm="Marcar esta comissão como paga?"
+                                                        data-confirm-title="Pagar comissão"
+                                                        data-confirm-ok="Confirmar">
+                                                        <x-icon name="dollar" />
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </x-slot:excluir>
+                                    </x-acoes>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="10" class="text-center text-muted empty-state">Nenhuma comissão encontrada.</td>
-                            </tr>
+                            <x-tabela-vazia :colspan="10">Nenhuma comissão encontrada.</x-tabela-vazia>
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $comissoes->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

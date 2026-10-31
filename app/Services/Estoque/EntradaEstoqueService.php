@@ -78,20 +78,7 @@ class EntradaEstoqueService
         $fornecedorNome = $parsed['emitente']['razao_social'];
         $fornecedorIe = $parsed['emitente']['ie'] ?? null;
 
-        $fornecedor = null;
-
-        // Busca fornecedor pelo CNPJ
-        $fornecedores = Fornecedor::where('empresa_id', $empresaId)
-            ->whereNotNull('cnpj')
-            ->get();
-
-        foreach ($fornecedores as $f) {
-            $cnpjFornecedor = preg_replace('/\D/', '', $f->cnpj);
-            if ($cnpjFornecedor === $cnpjEmitente) {
-                $fornecedor = $f;
-                break;
-            }
-        }
+        $fornecedor = $this->fornecedorPorCnpj($empresaId, (string) $cnpjEmitente);
 
         // Se não encontrou, cria automaticamente
         if (!$fornecedor && $cnpjEmitente) {
@@ -109,32 +96,28 @@ class EntradaEstoqueService
         $parsed['fornecedor_nome'] = $fornecedor?->nome ?? $fornecedorNome;
         $parsed['fornecedor_criado'] = $fornecedor && !$fornecedor->wasRecentlyCreated ? false : true;
 
-        // 4. Produto lookup per item
-        foreach ($parsed['itens'] as $key => $item) {
-            $produtoId = null;
-            $produtoEncontrado = false;
+        $codigos = [];
+        $eans = [];
+        foreach ($parsed['itens'] as $item) {
+            $codigos[] = $item['codigo_produto_fornecedor'] ?? '';
+            if (!empty($item['ean'])) {
+                $eans[] = $item['ean'];
+            }
+        }
 
-            // First try: by codigo (codigo_produto_fornecedor)
-            $produto = Produto::where('empresa_id', $empresaId)
-                ->where('codigo', $item['codigo_produto_fornecedor'])
-                ->where('ativo', true)
-                ->first();
+        $porCodigo = $this->produtosAtivosPorColuna($empresaId, 'codigo', $codigos);
+        $porEan = $this->produtosAtivosPorColuna($empresaId, 'codigo_barras', $eans);
+
+        foreach ($parsed['itens'] as $key => $item) {
+            $codigo = $item['codigo_produto_fornecedor'] ?? '';
+            $produto = $porCodigo->get($codigo);
 
             if (!$produto && !empty($item['ean'])) {
-                // Second try: by codigo_barras (EAN)
-                $produto = Produto::where('empresa_id', $empresaId)
-                    ->where('codigo_barras', $item['ean'])
-                    ->where('ativo', true)
-                    ->first();
+                $produto = $porEan->get($item['ean']);
             }
 
-            if ($produto) {
-                $produtoId = $produto->id;
-                $produtoEncontrado = true;
-            }
-
-            $parsed['itens'][$key]['produto_id'] = $produtoId;
-            $parsed['itens'][$key]['produto_encontrado'] = $produtoEncontrado;
+            $parsed['itens'][$key]['produto_id'] = $produto?->id;
+            $parsed['itens'][$key]['produto_encontrado'] = $produto !== null;
         }
 
         // 5. Add raw XML for session storage
@@ -450,6 +433,80 @@ class EntradaEstoqueService
         if ((int) $entrada->empresa_id !== (int) auth()->user()->empresa_id) {
             abort(404);
         }
+    }
+
+    /**
+     * Mesma comparação da varredura anterior (só dígitos), sem carregar o cadastro inteiro.
+     * O formato mascarado ou só dígitos resolve numa consulta; pontuação fora do padrão cai no lote seguinte.
+     */
+    private function fornecedorPorCnpj(int $empresaId, string $cnpjEmitente): ?Fornecedor
+    {
+        $digitos = preg_replace('/\D/', '', $cnpjEmitente) ?? '';
+        if ($digitos === '') {
+            return null;
+        }
+
+        $formatado = $this->formatarCnpj($digitos);
+
+        $fornecedor = Fornecedor::query()
+            ->where('empresa_id', $empresaId)
+            ->whereNotNull('cnpj')
+            ->whereIn('cnpj', array_values(array_unique([$digitos, $formatado])))
+            ->orderBy('id')
+            ->first();
+
+        if ($fornecedor) {
+            return $fornecedor;
+        }
+
+        $encontradoId = null;
+
+        Fornecedor::query()
+            ->where('empresa_id', $empresaId)
+            ->whereNotNull('cnpj')
+            ->orderBy('id')
+            ->select(['id', 'cnpj'])
+            ->chunk(500, function ($fornecedores) use ($digitos, &$encontradoId) {
+                foreach ($fornecedores as $candidato) {
+                    if (preg_replace('/\D/', '', (string) $candidato->cnpj) === $digitos) {
+                        $encontradoId = $candidato->id;
+
+                        return false;
+                    }
+                }
+            });
+
+        return $encontradoId ? Fornecedor::query()->find($encontradoId) : null;
+    }
+
+    /**
+     * @param  list<int|string|null>  $valores
+     * @return \Illuminate\Support\Collection<int|string, Produto>
+     */
+    private function produtosAtivosPorColuna(int $empresaId, string $coluna, array $valores)
+    {
+        $valores = array_values(array_unique($valores, SORT_REGULAR));
+        if ($valores === []) {
+            return collect();
+        }
+
+        $mapa = collect();
+
+        foreach (
+            Produto::query()
+                ->where('empresa_id', $empresaId)
+                ->where('ativo', true)
+                ->whereIn($coluna, $valores)
+                ->orderBy('id')
+                ->get(['id', $coluna]) as $produto
+        ) {
+            $chave = (string) $produto->{$coluna};
+            if (! $mapa->has($chave)) {
+                $mapa->put($chave, $produto);
+            }
+        }
+
+        return $mapa;
     }
 
     /**

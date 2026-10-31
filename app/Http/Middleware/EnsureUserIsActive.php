@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\SessaoLogin;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,9 +18,10 @@ class EnsureUserIsActive
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+            SessaoLogin::esquecer();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'Usuário inativo. Entre em contato com o administrador.',
+                'login' => 'Usuário inativo. Entre em contato com o administrador.',
             ]);
         }
 

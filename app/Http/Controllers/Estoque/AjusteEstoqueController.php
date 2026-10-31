@@ -116,7 +116,7 @@ class AjusteEstoqueController extends Controller
     {
         $empresaId = auth()->user()->empresa_id ?? 0;
 
-        $query = MovimentacaoEstoque::with(['produto', 'usuario'])
+        $query = MovimentacaoEstoque::with(['produto:id,nome', 'usuario:id,name'])
             ->where('empresa_id', $empresaId);
 
         if ($request->filled('produto_id')) {
@@ -128,11 +128,11 @@ class AjusteEstoqueController extends Controller
         }
 
         if ($request->filled('data_inicio')) {
-            $query->whereDate('created_at', '>=', $request->data_inicio);
+            $query->whereDataDe('created_at', $request->data_inicio);
         }
 
         if ($request->filled('data_fim')) {
-            $query->whereDate('created_at', '<=', $request->data_fim);
+            $query->whereDataAte('created_at', $request->data_fim);
         }
 
         $movimentacoes = $query->orderByDesc('id')->paginate(20)->withQueryString();

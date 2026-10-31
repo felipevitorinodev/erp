@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'OS #' . $os->numero)
 @section('page_title', 'Ordem de Serviço #' . $os->numero)
@@ -81,109 +81,62 @@
         </div>
     @endif
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Dados gerais</span>
+    <x-ficha titulo="Dados gerais">
+        <x-slot:status>
             <span class="badge {{ $os->situacaoBadge() }}">{{ $os->situacaoLabel() }}</span>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-4">
-                <div class="form-group">
-                    <label class="form-label">Cliente</label>
-                    <span>{{ $os->cliente->nome ?? '— Consumidor Final —' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Técnico</label>
-                    <span>{{ $os->tecnico->nome ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Abertura</label>
-                    <span>{{ $os->data_abertura->format('d/m/Y') }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Previsão / Conclusão</label>
-                    <span>
-                        {{ $os->data_previsao ? $os->data_previsao->format('d/m/Y') : '—' }}
-                        /
-                        {{ $os->data_conclusao ? $os->data_conclusao->format('d/m/Y') : '—' }}
-                    </span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Forma de pagamento</label>
-                    <span>{{ $os->forma_pagamento ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Garantia</label>
-                    <span>{{ $os->garantia ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Aberta por</label>
-                    <span>{{ $os->usuario->name ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Origem / Venda</label>
-                    <span>
-                        @if ($os->orcamento)
-                            <a href="{{ route('orcamento.show', $os->orcamento) }}">Orçamento #{{ $os->orcamento->numero }}</a>
-                        @endif
-                        @if ($os->venda)
-                            {{ $os->orcamento ? '·' : '' }}
-                            <a href="{{ route('venda.show', $os->venda) }}">Venda #{{ $os->venda->numero }}</a>
-                        @endif
-                        @if (! $os->orcamento && ! $os->venda)
-                            —
-                        @endif
-                    </span>
-                </div>
+        </x-slot:status>
+        <x-slot:resumo>
+            <div>
+                <span>Total</span>
+                <strong><x-moeda :valor="$os->total" /></strong>
             </div>
-        </div>
-    </div>
-
-    <div class="card" style="margin-top:1rem;">
-        <div class="card__header">
-            <span class="card__title">Equipamento</span>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-4">
-                <div class="form-group">
-                    <label class="form-label">Equipamento</label>
-                    <span>{{ $os->equipamento ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Marca / Modelo</label>
-                    <span>{{ trim(($os->marca ?? '') . ' ' . ($os->modelo ?? '')) ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Nº de série</label>
-                    <span>{{ $os->numero_serie ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Acessórios</label>
-                    <span>{{ $os->acessorios ?: '—' }}</span>
-                </div>
+            <div>
+                <span>Subtotal</span>
+                <strong><x-moeda :valor="$os->subtotal" /></strong>
             </div>
-            <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label class="form-label">Defeito relatado</label>
-                    <span style="white-space:pre-line;">{{ $os->defeito_relatado ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Diagnóstico</label>
-                    <span style="white-space:pre-line;">{{ $os->diagnostico ?: '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Serviço executado</label>
-                    <span style="white-space:pre-line;">{{ $os->servico_executado ?: '—' }}</span>
-                </div>
+            <div>
+                <span>Desconto</span>
+                <strong><x-moeda :valor="$os->desconto" /></strong>
             </div>
-            @if ($os->observacoes)
-                <div class="form-group" style="margin-top:1rem;">
-                    <label class="form-label">Observações</label>
-                    <span style="white-space:pre-line;">{{ $os->observacoes }}</span>
-                </div>
+            <div>
+                <span>Acréscimo</span>
+                <strong><x-moeda :valor="$os->acrescimo" /></strong>
+            </div>
+        </x-slot:resumo>
+        <x-ficha-campo label="Cliente">{{ $os->cliente->nome ?? '— Consumidor Final —' }}</x-ficha-campo>
+        <x-ficha-campo label="Técnico">{{ $os->tecnico->nome ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Abertura">{{ $os->data_abertura->format('d/m/Y') }}</x-ficha-campo>
+        <x-ficha-campo label="Previsão">{{ $os->data_previsao ? $os->data_previsao->format('d/m/Y') : '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Conclusão">{{ $os->data_conclusao ? $os->data_conclusao->format('d/m/Y') : '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Forma de pagamento">{{ $os->forma_pagamento ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Garantia">{{ $os->garantia ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Aberta por">{{ $os->usuario->name ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Origem / venda">
+            @if ($os->orcamento)
+                <a href="{{ route('orcamento.show', $os->orcamento) }}">Orçamento #{{ $os->orcamento->numero }}</a>
             @endif
-        </div>
-    </div>
+            @if ($os->venda)
+                {{ $os->orcamento ? '·' : '' }}
+                <a href="{{ route('venda.show', $os->venda) }}">Venda #{{ $os->venda->numero }}</a>
+            @endif
+            @if (! $os->orcamento && ! $os->venda)
+                —
+            @endif
+        </x-ficha-campo>
+    </x-ficha>
+
+    <x-ficha titulo="Equipamento">
+        <x-ficha-campo label="Equipamento">{{ $os->equipamento ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Marca / modelo">{{ trim(($os->marca ?? '') . ' ' . ($os->modelo ?? '')) ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Nº de série">{{ $os->numero_serie ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Acessórios">{{ $os->acessorios ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Defeito relatado" largo class="ficha__item--texto">{{ $os->defeito_relatado ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Diagnóstico" largo class="ficha__item--texto">{{ $os->diagnostico ?: '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Serviço executado" largo class="ficha__item--texto">{{ $os->servico_executado ?: '—' }}</x-ficha-campo>
+        @if ($os->observacoes)
+            <x-ficha-campo label="Observações" largo class="ficha__item--texto">{{ $os->observacoes }}</x-ficha-campo>
+        @endif
+    </x-ficha>
 
     <div class="card" style="margin-top:1rem;">
         <div class="card__header">

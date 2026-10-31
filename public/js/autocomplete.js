@@ -113,7 +113,13 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
         });
     }
 
+    var ultimaAbertura = 0;
     $input.on('focus click', function () {
+        var agora = Date.now();
+        if (agora - ultimaAbertura < 50) {
+            return;
+        }
+        ultimaAbertura = agora;
         buscar($.trim($input.val()));
     });
 

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'NF-e #' . $nfe->numero)
 @section('page_title', 'NF-e #' . $nfe->numero)
@@ -31,8 +31,20 @@
             <a href="{{ route('nfe.xml', [$nfe, 'tipo' => 'cancelamento']) }}" class="btn btn--ghost btn--sm">XML cancelamento</a>
         @endif
 
+        @if ($nfe->situacao === 'rejeitada' && $nfe->venda_id)
+            <form method="POST" action="{{ route('nfe.limpar-codigos', $nfe) }}" style="display:inline;">
+                @csrf
+                <button type="submit" class="btn btn--ghost btn--sm"
+                    data-confirm="Limpar CFOP, CSOSN e CST gravados nos itens desta venda? A próxima emissão usa o perfil atual. Esta nota rejeitada não é alterada."
+                    data-confirm-title="Limpar códigos fiscais"
+                    data-confirm-ok="Limpar"
+                    data-confirm-variant="danger">Limpar códigos da venda</button>
+            </form>
+        @endif
+
         @if ($nfe->situacao === 'pendente')
-            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;">
+            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;"
+                onsubmit="this.querySelector('button').disabled = true;">
                 @csrf
                 <button type="submit" class="btn btn--primary btn--sm">Consultar SEFAZ</button>
             </form>
@@ -60,6 +72,9 @@
             @if ($nfe->codigo_status)
                 <span class="text-muted">(Código {{ $nfe->codigo_status }})</span>
             @endif
+            @if ($explicacao = \App\Support\NfeMensagemSefaz::explicar($nfe->codigo_status))
+                <br>{{ $explicacao }}
+            @endif
         </div>
     @endif
 
@@ -72,74 +87,40 @@
         </div>
     @endif
 
-    <div class="card" style="margin-top:0.75rem;">
-        <div class="card__header">
-            <span class="card__title">Dados da NF-e</span>
-            <div>
-                @if ($nfe->situacao === 'autorizada')
-                    <span class="badge badge--success">Autorizada</span>
-                @elseif ($nfe->situacao === 'rejeitada')
-                    <span class="badge badge--error">Rejeitada</span>
-                @elseif ($nfe->situacao === 'denegada')
-                    <span class="badge badge--error">Denegada</span>
-                @elseif ($nfe->situacao === 'cancelada')
-                    <span class="badge badge--neutral">Cancelada</span>
-                @else
-                    <span class="badge badge--warning">Pendente</span>
-                @endif
-            </div>
-        </div>
-        <div class="card__body">
-            <div class="form-grid form-grid--col-4">
-                <div class="form-group">
-                    <label class="form-label">Número</label>
-                    <span>#{{ $nfe->numero }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Série</label>
-                    <span>{{ $nfe->serie }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ambiente</label>
-                    <span>
-                        @if ((int) $nfe->ambiente === 1)
-                            <span class="badge badge--success">Produção</span>
-                        @else
-                            <span class="badge badge--warning">Homologação</span>
-                        @endif
-                    </span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data de autorização</label>
-                    <span>{{ $nfe->data_autorizacao?->format('d/m/Y H:i') ?? '—' }}</span>
-                </div>
-            </div>
-
-            <div class="form-grid form-grid--col-2" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label class="form-label">Protocolo</label>
-                    <span>{{ $nfe->protocolo ?? '—' }}</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Venda</label>
-                    <span>
-                        @if ($nfe->venda)
-                            <a href="{{ route('venda.show', $nfe->venda) }}">#{{ $nfe->venda->numero }}</a>
-                        @else
-                            —
-                        @endif
-                    </span>
-                </div>
-            </div>
-
-            <div class="form-group" style="margin-top:1rem;">
-                <label class="form-label">Chave de acesso</label>
-                <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; word-break: break-all; display:block;">
-                    {{ $nfe->chave_acesso ?? '—' }}
-                </span>
-            </div>
-        </div>
-    </div>
+    <x-ficha titulo="Dados da NF-e">
+        <x-slot:status>
+            @if ($nfe->situacao === 'autorizada')
+                <x-badge tom="success">Autorizada</x-badge>
+            @elseif ($nfe->situacao === 'rejeitada')
+                <x-badge tom="error">Rejeitada</x-badge>
+            @elseif ($nfe->situacao === 'denegada')
+                <x-badge tom="error">Denegada</x-badge>
+            @elseif ($nfe->situacao === 'cancelada')
+                <x-badge>Cancelada</x-badge>
+            @else
+                <x-badge tom="warning">Pendente</x-badge>
+            @endif
+        </x-slot:status>
+        <x-ficha-campo label="Número">#{{ $nfe->numero }}</x-ficha-campo>
+        <x-ficha-campo label="Série">{{ $nfe->serie }}</x-ficha-campo>
+        <x-ficha-campo label="Ambiente">
+            @if ((int) $nfe->ambiente === 1)
+                <x-badge tom="success">Produção</x-badge>
+            @else
+                <x-badge tom="warning">Homologação</x-badge>
+            @endif
+        </x-ficha-campo>
+        <x-ficha-campo label="Data de autorização">{{ $nfe->data_autorizacao?->format('d/m/Y H:i') ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Protocolo">{{ $nfe->protocolo ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Venda">
+            @if ($nfe->venda)
+                <a href="{{ route('venda.show', $nfe->venda) }}">#{{ $nfe->venda->numero }}</a>
+            @else
+                —
+            @endif
+        </x-ficha-campo>
+        <x-ficha-campo label="Chave de acesso" largo mono>{{ $nfe->chave_acesso ?? '—' }}</x-ficha-campo>
+    </x-ficha>
 
     @if ($nfe->podeCancelar())
         <div class="modal-overlay" id="modal-cancelar-nfe" hidden>
@@ -157,9 +138,10 @@
                         </p>
                         <div class="form-group">
                             <label class="form-label form-label--required">Justificativa</label>
-                            <textarea name="justificativa" rows="4" maxlength="255" required minlength="15"
+                            <textarea name="justificativa" id="justificativa-cancelamento" rows="4" maxlength="255" required minlength="15"
                                 class="form-control @error('justificativa') is-invalid @enderror"
                                 style="resize:vertical;">{{ old('justificativa') }}</textarea>
+                            <small class="text-muted"><span id="justificativa-contagem">0</span>/255 (mínimo 15)</small>
                             @error('justificativa')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -167,7 +149,7 @@
                     </div>
                     <div class="modal-box__footer">
                         <button type="button" class="btn btn--ghost" id="btn-cancelar-modal-nfe">Voltar</button>
-                        <button type="submit" class="btn btn--danger">Confirmar cancelamento</button>
+                        <button type="submit" class="btn btn--danger" id="btn-confirmar-cancelamento">Confirmar cancelamento</button>
                     </div>
                 </form>
             </div>
@@ -196,6 +178,24 @@
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) fechar();
             });
+
+            var campo = document.getElementById('justificativa-cancelamento');
+            var contagem = document.getElementById('justificativa-contagem');
+            var confirmar = document.getElementById('btn-confirmar-cancelamento');
+            function atualizarContagem() {
+                if (!campo || !contagem) return;
+                contagem.textContent = String(campo.value.length);
+                if (confirmar) confirmar.disabled = campo.value.trim().length < 15;
+            }
+            if (campo) {
+                campo.addEventListener('input', atualizarContagem);
+                atualizarContagem();
+            }
+            if (confirmar) {
+                confirmar.form.addEventListener('submit', function () {
+                    confirmar.disabled = true;
+                });
+            }
 
             @if ($errors->has('justificativa'))
                 abrir();
