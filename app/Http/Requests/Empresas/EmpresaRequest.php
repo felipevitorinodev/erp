@@ -50,6 +50,10 @@ class EmpresaRequest extends FormRequest
             }
         }
 
+        if ($this->boolean('sem_cnpj')) {
+            $merge['cnpj'] = null;
+        }
+
         if ($merge !== []) {
             $this->merge($merge);
         }
@@ -63,43 +67,46 @@ class EmpresaRequest extends FormRequest
     public function rules(): array
     {
         return [
-        'razao_social' => 'required|string|max:255',
-        'nome_fantasia' => 'nullable|string|max:255',
-        'cnpj'         => 'required|string|max:18|cnpj',
-        'telefone'     => 'nullable|string|max:20',
-        'email'        => 'nullable|email|max:255',
-        'cep'          => 'nullable|string|max:9',
-        'cidade'       => 'nullable|string|max:100',
-        'logradouro'   => 'nullable|string|max:255',
-        'numero'       => 'nullable|string|max:20',
-        'bairro'       => 'nullable|string|max:100',
-        'uf'           => 'nullable|string|max:2',
-        'ie'           => 'nullable|string|max:20',
-        'im'           => 'nullable|string|max:20',
-        'complemento'  => 'nullable|string|max:255',
-        'certificado_pfx' => 'nullable|file|extensions:pfx,p12',
-        'certificado_senha' => 'nullable|string|max:255',
-        'nfe_ambiente' => 'sometimes|required|integer|in:1,2',
-        'confirmar_ambiente' => 'nullable|boolean',
-        'nfe_serie' => 'sometimes|required|string|max:3|regex:/^\d{1,3}$/',
-        'nfce_serie' => 'nullable|string|max:3|regex:/^\d{1,3}$/',
-        'nfce_csc_homologacao' => 'nullable|string|max:36|regex:/^[A-Za-z0-9-]*$/',
-        'nfce_id_csc_homologacao' => 'nullable|string|max:6|regex:/^\d{0,6}$/',
-        'nfce_csc_producao' => 'nullable|string|max:36|regex:/^[A-Za-z0-9-]*$/',
-        'nfce_id_csc_producao' => 'nullable|string|max:6|regex:/^\d{0,6}$/',
-        'nfce_emitir_pdv' => 'nullable|boolean',
-        'cod_ibge' => [
-            'nullable',
-            'digits:7',
-            Rule::requiredIf(fn () => $this->enderecoExigeIbge()),
-        ],
-        'crt' => 'sometimes|required|integer|in:1,2,3',
-        'nfe_destino' => 'sometimes|required|integer|in:1,2,3',
-        'nfe_cfop_padrao' => 'sometimes|required|digits:4',
-        'nfe_csosn_padrao' => 'sometimes|required|digits:3',
-        'nfe_cst_pis_padrao' => 'sometimes|required|digits:2',
-        'nfe_cst_cofins_padrao' => 'sometimes|required|digits:2',
-    ];
+            'razao_social' => 'required|string|max:255',
+            'nome_fantasia' => 'nullable|string|max:255',
+            'sem_cnpj' => ['sometimes', 'boolean'],
+            'cnpj' => $this->boolean('sem_cnpj')
+                ? ['nullable', 'string', 'max:18']
+                : ['required', 'string', 'max:18', 'cnpj'],
+            'telefone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'cep' => 'nullable|string|max:9',
+            'cidade' => 'nullable|string|max:100',
+            'logradouro' => 'nullable|string|max:255',
+            'numero' => 'nullable|string|max:20',
+            'bairro' => 'nullable|string|max:100',
+            'uf' => 'nullable|string|max:2',
+            'ie' => 'nullable|string|max:20',
+            'im' => 'nullable|string|max:20',
+            'complemento' => 'nullable|string|max:255',
+            'certificado_pfx' => 'nullable|file|extensions:pfx,p12|max:5120',
+            'certificado_senha' => 'nullable|string|max:255',
+            'nfe_ambiente' => 'sometimes|required|integer|in:1,2',
+            'confirmar_ambiente' => 'nullable|boolean',
+            'nfe_serie' => 'sometimes|required|string|max:3|regex:/^\d{1,3}$/',
+            'nfce_serie' => 'nullable|string|max:3|regex:/^\d{1,3}$/',
+            'nfce_csc_homologacao' => 'nullable|string|max:36|regex:/^[A-Za-z0-9-]*$/',
+            'nfce_id_csc_homologacao' => 'nullable|string|max:6|regex:/^\d{0,6}$/',
+            'nfce_csc_producao' => 'nullable|string|max:36|regex:/^[A-Za-z0-9-]*$/',
+            'nfce_id_csc_producao' => 'nullable|string|max:6|regex:/^\d{0,6}$/',
+            'nfce_emitir_pdv' => 'nullable|boolean',
+            'cod_ibge' => [
+                'nullable',
+                'digits:7',
+                Rule::requiredIf(fn () => $this->enderecoExigeIbge()),
+            ],
+            'crt' => 'sometimes|required|integer|in:1,2,3',
+            'nfe_destino' => 'sometimes|required|integer|in:1,2,3',
+            'nfe_cfop_padrao' => 'sometimes|required|digits:4',
+            'nfe_csosn_padrao' => 'sometimes|required|digits:3',
+            'nfe_cst_pis_padrao' => 'sometimes|required|digits:2',
+            'nfe_cst_cofins_padrao' => 'sometimes|required|digits:2',
+        ];
     }
 
     public function withValidator($validator): void
@@ -136,12 +143,15 @@ class EmpresaRequest extends FormRequest
         });
     }
 
-    public function messages(): array{
+    public function messages(): array
+    {
         return [
+            'cnpj.required' => 'Informe o CNPJ ou marque Cadastrar sem CNPJ.',
+            'certificado_pfx.max' => 'O certificado não pode ter mais de 5 MB.',
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
             'nfe_ambiente.in' => 'O ambiente da NF-e deve ser Homologação ou Produção.',
             'nfe_serie.regex' => 'A série da NF-e deve ter de 1 a 3 dígitos.',

@@ -9,10 +9,11 @@ use App\Models\Estoque\EntradaEstoque;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
 use App\Repositories\Estoque\EntradaEstoqueRepository;
-use App\Services\Estoque\NfeXmlParser;
+use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 class EntradaEstoqueService
@@ -29,22 +30,23 @@ class EntradaEstoqueService
 
         return view('entrada-estoque.index', [
             'entradas' => $entradas,
-            'filtros'  => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
+            'filtros' => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
         ]);
     }
 
     /**
      * Process NF-e XML and return enriched data for form pre-fill.
      *
-     * @param string $xmlContent Raw XML content
-     * @param int $empresaId Company ID for lookups
+     * @param  string  $xmlContent  Raw XML content
+     * @param  int  $empresaId  Company ID for lookups
      * @return array Parsed and enriched data
+     *
      * @throws RuntimeException
      */
     public function processarXml(string $xmlContent, int $empresaId): array
     {
         // 1. Parse the XML
-        $parser = new NfeXmlParser();
+        $parser = new NfeXmlParser;
         $parsed = $parser->parse($xmlContent);
 
         $cnpjEmpresa = preg_replace('/\D/', '', (string) Empresa::whereKey($empresaId)->value('cnpj'));
@@ -52,7 +54,7 @@ class EntradaEstoqueService
 
         if (strlen($cnpjEmpresa) === 14 && $cnpjDestinatario !== '' && $cnpjDestinatario !== $cnpjEmpresa) {
             throw new RuntimeException(
-                'Esta NF-e foi emitida para outro CNPJ (' . $this->formatarCnpj($cnpjDestinatario) . '), não para a sua empresa.'
+                'Esta NF-e foi emitida para outro CNPJ ('.$this->formatarCnpj($cnpjDestinatario).'), não para a sua empresa.'
             );
         }
 
@@ -68,8 +70,8 @@ class EntradaEstoqueService
 
         if ($entradaExistente) {
             throw new RuntimeException(
-                'Esta NF-e já foi importada (Entrada #' . $entradaExistente->numero .
-                ' — ' . $entradaExistente->data_entrada->format('d/m/Y') . ').'
+                'Esta NF-e já foi importada (Entrada #'.$entradaExistente->numero.
+                ' — '.$entradaExistente->data_entrada->format('d/m/Y').').'
             );
         }
 
@@ -81,26 +83,26 @@ class EntradaEstoqueService
         $fornecedor = $this->fornecedorPorCnpj($empresaId, (string) $cnpjEmitente);
 
         // Se não encontrou, cria automaticamente
-        if (!$fornecedor && $cnpjEmitente) {
+        if (! $fornecedor && $cnpjEmitente) {
             $fornecedor = Fornecedor::create([
-                'empresa_id'         => $empresaId,
-                'nome'               => $fornecedorNome,
-                'nome_fantasia'      => null,
-                'cnpj'               => $this->formatarCnpj($cnpjEmitente),
+                'empresa_id' => $empresaId,
+                'nome' => $fornecedorNome,
+                'nome_fantasia' => null,
+                'cnpj' => $this->formatarCnpj($cnpjEmitente),
                 'inscricao_estadual' => $fornecedorIe,
-                'ativo'              => true,
+                'ativo' => true,
             ]);
         }
 
         $parsed['fornecedor_id'] = $fornecedor?->id;
         $parsed['fornecedor_nome'] = $fornecedor?->nome ?? $fornecedorNome;
-        $parsed['fornecedor_criado'] = $fornecedor && !$fornecedor->wasRecentlyCreated ? false : true;
+        $parsed['fornecedor_criado'] = $fornecedor && ! $fornecedor->wasRecentlyCreated ? false : true;
 
         $codigos = [];
         $eans = [];
         foreach ($parsed['itens'] as $item) {
             $codigos[] = $item['codigo_produto_fornecedor'] ?? '';
-            if (!empty($item['ean'])) {
+            if (! empty($item['ean'])) {
                 $eans[] = $item['ean'];
             }
         }
@@ -112,7 +114,7 @@ class EntradaEstoqueService
             $codigo = $item['codigo_produto_fornecedor'] ?? '';
             $produto = $porCodigo->get($codigo);
 
-            if (!$produto && !empty($item['ean'])) {
+            if (! $produto && ! empty($item['ean'])) {
                 $produto = $porEan->get($item['ean']);
             }
 
@@ -142,7 +144,7 @@ class EntradaEstoqueService
         }
 
         return view('entrada-estoque.create', [
-            'dadosXml'       => $dadosXml,
+            'dadosXml' => $dadosXml,
             'observacoesXml' => $observacoesXml,
         ]);
     }
@@ -161,7 +163,7 @@ class EntradaEstoqueService
             return redirect()->route('entrada-estoque.create')
                 ->with('success', 'XML importado com sucesso. Revise os dados antes de salvar.');
         } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->with('error', MensagemPublica::de($e));
         }
     }
 
@@ -199,7 +201,7 @@ class EntradaEstoqueService
         // Verificar duplicidade de NF-e antes de salvar
         if ($dadosXml) {
             $chaveAcesso = $dadosXml['nota']['chave_acesso'] ?? null;
-            
+
             if ($chaveAcesso) {
                 EntradaEstoque::onlyTrashed()
                     ->where('empresa_id', $empresaId)
@@ -212,10 +214,10 @@ class EntradaEstoqueService
 
                 if ($entradaExistente) {
                     session()->forget(['dados_xml', 'xml_content']);
-                    
+
                     return redirect()->route('entrada-estoque.show', $entradaExistente)
-                        ->with('error', 'Esta NF-e já foi importada (Entrada #' . $entradaExistente->numero .
-                            ' — ' . $entradaExistente->data_entrada->format('d/m/Y') . ').');
+                        ->with('error', 'Esta NF-e já foi importada (Entrada #'.$entradaExistente->numero.
+                            ' — '.$entradaExistente->data_entrada->format('d/m/Y').').');
                 }
             }
         }
@@ -225,7 +227,7 @@ class EntradaEstoqueService
                 ->where('empresa_id', $empresaId)
                 ->first();
 
-            if (!$fornecedor) {
+            if (! $fornecedor) {
                 return back()
                     ->withErrors(['fornecedor_id' => 'Fornecedor inválido para esta empresa.'])
                     ->withInput();
@@ -237,25 +239,25 @@ class EntradaEstoqueService
         $total = max(0, round($subtotal - $desconto, 2));
 
         $dados = [
-            'empresa_id'    => $empresaId,
+            'empresa_id' => $empresaId,
             'fornecedor_id' => $fornecedorId,
-            'numero'        => trim((string) $request->numero),
-            'data_entrada'  => $request->data_entrada,
-            'subtotal'      => $subtotal,
-            'desconto'      => $desconto,
-            'total'         => $total,
-            'observacoes'   => $request->observacoes,
-            'situacao'      => 'rascunho',
+            'numero' => trim((string) $request->numero),
+            'data_entrada' => $request->data_entrada,
+            'subtotal' => $subtotal,
+            'desconto' => $desconto,
+            'total' => $total,
+            'observacoes' => $request->observacoes,
+            'situacao' => 'rascunho',
         ];
 
         // Merge XML fields from session if present
         if ($dadosXml) {
-            $dados['chave_acesso']     = $dadosXml['nota']['chave_acesso'] ?? null;
-            $dados['xml_importado']    = session('xml_content');
-            $dados['numero_nfe']       = $dadosXml['nota']['numero'] ?? null;
-            $dados['serie_nfe']        = $dadosXml['nota']['serie'] ?? null;
+            $dados['chave_acesso'] = $dadosXml['nota']['chave_acesso'] ?? null;
+            $dados['xml_importado'] = session('xml_content');
+            $dados['numero_nfe'] = $dadosXml['nota']['numero'] ?? null;
+            $dados['serie_nfe'] = $dadosXml['nota']['serie'] ?? null;
             $dados['data_emissao_nfe'] = $dadosXml['nota']['data_emissao'] ?? null;
-            $dados['valor_nota']       = isset($dadosXml['totais']['total']) ? round((float) $dadosXml['totais']['total'], 2) : null;
+            $dados['valor_nota'] = isset($dadosXml['totais']['total']) ? round((float) $dadosXml['totais']['total'], 2) : null;
         }
 
         try {
@@ -263,7 +265,7 @@ class EntradaEstoqueService
         } catch (UniqueConstraintViolationException $e) {
             // NF-e já foi importada - buscar entrada existente
             session()->forget(['dados_xml', 'xml_content']);
-            
+
             $chaveAcesso = $dados['chave_acesso'] ?? null;
             if ($chaveAcesso) {
                 $entradaExistente = EntradaEstoque::where('empresa_id', $empresaId)
@@ -272,11 +274,11 @@ class EntradaEstoqueService
 
                 if ($entradaExistente) {
                     return redirect()->route('entrada-estoque.show', $entradaExistente)
-                        ->with('error', 'Esta NF-e já foi importada (Entrada #' . $entradaExistente->numero .
-                            ' — ' . $entradaExistente->data_entrada->format('d/m/Y') . ').');
+                        ->with('error', 'Esta NF-e já foi importada (Entrada #'.$entradaExistente->numero.
+                            ' — '.$entradaExistente->data_entrada->format('d/m/Y').').');
                 }
             }
-            
+
             return redirect()->route('entrada-estoque.index')
                 ->with('error', 'Esta NF-e já foi importada anteriormente.');
         }
@@ -285,7 +287,7 @@ class EntradaEstoqueService
         session()->forget(['dados_xml', 'xml_content']);
 
         return redirect()->route('entrada-estoque.show', $entrada)
-            ->with('success', 'Entrada de estoque #' . $entrada->numero . ' cadastrada com sucesso.');
+            ->with('success', 'Entrada de estoque #'.$entrada->numero.' cadastrada com sucesso.');
     }
 
     public function show(EntradaEstoque $entradaEstoque)
@@ -335,7 +337,7 @@ class EntradaEstoqueService
                 ->where('empresa_id', $empresaId)
                 ->first();
 
-            if (!$fornecedor) {
+            if (! $fornecedor) {
                 return back()
                     ->withErrors(['fornecedor_id' => 'Fornecedor inválido para esta empresa.'])
                     ->withInput();
@@ -348,22 +350,22 @@ class EntradaEstoqueService
 
         $dados = [
             'fornecedor_id' => $fornecedorId,
-            'numero'        => trim((string) $request->numero),
-            'data_entrada'  => $request->data_entrada,
-            'subtotal'      => $subtotal,
-            'desconto'      => $desconto,
-            'total'         => $total,
-            'observacoes'   => $request->observacoes,
+            'numero' => trim((string) $request->numero),
+            'data_entrada' => $request->data_entrada,
+            'subtotal' => $subtotal,
+            'desconto' => $desconto,
+            'total' => $total,
+            'observacoes' => $request->observacoes,
         ];
 
         try {
             $this->repository->update($entradaEstoque, $dados, $itens);
-        } catch (\RuntimeException $e) {
-            return redirect()->route('entrada-estoque.show', $entradaEstoque)->with('error', $e->getMessage());
+        } catch (RuntimeException $e) {
+            return redirect()->route('entrada-estoque.show', $entradaEstoque)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('entrada-estoque.show', $entradaEstoque)
-            ->with('success', 'Entrada de estoque #' . $entradaEstoque->numero . ' atualizada com sucesso.');
+            ->with('success', 'Entrada de estoque #'.$entradaEstoque->numero.' atualizada com sucesso.');
     }
 
     public function confirmar(EntradaEstoque $entradaEstoque)
@@ -379,11 +381,11 @@ class EntradaEstoqueService
             $this->repository->confirmar($entradaEstoque->load('itens'));
         } catch (\Exception $ex) {
             return redirect()->route('entrada-estoque.show', $entradaEstoque)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->route('entrada-estoque.show', $entradaEstoque)
-            ->with('success', 'Entrada #' . $entradaEstoque->numero . ' confirmada. Estoque atualizado e conta a pagar gerada.');
+            ->with('success', 'Entrada #'.$entradaEstoque->numero.' confirmada. Estoque atualizado e conta a pagar gerada.');
     }
 
     public function cancelar(EntradaEstoque $entradaEstoque)
@@ -399,11 +401,11 @@ class EntradaEstoqueService
             $this->repository->cancelar($entradaEstoque->load('itens'));
         } catch (\Exception $ex) {
             return redirect()->route('entrada-estoque.show', $entradaEstoque)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->route('entrada-estoque.show', $entradaEstoque)
-            ->with('success', 'Entrada #' . $entradaEstoque->numero . ' cancelada. Estoque e conta a pagar revertidos.');
+            ->with('success', 'Entrada #'.$entradaEstoque->numero.' cancelada. Estoque e conta a pagar revertidos.');
     }
 
     public function destroy(EntradaEstoque $entradaEstoque)
@@ -417,12 +419,12 @@ class EntradaEstoqueService
             $this->repository->destroy($entradaEstoque->id);
         } catch (\Exception $ex) {
             return redirect()->route('entrada-estoque.show', $entradaEstoque)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         $msg = $eraConfirmada
-            ? 'Compra #' . $numero . ' excluída. Estoque e conta a pagar foram revertidos.'
-            : 'Compra #' . $numero . ' excluída com sucesso.';
+            ? 'Compra #'.$numero.' excluída. Estoque e conta a pagar foram revertidos.'
+            : 'Compra #'.$numero.' excluída com sucesso.';
 
         return redirect()->route('entrada-estoque.index')
             ->with('success', $msg);
@@ -481,7 +483,7 @@ class EntradaEstoqueService
 
     /**
      * @param  list<int|string|null>  $valores
-     * @return \Illuminate\Support\Collection<int|string, Produto>
+     * @return Collection<int|string, Produto>
      */
     private function produtosAtivosPorColuna(int $empresaId, string $coluna, array $valores)
     {
@@ -515,7 +517,7 @@ class EntradaEstoqueService
     private function formatarCnpj(string $cnpj): string
     {
         $cnpj = preg_replace('/\D/', '', $cnpj);
-        
+
         if (strlen($cnpj) !== 14) {
             return $cnpj;
         }
@@ -542,25 +544,25 @@ class EntradaEstoqueService
             }
 
             $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
-            $descItem  = $this->parseMoeda($item['desconto'] ?? 0);
-            $total     = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
+            $descItem = $this->parseMoeda($item['desconto'] ?? 0);
+            $total = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             // Se tem produto_id, usa o produto existente
-            if (!empty($item['produto_id'])) {
+            if (! empty($item['produto_id'])) {
                 $produto = Produto::find($item['produto_id']);
 
-                if (!$produto || (int) $produto->empresa_id !== $empresaId) {
+                if (! $produto || (int) $produto->empresa_id !== $empresaId) {
                     continue;
                 }
 
                 $resultado[] = [
-                    'produto_id'     => $produto->id,
-                    'produto_nome'   => $produto->nome,
+                    'produto_id' => $produto->id,
+                    'produto_nome' => $produto->nome,
                     'produto_codigo' => $produto->codigo,
-                    'quantidade'     => $quantidade,
+                    'quantidade' => $quantidade,
                     'preco_unitario' => $precoUnit,
-                    'desconto'       => $descItem,
-                    'total'          => $total,
+                    'desconto' => $descItem,
+                    'total' => $total,
                 ];
             } else {
                 $nomeProduto = trim($item['produto_nome'] ?? '');
@@ -574,13 +576,13 @@ class EntradaEstoqueService
                 }
 
                 $resultado[] = [
-                    'produto_id'     => $produtoExistente?->id,
-                    'produto_nome'   => $produtoExistente?->nome ?: ($nomeProduto !== '' ? $nomeProduto : 'Produto sem nome'),
+                    'produto_id' => $produtoExistente?->id,
+                    'produto_nome' => $produtoExistente?->nome ?: ($nomeProduto !== '' ? $nomeProduto : 'Produto sem nome'),
                     'produto_codigo' => $produtoExistente?->codigo ?: ($codigoProduto !== '' ? $codigoProduto : null),
-                    'quantidade'     => $quantidade,
+                    'quantidade' => $quantidade,
                     'preco_unitario' => $precoUnit,
-                    'desconto'       => $descItem,
-                    'total'          => $total,
+                    'desconto' => $descItem,
+                    'total' => $total,
                 ];
             }
         }

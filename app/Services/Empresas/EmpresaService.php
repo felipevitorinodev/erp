@@ -7,6 +7,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\Nfes\Nfe;
 use App\Repositories\Empresas\EmpresaRepository;
 use App\Repositories\Nfes\NfeNumeracaoRepository;
+use App\Support\MensagemPublica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\File;
@@ -27,7 +28,7 @@ class EmpresaService
 
         return view('empresa.index', [
             'empresas' => $empresas,
-            'filtros'  => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 
@@ -49,20 +50,23 @@ class EmpresaService
                 ->with('error', 'Você já possui uma empresa vinculada.');
         }
 
-        $empresa = $this->empresaRepository->store($request->validated());
+        $dados = $request->validated();
+        unset($dados['sem_cnpj']);
+
+        $empresa = $this->empresaRepository->store($dados);
         $user->empresa_id = $empresa->id;
         $user->save();
 
         return redirect()->route('empresa.index')
             ->with('success', 'Empresa cadastrada com sucesso.');
-    }   
+    }
 
     public function edit(Empresa $empresa)
     {
         $this->autorizarEmpresa($empresa);
 
         return view('empresa.edit', [
-            'empresa' => $empresa
+            'empresa' => $empresa,
         ]);
     }
 
@@ -79,6 +83,7 @@ class EmpresaService
             $dados['nfce_id_csc_homologacao'],
             $dados['nfce_csc_producao'],
             $dados['nfce_id_csc_producao'],
+            $dados['sem_cnpj'],
         );
 
         if (filled($dados['nfce_serie'] ?? null)) {
@@ -98,7 +103,7 @@ class EmpresaService
         } catch (RuntimeException $e) {
             return back()
                 ->withInput($request->except(Empresa::segredosForaDaSessao()))
-                ->with('error', $e->getMessage());
+                ->with('error', MensagemPublica::de($e));
         }
 
         $this->aplicarCscNfce($request, $empresa);
@@ -139,7 +144,13 @@ class EmpresaService
 
         if ($temArquivo) {
             $conteudo = file_get_contents($request->file('certificado_pfx')->getRealPath());
-            $cnpj = preg_replace('/\D/', '', (string) ($dados['cnpj'] ?? $empresa->cnpj));
+            $cnpjInformado = array_key_exists('cnpj', $dados) ? $dados['cnpj'] : $empresa->cnpj;
+            $cnpj = preg_replace('/\D/', '', (string) $cnpjInformado) ?? '';
+
+            if (strlen($cnpj) !== 14) {
+                throw new RuntimeException('Informe o CNPJ da empresa antes de enviar o certificado.');
+            }
+
             $certificado = $this->validarPfx($conteudo, $senha);
 
             if ($certificado->isExpired()) {
@@ -223,5 +234,5 @@ class EmpresaService
     {
         return redirect()->route('empresa.index')
             ->with('error', 'A empresa em uso não pode ser excluída pelo sistema. Entre em contato com o suporte.');
-    }                       
+    }
 }

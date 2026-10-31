@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Middleware\CheckPerfil;
+use App\Http\Middleware\CheckPermissao;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Models\Empresas\Empresa;
+use App\Support\SessaoLogin;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Support\SessaoLogin;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Arr;
@@ -22,7 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: '127.0.0.1');
+        $middleware->trustHosts(at: [
+            '^localhost$',
+            '^127\.0\.0\.1$',
+        ]);
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->hasSession() && $request->cookie(SessaoLogin::MARCADOR) === '1') {
                 SessaoLogin::esquecer();
@@ -32,10 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return route('login');
         });
         $middleware->alias([
-            'perfil' => \App\Http\Middleware\CheckPerfil::class,
-            'permissao' => \App\Http\Middleware\CheckPermissao::class,
+            'perfil' => CheckPerfil::class,
+            'permissao' => CheckPermissao::class,
         ]);
-        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
+        $middleware->appendToGroup('web', EnsureUserIsActive::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -66,10 +73,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Handler global para violação de constraint única
         $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
             $message = 'Registro duplicado. Já existe um registro com estes dados no sistema.';
-            
+
             // Identifica qual campo está duplicado baseado na mensagem de erro
             $sqlMessage = $e->getMessage();
-            
+
             if (str_contains($sqlMessage, 'cpf')) {
                 $message = 'CPF já cadastrado no sistema.';
             } elseif (str_contains($sqlMessage, 'cnpj')) {
@@ -114,6 +121,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 if ($request->expectsJson()) {
                     return response()->json(['error' => $message], 422);
                 }
+
                 return back()
                     ->withInput(Arr::except($request->input(), Empresa::segredosForaDaSessao()))
                     ->with('error', $message);

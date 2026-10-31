@@ -7,7 +7,9 @@ use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Vendas\VendaRepository;
+use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +26,7 @@ class OrdemServicoService
     public function index(Request $request)
     {
         return view('ordem-servico.index', [
-            'ordens'  => $this->repository->index($request),
+            'ordens' => $this->repository->index($request),
             'filtros' => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
         ]);
     }
@@ -50,11 +52,11 @@ class OrdemServicoService
             'usuario_id' => auth()->id(),
             ...$this->dadosFormulario($request),
             ...$totais,
-            'situacao'   => 'aberta',
+            'situacao' => 'aberta',
         ], $itens);
 
         return redirect()->route('ordem-servico.show', $os)
-            ->with('success', 'Ordem de serviço #' . $os->numero . ' aberta com sucesso.');
+            ->with('success', 'Ordem de serviço #'.$os->numero.' aberta com sucesso.');
     }
 
     public function show(OrdemServico $os)
@@ -70,9 +72,9 @@ class OrdemServicoService
         $this->garantirEmpresa($os);
         $os->load(['cliente', 'tecnico', 'itens', 'usuario', 'venda', 'empresa']);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('ordem-servico.pdf', ['os' => $os])->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('ordem-servico.pdf', ['os' => $os])->setPaper('a4', 'portrait');
 
-        return $pdf->stream('ordem_servico_' . $os->numero . '.pdf');
+        return $pdf->stream('ordem_servico_'.$os->numero.'.pdf');
     }
 
     public function edit(OrdemServico $os)
@@ -81,7 +83,7 @@ class OrdemServicoService
 
         if (! $os->estaAberta()) {
             return redirect()->route('ordem-servico.show', $os)
-                ->with('error', 'Ordem de serviço ' . mb_strtolower($os->situacaoLabel()) . ' não pode ser editada.');
+                ->with('error', 'Ordem de serviço '.mb_strtolower($os->situacaoLabel()).' não pode ser editada.');
         }
 
         $os->load(['itens.produto', 'cliente', 'tecnico']);
@@ -104,11 +106,11 @@ class OrdemServicoService
             return collect($antigos)
                 ->filter(fn ($item) => ! empty($item['produto_id']) && isset($nomes[$item['produto_id']]))
                 ->map(fn ($item) => [
-                    'produto_id'     => $item['produto_id'],
-                    'produto_nome'   => $nomes[$item['produto_id']],
-                    'quantidade'     => (float) ($item['quantidade'] ?? 1),
+                    'produto_id' => $item['produto_id'],
+                    'produto_nome' => $nomes[$item['produto_id']],
+                    'quantidade' => (float) ($item['quantidade'] ?? 1),
                     'preco_unitario' => (float) ($item['preco_unitario'] ?? 0),
-                    'desconto'       => (float) ($item['desconto'] ?? 0),
+                    'desconto' => (float) ($item['desconto'] ?? 0),
                 ])->values()->all();
         }
 
@@ -117,11 +119,11 @@ class OrdemServicoService
         }
 
         return $os->itens->map(fn ($item) => [
-            'produto_id'     => $item->produto_id,
-            'produto_nome'   => $item->produto_nome,
-            'quantidade'     => (float) $item->quantidade,
+            'produto_id' => $item->produto_id,
+            'produto_nome' => $item->produto_nome,
+            'quantidade' => (float) $item->quantidade,
             'preco_unitario' => (float) $item->preco_unitario,
-            'desconto'       => (float) $item->desconto,
+            'desconto' => (float) $item->desconto,
         ])->all();
     }
 
@@ -141,11 +143,11 @@ class OrdemServicoService
         try {
             $this->repository->update($os, [...$this->dadosFormulario($request), ...$totais], $itens);
         } catch (\RuntimeException $e) {
-            return redirect()->route('ordem-servico.show', $os)->with('error', $e->getMessage());
+            return redirect()->route('ordem-servico.show', $os)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('ordem-servico.show', $os)
-            ->with('success', 'Ordem de serviço #' . $os->numero . ' atualizada com sucesso.');
+            ->with('success', 'Ordem de serviço #'.$os->numero.' atualizada com sucesso.');
     }
 
     public function alterarSituacao(Request $request, OrdemServico $os)
@@ -160,11 +162,11 @@ class OrdemServicoService
         try {
             $os = $this->repository->alterarSituacao($os, $situacao);
         } catch (\RuntimeException $e) {
-            return redirect()->route('ordem-servico.show', $os)->with('error', $e->getMessage());
+            return redirect()->route('ordem-servico.show', $os)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('ordem-servico.show', $os)
-            ->with('success', 'Ordem de serviço #' . $os->numero . ': ' . mb_strtolower($os->situacaoLabel()) . '.');
+            ->with('success', 'Ordem de serviço #'.$os->numero.': '.mb_strtolower($os->situacaoLabel()).'.');
     }
 
     /**
@@ -190,38 +192,38 @@ class OrdemServicoService
                 }
 
                 $itens = $os->itens->map(fn ($item) => [
-                    'produto_id'     => $item->produto_id,
-                    'produto_nome'   => $item->produto_nome,
+                    'produto_id' => $item->produto_id,
+                    'produto_nome' => $item->produto_nome,
                     'produto_codigo' => $item->produto_codigo,
-                    'quantidade'     => $item->quantidade,
+                    'quantidade' => $item->quantidade,
                     'preco_unitario' => $item->preco_unitario,
-                    'desconto'       => $item->desconto,
-                    'total'          => $item->total,
+                    'desconto' => $item->desconto,
+                    'total' => $item->total,
                 ])->all();
 
-                $observacoes = trim('OS #' . $os->numero . ($os->equipamento ? ' - ' . $os->equipamento : '')
-                    . "\n" . (string) $os->observacoes);
+                $observacoes = trim('OS #'.$os->numero.($os->equipamento ? ' - '.$os->equipamento : '')
+                    ."\n".(string) $os->observacoes);
 
                 $venda = $this->vendaRepository->store([
-                    'empresa_id'      => $os->empresa_id,
-                    'cliente_id'      => $os->cliente_id,
-                    'usuario_id'      => auth()->id(),
-                    'funcionario_id'  => $os->funcionario_id,
-                    'numero'          => $this->vendaRepository->proximoNumero($os->empresa_id),
-                    'data_venda'      => now()->toDateString(),
-                    'subtotal'        => $os->subtotal,
-                    'desconto'        => $os->desconto,
-                    'acrescimo'       => $os->acrescimo,
-                    'total'           => $os->total,
+                    'empresa_id' => $os->empresa_id,
+                    'cliente_id' => $os->cliente_id,
+                    'usuario_id' => auth()->id(),
+                    'funcionario_id' => $os->funcionario_id,
+                    'numero' => $this->vendaRepository->proximoNumero($os->empresa_id),
+                    'data_venda' => now()->toDateString(),
+                    'subtotal' => $os->subtotal,
+                    'desconto' => $os->desconto,
+                    'acrescimo' => $os->acrescimo,
+                    'total' => $os->total,
                     'forma_pagamento' => $os->forma_pagamento,
-                    'observacoes'     => $observacoes,
-                    'situacao'        => 'em_andamento',
+                    'observacoes' => $observacoes,
+                    'situacao' => 'em_andamento',
                 ], $itens);
 
                 // A OS precisa estar vinculada antes de confirmar: a comissão do técnico usa a regra de OS.
                 $os->update([
-                    'situacao'       => 'faturada',
-                    'venda_id'       => $venda->id,
+                    'situacao' => 'faturada',
+                    'venda_id' => $venda->id,
                     'data_conclusao' => $os->data_conclusao ?? now()->toDateString(),
                 ]);
 
@@ -237,11 +239,11 @@ class OrdemServicoService
             return redirect()->route('ordem-servico.show', $os)
                 ->with('error', 'Não foi possível faturar a ordem de serviço. Tente novamente.');
         } catch (\Exception $e) {
-            return redirect()->route('ordem-servico.show', $os)->with('error', $e->getMessage());
+            return redirect()->route('ordem-servico.show', $os)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('venda.show', $venda)
-            ->with('success', 'Ordem de serviço #' . $os->numero . ' faturada. Venda #' . $venda->numero . ' gerada.');
+            ->with('success', 'Ordem de serviço #'.$os->numero.' faturada. Venda #'.$venda->numero.' gerada.');
     }
 
     public function cancelar(OrdemServico $os)
@@ -251,11 +253,11 @@ class OrdemServicoService
         try {
             $this->repository->cancelar($os);
         } catch (\RuntimeException $e) {
-            return redirect()->route('ordem-servico.show', $os)->with('error', $e->getMessage());
+            return redirect()->route('ordem-servico.show', $os)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('ordem-servico.show', $os)
-            ->with('success', 'Ordem de serviço #' . $os->numero . ' cancelada.');
+            ->with('success', 'Ordem de serviço #'.$os->numero.' cancelada.');
     }
 
     public function destroy(OrdemServico $os)
@@ -267,31 +269,31 @@ class OrdemServicoService
         try {
             $this->repository->destroy($os->id);
         } catch (\RuntimeException $e) {
-            return redirect()->route('ordem-servico.show', $os)->with('error', $e->getMessage());
+            return redirect()->route('ordem-servico.show', $os)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('ordem-servico.index')
-            ->with('success', 'Ordem de serviço #' . $numero . ' excluída com sucesso.');
+            ->with('success', 'Ordem de serviço #'.$numero.' excluída com sucesso.');
     }
 
     protected function dadosFormulario(Request $request): array
     {
         return [
-            'cliente_id'        => $request->cliente_id ?: null,
-            'funcionario_id'    => $request->funcionario_id ?: null,
-            'data_abertura'     => $request->data_abertura,
-            'data_previsao'     => $request->data_previsao ?: null,
-            'equipamento'       => $request->equipamento,
-            'marca'             => $request->marca,
-            'modelo'            => $request->modelo,
-            'numero_serie'      => $request->numero_serie,
-            'acessorios'        => $request->acessorios,
-            'defeito_relatado'  => $request->defeito_relatado,
-            'diagnostico'       => $request->diagnostico,
+            'cliente_id' => $request->cliente_id ?: null,
+            'funcionario_id' => $request->funcionario_id ?: null,
+            'data_abertura' => $request->data_abertura,
+            'data_previsao' => $request->data_previsao ?: null,
+            'equipamento' => $request->equipamento,
+            'marca' => $request->marca,
+            'modelo' => $request->modelo,
+            'numero_serie' => $request->numero_serie,
+            'acessorios' => $request->acessorios,
+            'defeito_relatado' => $request->defeito_relatado,
+            'diagnostico' => $request->diagnostico,
             'servico_executado' => $request->servico_executado,
-            'garantia'          => $request->garantia,
-            'forma_pagamento'   => $request->forma_pagamento,
-            'observacoes'       => $request->observacoes,
+            'garantia' => $request->garantia,
+            'forma_pagamento' => $request->forma_pagamento,
+            'observacoes' => $request->observacoes,
         ];
     }
 
@@ -321,16 +323,16 @@ class OrdemServicoService
                 continue;
             }
             $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
-            $descItem  = $this->parseMoeda($item['desconto'] ?? 0);
+            $descItem = $this->parseMoeda($item['desconto'] ?? 0);
 
             $resultado[] = [
-                'produto_id'     => $produto->id,
-                'produto_nome'   => $produto->nome,
+                'produto_id' => $produto->id,
+                'produto_nome' => $produto->nome,
                 'produto_codigo' => $produto->codigo,
-                'quantidade'     => $quantidade,
+                'quantidade' => $quantidade,
                 'preco_unitario' => $precoUnit,
-                'desconto'       => $descItem,
-                'total'          => max(0, round(($quantidade * $precoUnit) - $descItem, 2)),
+                'desconto' => $descItem,
+                'total' => max(0, round(($quantidade * $precoUnit) - $descItem, 2)),
             ];
         }
 
@@ -342,8 +344,8 @@ class OrdemServicoService
      */
     protected function calcularTotais(array $itens, Request $request): ?array
     {
-        $subtotal  = round(array_sum(array_column($itens, 'total')), 2);
-        $desconto  = $this->parseMoeda($request->desconto);
+        $subtotal = round(array_sum(array_column($itens, 'total')), 2);
+        $desconto = $this->parseMoeda($request->desconto);
         $acrescimo = $this->parseMoeda($request->acrescimo);
 
         if ($desconto < 0 || $acrescimo < 0 || $desconto > $subtotal) {
@@ -351,10 +353,10 @@ class OrdemServicoService
         }
 
         return [
-            'subtotal'  => $subtotal,
-            'desconto'  => $desconto,
+            'subtotal' => $subtotal,
+            'desconto' => $desconto,
             'acrescimo' => $acrescimo,
-            'total'     => round($subtotal - $desconto + $acrescimo, 2),
+            'total' => round($subtotal - $desconto + $acrescimo, 2),
         ];
     }
 }

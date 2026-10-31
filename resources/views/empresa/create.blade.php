@@ -63,14 +63,22 @@
                         </div>
                     </div>
 
+                    @php
+                        $semCnpj = filter_var(old('sem_cnpj', '0'), FILTER_VALIDATE_BOOLEAN);
+                    @endphp
                     <div class="form-grid form-grid--col-4" style="margin-top: 1rem;">
                         <div class="form-group">
-                            <label class="form-label form-label--required">CNPJ</label>
-                            <input type="text" name="cnpj" class="form-control @error('cnpj') is-invalid @enderror"
-                                value="{{ old('cnpj') }}" maxlength="18" placeholder="00.000.000/0000-00">
+                            <label class="form-label {{ $semCnpj ? '' : 'form-label--required' }}" id="label-cnpj" for="cnpj">CNPJ</label>
+                            <input type="text" name="cnpj" id="cnpj" class="form-control @error('cnpj') is-invalid @enderror"
+                                value="{{ $semCnpj ? '' : old('cnpj') }}" maxlength="18" placeholder="00.000.000/0000-00">
                             @error('cnpj')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
+                            <input type="hidden" name="sem_cnpj" value="0">
+                            <label class="form-check" for="sem_cnpj" style="margin-top: .65rem;">
+                                <input type="checkbox" name="sem_cnpj" id="sem_cnpj" value="1" @checked($semCnpj)>
+                                Cadastrar sem CNPJ
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -205,3 +213,37 @@
     </div>
 
 @endsection
+
+@push('scripts')
+    <script>
+        (function () {
+            var checkbox = document.getElementById('sem_cnpj');
+            var campo = document.getElementById('cnpj');
+            var label = document.getElementById('label-cnpj');
+            if (!checkbox || !campo || !label) {
+                return;
+            }
+
+            var anterior = campo.value;
+
+            function aplicar() {
+                var sem = checkbox.checked;
+                campo.disabled = sem;
+                label.classList.toggle('form-label--required', !sem);
+                if (sem) {
+                    if (campo.value !== '') {
+                        anterior = campo.value;
+                    }
+                    campo.value = '';
+                    return;
+                }
+                if (campo.value === '' && anterior !== '') {
+                    campo.value = anterior;
+                }
+            }
+
+            checkbox.addEventListener('change', aplicar);
+            aplicar();
+        })();
+    </script>
+@endpush

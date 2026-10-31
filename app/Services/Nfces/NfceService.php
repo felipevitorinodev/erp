@@ -10,9 +10,11 @@ use App\Services\Empresas\EmpresaService;
 use App\Services\Nfes\NfeBuilderService;
 use App\Services\Nfes\NfeSenderService;
 use App\Services\Nfes\NfeVinculoFiscal;
+use App\Support\MensagemPublica;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use NFePHP\Common\Keys;
 use NFePHP\DA\NFe\Danfce;
 use RuntimeException;
 use Throwable;
@@ -68,7 +70,7 @@ class NfceService
         try {
             $builder = new NfceBuilderService($empresa);
         } catch (RuntimeException $e) {
-            return $this->resposta(false, null, $e->getMessage());
+            return $this->resposta(false, null, MensagemPublica::de($e));
         }
 
         if ($sefaz = $this->mensagemSefazIndisponivel($empresa, $builder)) {
@@ -139,10 +141,10 @@ class NfceService
         } catch (RuntimeException $e) {
             $nfe = $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
-                'motivo_status' => mb_substr($e->getMessage(), 0, 255),
+                'motivo_status' => mb_substr(MensagemPublica::de($e), 0, 255),
             ]);
 
-            return $this->resposta(false, $nfe, $e->getMessage());
+            return $this->resposta(false, $nfe, MensagemPublica::de($e));
         } catch (Throwable $e) {
             Log::error('Falha ao montar NFC-e', [
                 'venda_id' => $venda->id,
@@ -219,7 +221,7 @@ class NfceService
             $builder = new NfceBuilderService($empresa);
             $builder->validarCadastroNfce($itens);
         } catch (RuntimeException $e) {
-            return $e->getMessage();
+            return MensagemPublica::de($e);
         }
 
         return null;
@@ -363,7 +365,7 @@ class NfceService
     private function extrairChave(string $xml): ?string
     {
         try {
-            $chave = \NFePHP\Common\Keys::extractAccessKey($xml);
+            $chave = Keys::extractAccessKey($xml);
 
             return $chave !== '' ? $chave : null;
         } catch (Throwable) {

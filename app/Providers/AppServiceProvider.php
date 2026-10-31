@@ -19,15 +19,19 @@ use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
 use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
-use App\Services\Usuarios\PerfilService;
 use App\Models\Vendas\Venda;
+use App\Services\Usuarios\PerfilService;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,7 +48,23 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
+
+            if ($raiz = config('app.url')) {
+                URL::forceRootUrl($raiz);
+            }
         }
+
+        Event::listen(DiagnosingHealth::class, function () {
+            if (! app()->environment('production')) {
+                return;
+            }
+
+            $banco = DB::selectOne('select database() as nome');
+
+            if (($banco->nome ?? null) !== 'erp_magnolias') {
+                throw new RuntimeException('Banco de dados inesperado.');
+            }
+        });
 
         $this->registrarBindingsPorEmpresa();
         $this->registrarFiltrosDeData();
@@ -133,7 +153,7 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('empresa', function ($value) {
             $user = auth()->user();
 
-            if (!$user->pode('configuracoes')) {
+            if (! $user->pode('configuracoes')) {
                 abort(404);
             }
 

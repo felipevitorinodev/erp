@@ -6,6 +6,7 @@ use App\Http\Requests\ContasPagar\ContaPagarRequest;
 use App\Models\ContasPagar\ContaPagar;
 use App\Repositories\CategoriasFinanceiras\CategoriaFinanceiraRepository;
 use App\Repositories\ContasPagar\ContaPagarRepository;
+use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 
@@ -23,7 +24,7 @@ class ContaPagarService
         $contas = $this->repository->index($request);
 
         return view('conta-pagar.index', [
-            'contas'  => $contas,
+            'contas' => $contas,
             'filtros' => $request->only(['busca', 'situacao', 'data_vencimento']),
         ]);
     }
@@ -40,7 +41,7 @@ class ContaPagarService
         $dados = $this->montarDados($request);
         $dados['empresa_id'] = auth()->user()->empresa_id;
         $dados['valor_pago'] = 0;
-        $dados['situacao']   = 'aberta';
+        $dados['situacao'] = 'aberta';
 
         $conta = $this->repository->store($dados);
 
@@ -68,14 +69,14 @@ class ContaPagarService
         $contaPagar->load(['fornecedor', 'categoria']);
 
         $categorias = $this->categoriaFinanceiraRepository->listarAtivasPorTipo('despesa');
-        if ($contaPagar->categoria_id && !$categorias->contains('id', $contaPagar->categoria_id) && $contaPagar->categoria) {
+        if ($contaPagar->categoria_id && ! $categorias->contains('id', $contaPagar->categoria_id) && $contaPagar->categoria) {
             $categorias->push($contaPagar->categoria);
             $categorias = $categorias->sortBy('nome')->values();
         }
 
         return view('conta-pagar.edit', [
-            'conta'       => $contaPagar,
-            'categorias'  => $categorias,
+            'conta' => $contaPagar,
+            'categorias' => $categorias,
         ]);
     }
 
@@ -94,7 +95,7 @@ class ContaPagarService
             $this->repository->update($contaPagar, $dados);
         } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor' => $ex->getMessage()])
+                ->withErrors(['valor' => MensagemPublica::de($ex)])
                 ->withInput();
         }
 
@@ -112,7 +113,7 @@ class ContaPagarService
         }
 
         $valorInformado = $this->parseMoeda($request->valor_pago);
-        $saldo          = (float) $contaPagar->valor - (float) $contaPagar->valor_pago;
+        $saldo = (float) $contaPagar->valor - (float) $contaPagar->valor_pago;
 
         if ($valorInformado <= 0) {
             return back()
@@ -126,14 +127,14 @@ class ContaPagarService
                 ->withInput();
         }
 
-        if (!$request->filled('data_pagamento')) {
+        if (! $request->filled('data_pagamento')) {
             return back()
                 ->withErrors(['data_pagamento' => 'A data de pagamento é obrigatória.'])
                 ->withInput();
         }
 
         $request->validate([
-            'data_pagamento'  => 'required|date|before_or_equal:today',
+            'data_pagamento' => 'required|date|before_or_equal:today',
             'forma_pagamento' => 'nullable|string|max:100',
         ], [
             'data_pagamento.date' => 'Informe uma data de pagamento válida.',
@@ -149,7 +150,7 @@ class ContaPagarService
             );
         } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor_pago' => $ex->getMessage()])
+                ->withErrors(['valor_pago' => MensagemPublica::de($ex)])
                 ->withInput();
         }
 
@@ -175,7 +176,7 @@ class ContaPagarService
             $this->repository->cancelar($contaPagar);
         } catch (\RuntimeException $ex) {
             return redirect()->route('conta-pagar.show', $contaPagar)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->route('conta-pagar.show', $contaPagar)
@@ -205,13 +206,13 @@ class ContaPagarService
     protected function montarDados(ContaPagarRequest $request): array
     {
         return [
-            'fornecedor_id'   => $request->fornecedor_id ?: null,
-            'descricao'       => $request->descricao,
-            'valor'           => $this->parseMoeda($request->valor),
+            'fornecedor_id' => $request->fornecedor_id ?: null,
+            'descricao' => $request->descricao,
+            'valor' => $this->parseMoeda($request->valor),
             'data_vencimento' => $request->data_vencimento,
             'forma_pagamento' => $request->forma_pagamento,
-            'categoria_id'    => $request->categoria_id ?: null,
-            'observacoes'     => $request->observacoes,
+            'categoria_id' => $request->categoria_id ?: null,
+            'observacoes' => $request->observacoes,
         ];
     }
 

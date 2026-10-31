@@ -55,7 +55,7 @@
                             <tr>
                                 <td data-label="Código">{{ $empresa->id }}</td>
                                 <td data-label="Razão Social">{{ $empresa->razao_social }}</td>
-                                <td data-label="CNPJ">{{ $empresa->cnpj }}</td>
+                                <td data-label="CNPJ">{{ $empresa->cnpj ?: 'Sem CNPJ' }}</td>
                                 <td data-label="Inscrição Estadual">{{ $empresa->ie }}</td>
                                 <td data-label="Inscrição Municipal">{{ $empresa->im }}</td>
                                 <td data-label="Cep">{{ $empresa->cep }}</td>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Estoque;
 use App\Http\Controllers\Controller;
 use App\Models\Estoque\MovimentacaoEstoque;
 use App\Models\Produtos\Produto;
+use App\Support\MensagemPublica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -32,16 +33,16 @@ class AjusteEstoqueController extends Controller
         $tipoAjuste = $request->input('tipo') === 'ajuste';
 
         $request->validate([
-            'produto_id'  => 'required|exists:produtos,id',
-            'tipo'        => 'required|in:entrada,saida,ajuste',
+            'produto_id' => 'required|exists:produtos,id',
+            'tipo' => 'required|in:entrada,saida,ajuste',
             // Ajuste define o saldo absoluto (pode ser zero); entrada/saída exigem quantidade > 0
-            'quantidade'  => $tipoAjuste ? 'required|numeric|min:0' : 'required|numeric|min:0.001',
-            'motivo'      => 'required|string|max:200',
+            'quantidade' => $tipoAjuste ? 'required|numeric|min:0' : 'required|numeric|min:0.001',
+            'motivo' => 'required|string|max:200',
         ], [], [
             'produto_id' => 'produto',
-            'tipo'       => 'tipo',
+            'tipo' => 'tipo',
             'quantidade' => 'quantidade',
-            'motivo'     => 'motivo',
+            'motivo' => 'motivo',
         ]);
 
         $empresaId = (int) auth()->user()->empresa_id;
@@ -50,11 +51,11 @@ class AjusteEstoqueController extends Controller
             ->where('empresa_id', $empresaId)
             ->first();
 
-        if (!$produto) {
+        if (! $produto) {
             abort(404);
         }
 
-        if (!$produto->controla_estoque) {
+        if (! $produto->controla_estoque) {
             return back()
                 ->withErrors(['produto_id' => 'Este produto não controla estoque.'])
                 ->withInput();
@@ -76,9 +77,9 @@ class AjusteEstoqueController extends Controller
                 } elseif ($tipo === 'saida') {
                     if ($estoqueAntes < $quantidade) {
                         throw new \Exception(
-                            'Estoque insuficiente para o produto "' . $produto->nome . '". Disponível: '
-                            . number_format($estoqueAntes, 2, ',', '.')
-                            . ', necessário: ' . number_format($quantidade, 2, ',', '.') . '.'
+                            'Estoque insuficiente para o produto "'.$produto->nome.'". Disponível: '
+                            .number_format($estoqueAntes, 2, ',', '.')
+                            .', necessário: '.number_format($quantidade, 2, ',', '.').'.'
                         );
                     }
                     $produto->decrement('estoque_atual', $quantidade);
@@ -90,21 +91,21 @@ class AjusteEstoqueController extends Controller
                 $estoqueDepois = (float) $produto->estoque_atual;
 
                 MovimentacaoEstoque::create([
-                    'empresa_id'     => $empresaId,
-                    'produto_id'     => $produto->id,
-                    'user_id'        => auth()->id(),
-                    'tipo'           => $tipo,
-                    'quantidade'     => $quantidade,
-                    'estoque_antes'  => $estoqueAntes,
+                    'empresa_id' => $empresaId,
+                    'produto_id' => $produto->id,
+                    'user_id' => auth()->id(),
+                    'tipo' => $tipo,
+                    'quantidade' => $quantidade,
+                    'estoque_antes' => $estoqueAntes,
                     'estoque_depois' => $estoqueDepois,
-                    'motivo'         => $request->motivo,
-                    'origem'         => 'ajuste_manual',
-                    'origem_id'      => null,
+                    'motivo' => $request->motivo,
+                    'origem' => 'ajuste_manual',
+                    'origem_id' => null,
                 ]);
             });
         } catch (\Exception $ex) {
             return back()
-                ->with('error', $ex->getMessage())
+                ->with('error', MensagemPublica::de($ex))
                 ->withInput();
         }
 
@@ -144,9 +145,9 @@ class AjusteEstoqueController extends Controller
         }
 
         return view('estoque.historico', [
-            'movimentacoes'       => $movimentacoes,
-            'produtoSelecionado'  => $produtoSelecionado,
-            'filtros'             => $request->only(['produto_id', 'tipo', 'data_inicio', 'data_fim']),
+            'movimentacoes' => $movimentacoes,
+            'produtoSelecionado' => $produtoSelecionado,
+            'filtros' => $request->only(['produto_id', 'tipo', 'data_inicio', 'data_fim']),
         ]);
     }
 }

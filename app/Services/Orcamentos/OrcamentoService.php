@@ -8,7 +8,9 @@ use App\Models\Produtos\Produto;
 use App\Repositories\Orcamentos\OrcamentoRepository;
 use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Vendas\VendaRepository;
+use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +30,7 @@ class OrcamentoService
 
         return view('orcamento.index', [
             'orcamentos' => $orcamentos,
-            'filtros'    => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
+            'filtros' => $request->only(['busca', 'situacao', 'data_inicio', 'data_fim']),
         ]);
     }
 
@@ -56,19 +58,19 @@ class OrcamentoService
         }
 
         $orcamento = $this->repository->store([
-            'empresa_id'      => auth()->user()->empresa_id,
-            'cliente_id'      => $request->cliente_id ?: null,
-            'usuario_id'      => auth()->id(),
-            'data_orcamento'  => $request->data_orcamento,
-            'data_entrega'    => $request->data_entrega ?: null,
+            'empresa_id' => auth()->user()->empresa_id,
+            'cliente_id' => $request->cliente_id ?: null,
+            'usuario_id' => auth()->id(),
+            'data_orcamento' => $request->data_orcamento,
+            'data_entrega' => $request->data_entrega ?: null,
             ...$totais,
             'forma_pagamento' => $request->forma_pagamento,
-            'observacoes'     => $request->observacoes,
-            'situacao'        => 'pendente',
+            'observacoes' => $request->observacoes,
+            'situacao' => 'pendente',
         ], $itens);
 
         return redirect()->route('orcamento.show', $orcamento)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' cadastrado com sucesso.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' cadastrado com sucesso.');
     }
 
     public function show(Orcamento $orcamento)
@@ -84,8 +86,9 @@ class OrcamentoService
         $this->garantirEmpresa($orcamento);
 
         $orcamento->load(['cliente', 'itens.produto', 'usuario', 'venda']);
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
-        return $pdf->stream('orcamento_' . $orcamento->numero . '.pdf');
+        $pdf = Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
+
+        return $pdf->stream('orcamento_'.$orcamento->numero.'.pdf');
     }
 
     public function edit(Orcamento $orcamento)
@@ -129,19 +132,19 @@ class OrcamentoService
 
         try {
             $this->repository->update($orcamento, [
-                'cliente_id'      => $request->cliente_id ?: null,
-                'data_orcamento'  => $request->data_orcamento,
-                'data_entrega'    => $request->data_entrega ?: null,
+                'cliente_id' => $request->cliente_id ?: null,
+                'data_orcamento' => $request->data_orcamento,
+                'data_entrega' => $request->data_entrega ?: null,
                 ...$totais,
                 'forma_pagamento' => $request->forma_pagamento,
-                'observacoes'     => $request->observacoes,
+                'observacoes' => $request->observacoes,
             ], $itens);
         } catch (\RuntimeException $e) {
-            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+            return redirect()->route('orcamento.show', $orcamento)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('orcamento.show', $orcamento)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' atualizado com sucesso.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' atualizado com sucesso.');
     }
 
     public function aprovar(Orcamento $orcamento)
@@ -155,58 +158,58 @@ class OrcamentoService
 
         try {
             $venda = DB::transaction(function () use ($orcamento) {
-            $orcamento = $this->repository->travarPendente($orcamento);
-            $orcamento->load('itens');
+                $orcamento = $this->repository->travarPendente($orcamento);
+                $orcamento->load('itens');
 
-            $itens = [];
-            foreach ($orcamento->itens as $item) {
-                $itens[] = [
-                    'produto_id'     => $item->produto_id,
-                    'produto_nome'   => $item->produto_nome,
-                    'produto_codigo' => $item->produto_codigo,
-                    'quantidade'     => $item->quantidade,
-                    'preco_unitario' => $item->preco_unitario,
-                    'desconto'       => $item->desconto,
-                    'total'          => $item->total,
-                ];
-            }
+                $itens = [];
+                foreach ($orcamento->itens as $item) {
+                    $itens[] = [
+                        'produto_id' => $item->produto_id,
+                        'produto_nome' => $item->produto_nome,
+                        'produto_codigo' => $item->produto_codigo,
+                        'quantidade' => $item->quantidade,
+                        'preco_unitario' => $item->preco_unitario,
+                        'desconto' => $item->desconto,
+                        'total' => $item->total,
+                    ];
+                }
 
-            $venda = $this->vendaRepository->store([
-                'empresa_id'      => $orcamento->empresa_id,
-                'cliente_id'      => $orcamento->cliente_id,
-                'usuario_id'      => auth()->id(),
-                'numero'          => $this->vendaRepository->proximoNumero($orcamento->empresa_id),
-                'data_venda'      => now()->toDateString(),
-                'data_entrega'    => $orcamento->data_entrega,
-                'subtotal'        => $orcamento->subtotal,
-                'desconto'        => $orcamento->desconto,
-                'acrescimo'       => $orcamento->acrescimo,
-                'total'           => $orcamento->total,
-                'forma_pagamento' => $orcamento->forma_pagamento,
-                'observacoes'     => $orcamento->observacoes,
-                'situacao'        => 'em_andamento',
-            ], $itens);
+                $venda = $this->vendaRepository->store([
+                    'empresa_id' => $orcamento->empresa_id,
+                    'cliente_id' => $orcamento->cliente_id,
+                    'usuario_id' => auth()->id(),
+                    'numero' => $this->vendaRepository->proximoNumero($orcamento->empresa_id),
+                    'data_venda' => now()->toDateString(),
+                    'data_entrega' => $orcamento->data_entrega,
+                    'subtotal' => $orcamento->subtotal,
+                    'desconto' => $orcamento->desconto,
+                    'acrescimo' => $orcamento->acrescimo,
+                    'total' => $orcamento->total,
+                    'forma_pagamento' => $orcamento->forma_pagamento,
+                    'observacoes' => $orcamento->observacoes,
+                    'situacao' => 'em_andamento',
+                ], $itens);
 
-            // Se forma à vista, confirma a venda gerada
-            if (FormaPagamento::pagamentoIntegral($orcamento->forma_pagamento, (int) $orcamento->empresa_id)) {
-                $this->vendaRepository->confirmar($venda->load('itens'));
-            }
+                // Se forma à vista, confirma a venda gerada
+                if (FormaPagamento::pagamentoIntegral($orcamento->forma_pagamento, (int) $orcamento->empresa_id)) {
+                    $this->vendaRepository->confirmar($venda->load('itens'));
+                }
 
-            $orcamento->update([
-                'situacao' => 'aprovado',
-                'venda_id' => $venda->id,
-            ]);
+                $orcamento->update([
+                    'situacao' => 'aprovado',
+                    'venda_id' => $venda->id,
+                ]);
 
-            return $venda;
+                return $venda;
             });
         } catch (\Exception $ex) {
             // tratar exceções de confirmação/estoque e retornar ao orçamento com erro amigável
             return redirect()->route('orcamento.show', $orcamento)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->route('venda.show', $venda)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' aprovado. Venda #' . $venda->numero . ' gerada.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' aprovado. Venda #'.$venda->numero.' gerada.');
     }
 
     /**
@@ -228,45 +231,45 @@ class OrcamentoService
                 $orcamento->load('itens');
 
                 $itens = $orcamento->itens->map(fn ($item) => [
-                    'produto_id'     => $item->produto_id,
-                    'produto_nome'   => $item->produto_nome,
+                    'produto_id' => $item->produto_id,
+                    'produto_nome' => $item->produto_nome,
                     'produto_codigo' => $item->produto_codigo,
-                    'quantidade'     => $item->quantidade,
+                    'quantidade' => $item->quantidade,
                     'preco_unitario' => $item->preco_unitario,
-                    'desconto'       => $item->desconto,
-                    'total'          => $item->total,
+                    'desconto' => $item->desconto,
+                    'total' => $item->total,
                 ])->all();
 
                 $os = $this->ordemServicoRepository->store([
-                    'empresa_id'      => $orcamento->empresa_id,
-                    'cliente_id'      => $orcamento->cliente_id,
-                    'usuario_id'      => auth()->id(),
-                    'orcamento_id'    => $orcamento->id,
-                    'data_abertura'   => now()->toDateString(),
-                    'data_previsao'   => $orcamento->data_entrega,
-                    'subtotal'        => $orcamento->subtotal,
-                    'desconto'        => $orcamento->desconto,
-                    'acrescimo'       => $orcamento->acrescimo,
-                    'total'           => $orcamento->total,
+                    'empresa_id' => $orcamento->empresa_id,
+                    'cliente_id' => $orcamento->cliente_id,
+                    'usuario_id' => auth()->id(),
+                    'orcamento_id' => $orcamento->id,
+                    'data_abertura' => now()->toDateString(),
+                    'data_previsao' => $orcamento->data_entrega,
+                    'subtotal' => $orcamento->subtotal,
+                    'desconto' => $orcamento->desconto,
+                    'acrescimo' => $orcamento->acrescimo,
+                    'total' => $orcamento->total,
                     'forma_pagamento' => $orcamento->forma_pagamento,
-                    'observacoes'     => $orcamento->observacoes,
-                    'situacao'        => 'aberta',
+                    'observacoes' => $orcamento->observacoes,
+                    'situacao' => 'aberta',
                 ], $itens);
 
                 $orcamento->update([
-                    'situacao'         => 'aprovado',
+                    'situacao' => 'aprovado',
                     'ordem_servico_id' => $os->id,
                 ]);
 
                 return $os;
             });
         } catch (\RuntimeException $e) {
-            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+            return redirect()->route('orcamento.show', $orcamento)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('ordem-servico.edit', $os)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' convertido na OS #' . $os->numero
-                . '. Preencha os dados do equipamento.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' convertido na OS #'.$os->numero
+                .'. Preencha os dados do equipamento.');
     }
 
     public function recusar(Orcamento $orcamento)
@@ -281,11 +284,11 @@ class OrcamentoService
         try {
             $this->repository->recusar($orcamento);
         } catch (\RuntimeException $e) {
-            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+            return redirect()->route('orcamento.show', $orcamento)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('orcamento.show', $orcamento)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' recusado.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' recusado.');
     }
 
     public function cancelar(Orcamento $orcamento)
@@ -305,11 +308,11 @@ class OrcamentoService
         try {
             $this->repository->cancelar($orcamento);
         } catch (\RuntimeException $e) {
-            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+            return redirect()->route('orcamento.show', $orcamento)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('orcamento.show', $orcamento)
-            ->with('success', 'Orçamento #' . $orcamento->numero . ' cancelado.');
+            ->with('success', 'Orçamento #'.$orcamento->numero.' cancelado.');
     }
 
     public function destroy(Orcamento $orcamento)
@@ -321,11 +324,11 @@ class OrcamentoService
         try {
             $this->repository->destroy($orcamento->id);
         } catch (\RuntimeException $e) {
-            return redirect()->route('orcamento.show', $orcamento)->with('error', $e->getMessage());
+            return redirect()->route('orcamento.show', $orcamento)->with('error', MensagemPublica::de($e));
         }
 
         return redirect()->route('orcamento.index')
-            ->with('success', 'Orçamento #' . $numero . ' excluído com sucesso.');
+            ->with('success', 'Orçamento #'.$numero.' excluído com sucesso.');
     }
 
     protected function garantirEmpresa(Orcamento $orcamento): void
@@ -346,7 +349,7 @@ class OrcamentoService
 
             $produto = Produto::find($item['produto_id']);
 
-            if (!$produto) {
+            if (! $produto) {
                 continue;
             }
             // garantir que o produto pertence à mesma empresa do usuário
@@ -358,18 +361,18 @@ class OrcamentoService
             if ($quantidade <= 0) {
                 continue;
             }
-            $precoUnit  = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
-            $descItem   = $this->parseMoeda($item['desconto'] ?? 0);
-            $total      = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
+            $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
+            $descItem = $this->parseMoeda($item['desconto'] ?? 0);
+            $total = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             $resultado[] = [
-                'produto_id'     => $produto->id,
-                'produto_nome'   => $produto->nome,
+                'produto_id' => $produto->id,
+                'produto_nome' => $produto->nome,
                 'produto_codigo' => $produto->codigo,
-                'quantidade'     => $quantidade,
+                'quantidade' => $quantidade,
                 'preco_unitario' => $precoUnit,
-                'desconto'       => $descItem,
-                'total'          => $total,
+                'desconto' => $descItem,
+                'total' => $total,
             ];
         }
 
@@ -381,8 +384,8 @@ class OrcamentoService
      */
     protected function calcularTotais(array $itens, Request $request): ?array
     {
-        $subtotal  = round(array_sum(array_column($itens, 'total')), 2);
-        $desconto  = $this->parseMoeda($request->desconto);
+        $subtotal = round(array_sum(array_column($itens, 'total')), 2);
+        $desconto = $this->parseMoeda($request->desconto);
         $acrescimo = $this->parseMoeda($request->acrescimo);
 
         if ($desconto < 0 || $acrescimo < 0 || $desconto > $subtotal) {
@@ -390,10 +393,10 @@ class OrcamentoService
         }
 
         return [
-            'subtotal'  => $subtotal,
-            'desconto'  => $desconto,
+            'subtotal' => $subtotal,
+            'desconto' => $desconto,
             'acrescimo' => $acrescimo,
-            'total'     => round($subtotal - $desconto + $acrescimo, 2),
+            'total' => round($subtotal - $desconto + $acrescimo, 2),
         ];
     }
 }

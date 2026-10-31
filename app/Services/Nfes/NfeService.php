@@ -9,6 +9,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Nfes\NfeRepository;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Vendas\VendaService;
+use App\Support\MensagemPublica;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use NFePHP\Common\Certificate;
+use NFePHP\Common\Keys;
 use NFePHP\DA\NFe\Danfe;
 use RuntimeException;
 use Throwable;
@@ -202,13 +204,13 @@ class NfeService
             return back()->withErrors($e->errors())->withInput();
         } catch (Throwable $e) {
             Log::error('Falha ao criar venda para NF-e', [
-                'exception' => $e->getMessage(),
+                'exception' => MensagemPublica::de($e),
             ]);
 
             return back()
                 ->withInput()
                 ->with('error', 'Não foi possível gerar a venda da NF-e: '.($e instanceof \Exception && ! $e instanceof QueryException
-                    ? $e->getMessage()
+                    ? MensagemPublica::de($e)
                     : 'verifique os itens e o estoque.'));
         }
 
@@ -377,16 +379,16 @@ class NfeService
         } catch (RuntimeException $e) {
             $this->repository->atualizar($nfe, [
                 'situacao' => 'rejeitada',
-                'motivo_status' => mb_substr($e->getMessage(), 0, 255),
+                'motivo_status' => mb_substr(MensagemPublica::de($e), 0, 255),
             ]);
 
             return redirect()
                 ->route('nfe.show', $nfe)
-                ->with('error', $e->getMessage());
+                ->with('error', MensagemPublica::de($e));
         } catch (Throwable $e) {
             Log::error('Falha ao montar NF-e', [
                 'venda_id' => $venda->id,
-                'exception' => $e->getMessage(),
+                'exception' => MensagemPublica::de($e),
             ]);
 
             $this->repository->atualizar($nfe, [
@@ -431,7 +433,7 @@ class NfeService
         try {
             $sender = new NfeSenderService($empresa);
         } catch (RuntimeException $e) {
-            return redirect()->route('nfe.show', $nfe)->with('error', $e->getMessage());
+            return redirect()->route('nfe.show', $nfe)->with('error', MensagemPublica::de($e));
         }
 
         $resultado = $sender->consultar($nfe->chave_acesso, $nfe->xml_assinado, (int) $nfe->ambiente);
@@ -474,7 +476,7 @@ class NfeService
         try {
             $sender = new NfeSenderService($empresa);
         } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', MensagemPublica::de($e));
         }
 
         $resultado = $sender->cancelar($nfe->chave_acesso, $justificativa, $nfe->protocolo, (int) $nfe->ambiente);
@@ -518,7 +520,7 @@ class NfeService
         } catch (Throwable $e) {
             Log::error('Falha ao gerar DANFE', [
                 'nfe_id' => $nfe->id,
-                'exception' => $e->getMessage(),
+                'exception' => MensagemPublica::de($e),
             ]);
 
             return back()->with('error', 'Não foi possível gerar o DANFE desta NF-e.');
@@ -531,7 +533,6 @@ class NfeService
             'Content-Disposition' => 'inline; filename="'.$nome.'"',
         ]);
     }
-
 
     private function aplicarResultadoEnvio(Nfe $nfe, array $resultado)
     {
@@ -592,7 +593,7 @@ class NfeService
     private function extrairChave(string $xml): ?string
     {
         try {
-            $chave = \NFePHP\Common\Keys::extractAccessKey($xml);
+            $chave = Keys::extractAccessKey($xml);
 
             return $chave !== '' ? $chave : null;
         } catch (Throwable) {

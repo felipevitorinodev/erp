@@ -2,12 +2,13 @@
 
 namespace App\Services\Comissoes;
 
-use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasPagar\ContaPagarBaixa;
 use App\Models\Funcionarios\Funcionario;
 use App\Repositories\Comissoes\ComissaoRepository;
+use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
+use App\Support\MensagemPublica;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class ComissaoService
     public function index(Request $request)
     {
         $comissoes = $this->repository->index($request);
-        $totais    = $this->repository->totais($request);
+        $totais = $this->repository->totais($request);
 
         $funcionarios = Funcionario::where('empresa_id', auth()->user()->empresa_id)
             ->where('ativo', true)
@@ -30,10 +31,10 @@ class ComissaoService
             ->get(['id', 'nome']);
 
         return view('comissao.index', [
-            'comissoes'    => $comissoes,
-            'totais'       => $totais,
+            'comissoes' => $comissoes,
+            'totais' => $totais,
             'funcionarios' => $funcionarios,
-            'filtros'      => $request->only(['funcionario_id', 'situacao', 'data_inicio', 'data_fim']),
+            'filtros' => $request->only(['funcionario_id', 'situacao', 'data_inicio', 'data_fim']),
         ]);
     }
 
@@ -63,7 +64,7 @@ class ComissaoService
 
             return redirect()->back()->with('error', 'Não foi possível registrar o pagamento da comissão.');
         } catch (\Exception $ex) {
-            return redirect()->back()->with('error', $ex->getMessage());
+            return redirect()->back()->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->back()
@@ -73,7 +74,7 @@ class ComissaoService
     protected function gerarContaPagarDaComissao(Comissao $comissao): void
     {
         $jaExiste = ContaPagar::where('empresa_id', $comissao->empresa_id)
-            ->where('observacoes', 'comissao_id:' . $comissao->id)
+            ->where('observacoes', 'comissao_id:'.$comissao->id)
             ->exists();
 
         if ($jaExiste) {
@@ -85,15 +86,15 @@ class ComissaoService
         $vendaNumero = $comissao->venda->numero ?? $comissao->venda_id;
 
         $conta = ContaPagar::create([
-            'empresa_id'      => $comissao->empresa_id,
-            'descricao'       => 'Comissão venda #' . $vendaNumero . ' — ' . $vendedor,
-            'valor'           => $comissao->valor,
-            'valor_pago'      => $comissao->valor,
+            'empresa_id' => $comissao->empresa_id,
+            'descricao' => 'Comissão venda #'.$vendaNumero.' — '.$vendedor,
+            'valor' => $comissao->valor,
+            'valor_pago' => $comissao->valor,
             'data_vencimento' => $hoje,
-            'data_pagamento'  => $hoje,
-            'categoria_id'    => $this->categoriaPadraoService->idDespesaComissoes((int) $comissao->empresa_id),
-            'situacao'        => 'paga',
-            'observacoes'     => 'comissao_id:' . $comissao->id,
+            'data_pagamento' => $hoje,
+            'categoria_id' => $this->categoriaPadraoService->idDespesaComissoes((int) $comissao->empresa_id),
+            'situacao' => 'paga',
+            'observacoes' => 'comissao_id:'.$comissao->id,
         ]);
 
         ContaPagarBaixa::create([

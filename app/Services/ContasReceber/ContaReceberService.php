@@ -6,6 +6,7 @@ use App\Http\Requests\ContasReceber\ContaReceberRequest;
 use App\Models\ContasReceber\ContaReceber;
 use App\Repositories\CategoriasFinanceiras\CategoriaFinanceiraRepository;
 use App\Repositories\ContasReceber\ContaReceberRepository;
+use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
 
@@ -23,8 +24,8 @@ class ContaReceberService
         $contas = $this->repository->index($request);
 
         return view('conta-receber.index', [
-            'contas'   => $contas,
-            'filtros'  => $request->only(['busca', 'situacao', 'data_vencimento']),
+            'contas' => $contas,
+            'filtros' => $request->only(['busca', 'situacao', 'data_vencimento']),
         ]);
     }
 
@@ -46,7 +47,7 @@ class ContaReceberService
         }
         $dados['empresa_id'] = auth()->user()->empresa_id;
         $dados['valor_pago'] = 0;
-        $dados['situacao']   = 'aberta';
+        $dados['situacao'] = 'aberta';
 
         $conta = $this->repository->store($dados);
 
@@ -74,14 +75,14 @@ class ContaReceberService
         $contaReceber->load(['cliente', 'venda', 'categoria']);
 
         $categorias = $this->categoriaFinanceiraRepository->listarAtivasPorTipo('receita');
-        if ($contaReceber->categoria_id && !$categorias->contains('id', $contaReceber->categoria_id) && $contaReceber->categoria) {
+        if ($contaReceber->categoria_id && ! $categorias->contains('id', $contaReceber->categoria_id) && $contaReceber->categoria) {
             $categorias->push($contaReceber->categoria);
             $categorias = $categorias->sortBy('nome')->values();
         }
 
         return view('conta-receber.edit', [
-            'conta'        => $contaReceber,
-            'categorias'   => $categorias,
+            'conta' => $contaReceber,
+            'categorias' => $categorias,
         ]);
     }
 
@@ -102,7 +103,7 @@ class ContaReceberService
             $this->repository->update($contaReceber, $dados);
         } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor' => $ex->getMessage()])
+                ->withErrors(['valor' => MensagemPublica::de($ex)])
                 ->withInput();
         }
 
@@ -120,7 +121,7 @@ class ContaReceberService
         }
 
         $valorInformado = $this->parseMoeda($request->valor_pago);
-        $saldo          = (float) $contaReceber->valor - (float) $contaReceber->valor_pago;
+        $saldo = (float) $contaReceber->valor - (float) $contaReceber->valor_pago;
 
         if ($valorInformado <= 0) {
             return back()
@@ -134,14 +135,14 @@ class ContaReceberService
                 ->withInput();
         }
 
-        if (!$request->filled('data_pagamento')) {
+        if (! $request->filled('data_pagamento')) {
             return back()
                 ->withErrors(['data_pagamento' => 'A data de pagamento é obrigatória.'])
                 ->withInput();
         }
 
         $request->validate([
-            'data_pagamento'  => 'required|date|before_or_equal:today',
+            'data_pagamento' => 'required|date|before_or_equal:today',
             'forma_pagamento' => 'nullable|string|max:100',
         ], [
             'data_pagamento.date' => 'Informe uma data de pagamento válida.',
@@ -157,7 +158,7 @@ class ContaReceberService
             );
         } catch (\RuntimeException $ex) {
             return back()
-                ->withErrors(['valor_pago' => $ex->getMessage()])
+                ->withErrors(['valor_pago' => MensagemPublica::de($ex)])
                 ->withInput();
         }
 
@@ -183,7 +184,7 @@ class ContaReceberService
             $this->repository->cancelar($contaReceber);
         } catch (\RuntimeException $ex) {
             return redirect()->route('conta-receber.show', $contaReceber)
-                ->with('error', $ex->getMessage());
+                ->with('error', MensagemPublica::de($ex));
         }
 
         return redirect()->route('conta-receber.show', $contaReceber)
@@ -213,14 +214,14 @@ class ContaReceberService
     protected function montarDados(ContaReceberRequest $request): array
     {
         return [
-            'cliente_id'      => $request->cliente_id ?: null,
-            'venda_id'        => $request->venda_id ?: null,
-            'descricao'       => $request->descricao,
-            'valor'           => $this->parseMoeda($request->valor),
+            'cliente_id' => $request->cliente_id ?: null,
+            'venda_id' => $request->venda_id ?: null,
+            'descricao' => $request->descricao,
+            'valor' => $this->parseMoeda($request->valor),
             'data_vencimento' => $request->data_vencimento,
             'forma_pagamento' => $request->forma_pagamento,
-            'categoria_id'    => $request->categoria_id ?: null,
-            'observacoes'     => $request->observacoes,
+            'categoria_id' => $request->categoria_id ?: null,
+            'observacoes' => $request->observacoes,
         ];
     }
 

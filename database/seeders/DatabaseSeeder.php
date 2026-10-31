@@ -15,7 +15,6 @@ class DatabaseSeeder extends Seeder
             GrupoSeeder::class,
             UnidadeMedidaSeeder::class,
             FormaPagamentoSeeder::class,
-            DemoDadosSeeder::class,
         ]);
     }
 }
