@@ -97,6 +97,7 @@
                     $podeFornecedores = $usuarioMenu->pode('fornecedores');
                     $podeFuncionarios = $usuarioMenu->pode('funcionarios');
                     $podeRelatorios = $usuarioMenu->pode('relatorios');
+                    $mostraRelatorios = \App\Support\CatalogoRelatorios::temAlgum($usuarioMenu);
                     $podeConfiguracoes = $usuarioMenu->pode('configuracoes');
                 @endphp
 
@@ -332,45 +333,18 @@
 
                 @endif
 
-                @if ($podeRelatorios)
-                {{-- Relatórios --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
+                @if ($mostraRelatorios)
+                <div class="sidebar__group">
+                    <a href="{{ route('relatorios.index') }}" @class(['sidebar__link', 'sidebar__link--active' => request()->routeIs('relatorios.*', 'relatorio.*')])>
                         <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                            stroke-width="2" aria-hidden="true">
                             <line x1="18" y1="20" x2="18" y2="10"></line>
                             <line x1="12" y1="20" x2="12" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="14"></line>
                         </svg>
-                        <span class="sidebar__group-label">Relatórios</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('relatorio.vendas') }}"
-                            class="sidebar__link {{ request()->routeIs('relatorio.vendas*') ? 'sidebar__link--active' : '' }}">
-                            Vendas por Período
-                        </a>
-                        <a href="{{ route('relatorio.produtos-mais-vendidos') }}"
-                            class="sidebar__link {{ request()->routeIs('relatorio.produtos-mais-vendidos*') ? 'sidebar__link--active' : '' }}">
-                            Produtos Mais Vendidos
-                        </a>
-                        <a href="{{ route('relatorio.estoque') }}"
-                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
-                            Posição de estoque
-                        </a>
-                        @if ($podeFinanceiro)
-                            <a href="{{ route('relatorio.contas-receber') }}"
-                                class="sidebar__link {{ request()->routeIs('relatorio.contas-receber*') ? 'sidebar__link--active' : '' }}">
-                                Contas a Receber
-                            </a>
-                            <a href="{{ route('relatorio.contas-pagar') }}"
-                                class="sidebar__link {{ request()->routeIs('relatorio.contas-pagar*') ? 'sidebar__link--active' : '' }}">
-                                Contas a Pagar
-                            </a>
-                        @endif
-                    </div>
+                        Relatórios
+                    </a>
                 </div>
-
                 @endif
 
                 {{-- Configurações --}}

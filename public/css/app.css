@@ -1825,6 +1825,14 @@ select.form-control {
     transition: color var(--transition);
 }
 
+.sidebar__group > .sidebar__link {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .sidebar__icon {
     display: none;
 }
@@ -7655,5 +7663,310 @@ body.pdv-page.pdv-sucesso-ativo .main {
 
     .kpi-card__value {
         font-size: 1.35rem;
+    }
+}
+
+/* =========================================
+   HUB DE RELATORIOS
+   ========================================= */
+.relatorios-hub__intro {
+    margin: 0 0 1rem;
+    max-width: 42rem;
+    color: var(--color-text-mid);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.relatorios-busca {
+    max-width: 28rem;
+    margin-bottom: 1.25rem;
+}
+
+.relatorios-busca .form-control {
+    min-height: var(--touch-min);
+}
+
+.relatorios-categoria {
+    margin-bottom: 1.5rem;
+}
+
+.relatorios-categoria__titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.relatorios-categoria__icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.relatorios-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.relatorios-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-height: var(--touch-min);
+    padding: 1rem 1.05rem;
+    background: var(--color-surface);
+    border: 1px solid rgba(213, 220, 229, 0.75);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(22, 58, 95, 0.04), 0 6px 18px rgba(22, 58, 95, 0.05);
+    text-decoration: none;
+    color: inherit;
+}
+
+.relatorios-card:hover {
+    border-color: var(--color-border-mid);
+    background: #F7F9FC;
+}
+
+.relatorios-card:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.relatorios-card__icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.relatorios-card__titulo {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.relatorios-card__descricao {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-text-mid);
+}
+
+.relatorios-card--oculto,
+.relatorios-categoria--oculta,
+.relatorios-vazio--oculto {
+    display: none;
+}
+
+.relatorios-vazio {
+    margin: 0;
+    padding: 1.25rem 1rem;
+    border: 1px dashed var(--color-border-mid);
+    border-radius: 14px;
+    background: var(--color-surface);
+    color: var(--color-text-mid);
+}
+
+@media (min-width: 768px) {
+    .relatorios-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1100px) {
+    .relatorios-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1440px) {
+    .relatorios-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* =========================================
+   CONSULTA DE RELATORIO
+   ========================================= */
+.relatorio-pagina__descricao {
+    margin: 0 0 1rem;
+    max-width: 42rem;
+    color: var(--color-text-mid);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.relatorio-filtros {
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+}
+
+.relatorio-filtros__resumo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.relatorio-filtros__resumo::-webkit-details-marker {
+    display: none;
+}
+
+.relatorio-filtros__contador {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 12px;
+}
+
+.relatorio-filtros__corpo {
+    padding: 0 1rem 1rem;
+}
+
+.relatorio-atalhos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+
+.relatorio-atalho {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--color-border-mid);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.relatorio-atalho.is-ativo {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.kpi-grid.kpi-grid--relatorio {
+    grid-template-columns: 1fr;
+}
+
+.relatorio-graficos {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.relatorio-grafico {
+    min-width: 0;
+    padding: 0.9rem 1rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+}
+
+.relatorio-grafico__titulo {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.relatorio-grafico__area {
+    position: relative;
+    height: 220px;
+    margin-top: 0.75rem;
+}
+
+.relatorio-grafico__estado {
+    margin: 0;
+    color: var(--color-text-mid);
+}
+
+.relatorio-graficos__erro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem;
+}
+
+.relatorio-vazio--oculto {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .kpi-grid.kpi-grid--relatorio {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .relatorio-grafico__area {
+        height: 260px;
+    }
+}
+
+@media (min-width: 1100px) {
+    .kpi-grid.kpi-grid--relatorio {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .relatorio-graficos {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .table--cards tfoot {
+        display: block;
+        padding: 0 0.75rem 0.75rem;
+    }
+
+    .table--cards tfoot tr {
+        display: block;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--color-border);
+        border-left: 3px solid var(--color-primary);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+    }
+
+    .table--cards tfoot th {
+        display: block;
+        padding: 0 0 0.25rem;
+        border: 0;
+        text-align: left;
+    }
+
+    .table--cards tfoot td:empty {
+        display: none;
     }
 }

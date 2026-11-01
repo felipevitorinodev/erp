@@ -13,6 +13,7 @@
         $podeFinanceiro = auth()->user()->pode('financeiro');
         $podeEstoque = auth()->user()->pode('estoque');
         $podeRelatorios = auth()->user()->pode('relatorios');
+        $mostraRelatorios = \App\Support\CatalogoRelatorios::temAlgum(auth()->user());
         $podeOrcamentos = auth()->user()->pode('orcamentos');
         $podeProdutos = auth()->user()->pode('produtos');
         $podeClientes = auth()->user()->pode('clientes');
@@ -38,7 +39,7 @@
         $mostraVendas = $podeVendas || $podeRelatorios;
         $temAtencao = $podeRelatorios && ($contasReceberVencidasVal > 0 || $contasPagarVencidasVal > 0 || $estoqueCriticoVal > 0);
         $temAcoes = $podeVendas || $podeEstoque || $podeFinanceiro;
-        $temConsultas = $podeVendas || $podeOrcamentos || $podeProdutos || $podeClientes || $podeFornecedores || $podeFinanceiro || $podeRelatorios;
+        $temConsultas = $podeVendas || $podeOrcamentos || $podeProdutos || $podeClientes || $podeFornecedores || $podeFinanceiro || $mostraRelatorios;
         $moeda = fn ($valor) => 'R$ ' . number_format((float) $valor, 2, ',', '.');
         $nomeMes = $meses[now()->month];
         $faturamentoMes = $faturamentoMes ?? null;
@@ -309,8 +310,8 @@
                             Fluxo de Caixa
                         </a>
                     @endif
-                    @if ($podeRelatorios)
-                        <a href="{{ route('relatorio.vendas') }}" class="home-consulta">
+                    @if ($mostraRelatorios)
+                        <a href="{{ route('relatorios.index') }}" class="home-consulta">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="6" y1="20" x2="6" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="18" y1="20" x2="18" y2="14"></line></svg>
                             Relatórios
                         </a>
