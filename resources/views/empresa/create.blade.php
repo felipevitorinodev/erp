@@ -26,7 +26,7 @@
                             <label class="form-label form-label--required">Razão Social</label>
                             <input type="text" name="razao_social"
                                 class="form-control @error('razao_social') is-invalid @enderror"
-                                value="{{ old('razao_social') }}" maxlength="255">
+                                value="{{ old('razao_social') }}" maxlength="150">
                             @error('razao_social')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -36,7 +36,7 @@
                             <label class="form-label">Nome Fantasia</label>
                             <input type="text" name="nome_fantasia"
                                 class="form-control @error('nome_fantasia') is-invalid @enderror"
-                                value="{{ old('nome_fantasia') }}" maxlength="255">
+                                value="{{ old('nome_fantasia') }}" maxlength="150">
                             @error('nome_fantasia')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -47,7 +47,7 @@
                         <div class="form-group">
                             <label class="form-label">Inscrição Estadual</label>
                             <input type="text" name="ie" class="form-control @error('ie') is-invalid @enderror"
-                                value="{{ old('ie') }}" maxlength="255">
+                                value="{{ old('ie') }}" maxlength="20">
                             @error('ie')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -56,7 +56,7 @@
                         <div class="form-group">
                             <label class="form-label">Inscrição Municipal</label>
                             <input type="text" name="im" class="form-control @error('im') is-invalid @enderror"
-                                value="{{ old('im') }}" maxlength="255">
+                                value="{{ old('im') }}" maxlength="20">
                             @error('im')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -98,7 +98,7 @@
                         <div class="form-group">
                             <label class="form-label">Celular</label>
                             <input type="text" name="celular" class="form-control @error('celular') is-invalid @enderror"
-                                value="{{ old('celular') }}" maxlength="11">
+                                value="{{ old('celular') }}" maxlength="20">
                             @error('celular')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -107,7 +107,7 @@
                         <div class="form-group">
                             <label class="form-label">E-mail</label>
                             <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                                value="{{ old('email') }}" maxlength="255">
+                                value="{{ old('email') }}" maxlength="100">
                             @error('email')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -142,7 +142,7 @@
                         <div class="form-group form-group--span-2">
                             <label class="form-label">Logradouro</label>
                             <input type="text" name="logradouro" class="form-control @error('logradouro') is-invalid @enderror"
-                                value="{{ old('logradouro') }}" maxlength="255">
+                                value="{{ old('logradouro') }}" maxlength="150">
                             @error('logradouro')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -176,7 +176,7 @@
                             <label class="form-label">Complemento</label>
                             <input type="text" name="complemento"
                                 class="form-control @error('complemento') is-invalid @enderror" value="{{ old('complemento') }}"
-                                maxlength="255">
+                                maxlength="100">
                             @error('complemento')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -194,7 +194,7 @@
                         <div class="form-group">
                             <label class="form-label">Cidade</label>
                             <input type="text" name="cidade" class="form-control @error('cidade') is-invalid @enderror"
-                                value="{{ old('cidade') }}" maxlength="255">
+                                value="{{ old('cidade') }}" maxlength="100">
                             @error('cidade')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror

@@ -66,7 +66,7 @@
             <a href="{{ route('password.request') }}">Esqueci a senha</a>
         </div>
 
-        <button type="submit" class="btn btn--primary auth-submit">Entrar</button>
+        <button type="submit" class="btn btn--primary auth-submit" data-espera="Entrando...">Entrar</button>
     </form>
 
     <p class="auth-note">Acesso restrito a usuários autorizados.</p>

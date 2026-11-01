@@ -363,7 +363,7 @@ class OrcamentoService
             }
             $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
-            $total = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
+            $total = $this->totalComDesconto($quantidade, $precoUnit, $descItem, $produto->nome);
 
             $resultado[] = [
                 'produto_id' => $produto->id,

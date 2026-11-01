@@ -545,7 +545,6 @@ class EntradaEstoqueService
 
             $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
-            $total = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
 
             // Se tem produto_id, usa o produto existente
             if (! empty($item['produto_id'])) {
@@ -562,7 +561,7 @@ class EntradaEstoqueService
                     'quantidade' => $quantidade,
                     'preco_unitario' => $precoUnit,
                     'desconto' => $descItem,
-                    'total' => $total,
+                    'total' => $this->totalComDesconto($quantidade, $precoUnit, $descItem, $produto->nome),
                 ];
             } else {
                 $nomeProduto = trim($item['produto_nome'] ?? '');
@@ -575,14 +574,15 @@ class EntradaEstoqueService
                         ->first();
                 }
 
+                $nomeGravado = $produtoExistente?->nome ?: ($nomeProduto !== '' ? $nomeProduto : 'Produto sem nome');
                 $resultado[] = [
                     'produto_id' => $produtoExistente?->id,
-                    'produto_nome' => $produtoExistente?->nome ?: ($nomeProduto !== '' ? $nomeProduto : 'Produto sem nome'),
+                    'produto_nome' => $nomeGravado,
                     'produto_codigo' => $produtoExistente?->codigo ?: ($codigoProduto !== '' ? $codigoProduto : null),
                     'quantidade' => $quantidade,
                     'preco_unitario' => $precoUnit,
                     'desconto' => $descItem,
-                    'total' => $total,
+                    'total' => $this->totalComDesconto($quantidade, $precoUnit, $descItem, $nomeGravado),
                 ];
             }
         }

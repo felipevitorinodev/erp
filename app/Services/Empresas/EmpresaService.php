@@ -130,6 +130,10 @@ class EmpresaService
         $senhaInformada = trim((string) $request->input('certificado_senha', ''));
         $temArquivo = $request->hasFile('certificado_pfx');
 
+        if (! $temArquivo && $this->cnpjInformadoDiverge($empresa, $dados) && filled($empresa->certificado_path)) {
+            throw new RuntimeException('Já existe um certificado digital para o CNPJ atual. Envie o certificado do novo CNPJ no mesmo salvamento.');
+        }
+
         if (! $temArquivo && $senhaInformada === '') {
             return;
         }
@@ -145,19 +149,16 @@ class EmpresaService
         if ($temArquivo) {
             $conteudo = file_get_contents($request->file('certificado_pfx')->getRealPath());
             $cnpjInformado = array_key_exists('cnpj', $dados) ? $dados['cnpj'] : $empresa->cnpj;
-            $cnpj = preg_replace('/\D/', '', (string) $cnpjInformado) ?? '';
+            $cnpj = $this->digitosCnpj($cnpjInformado);
 
             if (strlen($cnpj) !== 14) {
                 throw new RuntimeException('Informe o CNPJ da empresa antes de enviar o certificado.');
             }
 
             $certificado = $this->validarPfx($conteudo, $senha);
+            $this->recusarCertificadoVencido($certificado);
 
-            if ($certificado->isExpired()) {
-                throw new RuntimeException('O certificado enviado está vencido desde '.$certificado->getValidTo()->format('d/m/Y').'.');
-            }
-
-            $cnpjCertificado = preg_replace('/\D/', '', (string) $certificado->getCnpj());
+            $cnpjCertificado = $this->digitosCnpj($certificado->getCnpj());
             if ($cnpjCertificado !== '' && $cnpjCertificado !== $cnpj) {
                 throw new RuntimeException('O certificado enviado pertence a outro CNPJ ('.$cnpjCertificado.').');
             }
@@ -179,7 +180,9 @@ class EmpresaService
                 throw new RuntimeException('Certificado inválido ou senha incorreta.');
             }
 
-            $this->validarPfx(file_get_contents($arquivo), $senha);
+            $this->recusarCertificadoVencido(
+                $this->validarPfx(file_get_contents($arquivo), $senha)
+            );
         }
 
         if ($senhaInformada !== '') {
@@ -201,6 +204,31 @@ class EmpresaService
                 $empresa->{'nfce_id_csc_'.$ambiente} = str_pad($id, 6, '0', STR_PAD_LEFT);
             }
         }
+    }
+
+    private function cnpjInformadoDiverge(Empresa $empresa, array $dados): bool
+    {
+        if (! array_key_exists('cnpj', $dados)) {
+            return false;
+        }
+
+        return $this->digitosCnpj($dados['cnpj']) !== $this->digitosCnpj($empresa->cnpj);
+    }
+
+    private function digitosCnpj(mixed $cnpj): string
+    {
+        return preg_replace('/\D/', '', (string) $cnpj) ?? '';
+    }
+
+    private function recusarCertificadoVencido(Certificate $certificado): void
+    {
+        if (! $certificado->isExpired()) {
+            return;
+        }
+
+        throw new RuntimeException(
+            'O certificado enviado está vencido desde '.$certificado->getValidTo()->format('d/m/Y').'.'
+        );
     }
 
     private function validarPfx(string|false $conteudo, string $senha): Certificate

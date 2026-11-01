@@ -37,11 +37,11 @@ class UsuarioController extends Controller
     {
         User::create([
             'empresa_id' => auth()->user()->empresa_id,
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'password'   => $request->password,
-            'perfil'     => $request->perfil,
-            'ativo'      => $request->boolean('ativo', true),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => $request->password,
+            'perfil' => $request->perfil,
+            'ativo' => $request->boolean('ativo', true),
         ]);
 
         return redirect()->route('usuario.index')
@@ -74,10 +74,10 @@ class UsuarioController extends Controller
         }
 
         $dados = [
-            'name'   => $request->name,
-            'email'  => $request->email,
+            'name' => $request->name,
+            'email' => $request->email,
             'perfil' => $request->perfil,
-            'ativo'  => $request->boolean('ativo', true),
+            'ativo' => $request->boolean('ativo', true),
         ];
 
         if ($request->filled('password')) {
@@ -86,8 +86,11 @@ class UsuarioController extends Controller
 
         $usuario->update($dados);
 
-        if (! $usuario->ativo || ($request->filled('password') && (int) $usuario->id !== (int) auth()->id())) {
-            DB::table('sessions')->where('user_id', $usuario->id)->delete();
+        $sessoes = DB::table('sessions')->where('user_id', $usuario->id);
+        if (! $usuario->ativo) {
+            $sessoes->delete();
+        } elseif ($request->filled('password')) {
+            $sessoes->where('id', '!=', $request->session()->getId())->delete();
         }
 
         return redirect()->route('usuario.index')

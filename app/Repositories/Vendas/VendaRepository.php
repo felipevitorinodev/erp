@@ -2,18 +2,18 @@
 
 namespace App\Repositories\Vendas;
 
-use App\Repositories\ContasReceber\ContaReceberRepository;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
-use App\Models\FormasPagamento\FormaPagamento;
-use App\Models\Nfes\Nfe;
-use App\Models\Funcionarios\Funcionario;
 use App\Models\Estoque\MovimentacaoEstoque;
+use App\Models\FormasPagamento\FormaPagamento;
+use App\Models\Funcionarios\Funcionario;
+use App\Models\Nfes\Nfe;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
+use App\Repositories\ContasReceber\ContaReceberRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -52,7 +52,7 @@ class VendaRepository
             }
         }
 
-        if (!auth()->user()->pode('vendas.ver_canceladas')) {
+        if (! auth()->user()->pode('vendas.ver_canceladas')) {
             $query->whereIn('situacao', ['confirmada', 'em_andamento']);
         }
 
@@ -91,6 +91,7 @@ class VendaRepository
 
             $venda = Venda::create($dados);
             $this->salvarItens($venda, $itens);
+
             return $venda;
         });
     }
@@ -101,8 +102,8 @@ class VendaRepository
             if (array_key_exists('forma_pagamento', $dados)) {
                 $forma = FormaPagamento::buscarPorNome($dados['forma_pagamento'], (int) $venda->empresa_id);
 
-                if (!$forma && $venda->situacao === 'confirmada' && trim((string) $dados['forma_pagamento']) !== '') {
-                    throw new \Exception('Forma de pagamento "' . $dados['forma_pagamento'] . '" não encontrada ou inativa.');
+                if (! $forma && $venda->situacao === 'confirmada' && trim((string) $dados['forma_pagamento']) !== '') {
+                    throw new \Exception('Forma de pagamento "'.$dados['forma_pagamento'].'" não encontrada ou inativa.');
                 }
 
                 $dados['forma_pagamento_id'] = $forma?->id;
@@ -221,7 +222,7 @@ class VendaRepository
 
     private function gerarComissaoDaVenda(Venda $venda): void
     {
-        if (!$venda->funcionario_id) {
+        if (! $venda->funcionario_id) {
             return;
         }
 
@@ -235,16 +236,16 @@ class VendaRepository
 
         $calculo = $funcionario ? $this->calcularComissao($venda, $funcionario) : null;
 
-        if (!$calculo) {
+        if (! $calculo) {
             return;
         }
 
         Comissao::create([
-            'empresa_id'     => $venda->empresa_id,
-            'venda_id'       => $venda->id,
+            'empresa_id' => $venda->empresa_id,
+            'venda_id' => $venda->id,
             'funcionario_id' => $funcionario->id,
             ...$calculo,
-            'situacao'       => 'pendente',
+            'situacao' => 'pendente',
         ]);
     }
 
@@ -286,9 +287,9 @@ class VendaRepository
         }
 
         return [
-            'percentual'   => $percentual,
+            'percentual' => $percentual,
             'base_calculo' => $base,
-            'valor'        => round($base * ($percentual / 100), 2),
+            'valor' => round($base * ($percentual / 100), 2),
         ];
     }
 
@@ -302,15 +303,15 @@ class VendaRepository
             ->where('situacao', 'aberta')
             ->first();
 
-        if (!$conta) {
+        if (! $conta) {
             return;
         }
 
         $conta->update([
-            'cliente_id'      => $venda->cliente_id,
-            'valor'           => $venda->total,
+            'cliente_id' => $venda->cliente_id,
+            'valor' => $venda->total,
             'forma_pagamento' => $venda->forma_pagamento,
-            'descricao'       => 'Venda #' . $venda->numero . ' — ' . ($venda->forma_pagamento ?: 'Conta a receber'),
+            'descricao' => 'Venda #'.$venda->numero.' — '.($venda->forma_pagamento ?: 'Conta a receber'),
         ]);
     }
 
@@ -326,10 +327,11 @@ class VendaRepository
             return;
         }
 
-        if (!$venda->funcionario_id) {
+        if (! $venda->funcionario_id) {
             if ($comissao && $comissao->situacao === 'pendente') {
                 $comissao->delete();
             }
+
             return;
         }
 
@@ -339,10 +341,11 @@ class VendaRepository
 
         $calculo = $funcionario ? $this->calcularComissao($venda, $funcionario) : null;
 
-        if (!$calculo) {
+        if (! $calculo) {
             if ($comissao && $comissao->situacao === 'pendente') {
                 $comissao->delete();
             }
+
             return;
         }
 
@@ -351,15 +354,16 @@ class VendaRepository
                 'funcionario_id' => $funcionario->id,
                 ...$calculo,
             ]);
+
             return;
         }
 
         Comissao::create([
-            'empresa_id'     => $venda->empresa_id,
-            'venda_id'       => $venda->id,
+            'empresa_id' => $venda->empresa_id,
+            'venda_id' => $venda->id,
             'funcionario_id' => $funcionario->id,
             ...$calculo,
-            'situacao'       => 'pendente',
+            'situacao' => 'pendente',
         ]);
     }
 
@@ -372,37 +376,74 @@ class VendaRepository
 
     private function aplicarEstoque(Venda $venda): void
     {
+        $consumos = [];
+
         foreach ($venda->itens as $item) {
-            if (!$item->produto_id) {
+            if (! $item->produto_id) {
                 continue;
             }
 
-            $produto = Produto::where('id', $item->produto_id)
-                ->where('empresa_id', $venda->empresa_id)
-                ->where('controla_estoque', true)
-                ->lockForUpdate()
-                ->first();
+            $produtoId = (int) $item->produto_id;
+            if (! isset($consumos[$produtoId])) {
+                $produto = Produto::where('id', $produtoId)
+                    ->where('empresa_id', $venda->empresa_id)
+                    ->where('controla_estoque', true)
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$produto) {
+                if (! $produto) {
+                    continue;
+                }
+
+                $consumos[$produtoId] = [
+                    'produto' => $produto,
+                    'quantidade' => 0.0,
+                ];
+            }
+
+            $consumos[$produtoId]['quantidade'] = round(
+                $consumos[$produtoId]['quantidade'] + (float) $item->quantidade,
+                3
+            );
+        }
+
+        $faltas = [];
+        foreach ($consumos as $consumo) {
+            $disponivel = round((float) $consumo['produto']->estoque_atual, 3);
+            if (round($disponivel - $consumo['quantidade'], 3) < 0) {
+                $faltas[] = '"'.$consumo['produto']->nome.'" (disponível '
+                    .number_format($disponivel, 3, ',', '.').')';
+            }
+        }
+
+        if ($faltas !== []) {
+            throw new \RuntimeException(
+                'Estoque insuficiente para '.implode(', ', $faltas).'. A venda não foi concluída.'
+            );
+        }
+
+        foreach ($venda->itens as $item) {
+            $produto = $consumos[(int) $item->produto_id]['produto'] ?? null;
+            if (! $produto) {
                 continue;
             }
 
-            $antes = (float) $produto->estoque_atual;
-            $depois = $antes - (float) $item->quantidade;
+            $antes = round((float) $produto->estoque_atual, 3);
+            $depois = round($antes - (float) $item->quantidade, 3);
 
             $produto->decrement('estoque_atual', $item->quantidade);
 
             MovimentacaoEstoque::create([
-                'empresa_id'     => $venda->empresa_id,
-                'produto_id'     => $produto->id,
-                'user_id'        => auth()->id(),
-                'tipo'           => 'saida',
-                'quantidade'     => $item->quantidade,
-                'estoque_antes'  => $antes,
+                'empresa_id' => $venda->empresa_id,
+                'produto_id' => $produto->id,
+                'user_id' => auth()->id(),
+                'tipo' => 'saida',
+                'quantidade' => $item->quantidade,
+                'estoque_antes' => $antes,
                 'estoque_depois' => $depois,
-                'motivo'         => 'Venda #' . $venda->numero,
-                'origem'         => 'venda',
-                'origem_id'      => $venda->id,
+                'motivo' => 'Venda #'.$venda->numero,
+                'origem' => 'venda',
+                'origem_id' => $venda->id,
             ]);
         }
     }
@@ -410,7 +451,7 @@ class VendaRepository
     private function estornarEstoque(Venda $venda): void
     {
         foreach ($venda->itens as $item) {
-            if (!$item->produto_id) {
+            if (! $item->produto_id) {
                 continue;
             }
 
@@ -420,7 +461,7 @@ class VendaRepository
                 ->lockForUpdate()
                 ->first();
 
-            if (!$produto) {
+            if (! $produto) {
                 continue;
             }
 
@@ -430,16 +471,16 @@ class VendaRepository
             $produto->increment('estoque_atual', $item->quantidade);
 
             MovimentacaoEstoque::create([
-                'empresa_id'     => $venda->empresa_id,
-                'produto_id'     => $produto->id,
-                'user_id'        => auth()->id(),
-                'tipo'           => 'entrada',
-                'quantidade'     => $item->quantidade,
-                'estoque_antes'  => $antes,
+                'empresa_id' => $venda->empresa_id,
+                'produto_id' => $produto->id,
+                'user_id' => auth()->id(),
+                'tipo' => 'entrada',
+                'quantidade' => $item->quantidade,
+                'estoque_antes' => $antes,
                 'estoque_depois' => $depois,
-                'motivo'         => 'Estorno venda #' . $venda->numero,
-                'origem'         => 'venda',
-                'origem_id'      => $venda->id,
+                'motivo' => 'Estorno venda #'.$venda->numero,
+                'origem' => 'venda',
+                'origem_id' => $venda->id,
             ]);
         }
     }

@@ -332,7 +332,7 @@ class OrdemServicoService
                 'quantidade' => $quantidade,
                 'preco_unitario' => $precoUnit,
                 'desconto' => $descItem,
-                'total' => max(0, round(($quantidade * $precoUnit) - $descItem, 2)),
+                'total' => $this->totalComDesconto($quantidade, $precoUnit, $descItem, $produto->nome),
             ];
         }
 

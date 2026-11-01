@@ -3,12 +3,12 @@
 namespace App\Models\Produtos;
 
 use App\Models\Empresas\Empresa;
-use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Grupos\Grupo;
+use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\UnidadesMedida\UnidadeMedida;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Produto extends Model
@@ -57,15 +57,14 @@ class Produto extends Model
     ];
 
     protected $casts = [
-        'ativo'                     => 'boolean',
-        'controla_estoque'          => 'boolean',
-        'permite_venda_sem_estoque' => 'boolean',
-        'preco_custo'               => 'decimal:2',
-        'preco_venda'               => 'decimal:2',
-        'preco_minimo'              => 'decimal:2',
-        'estoque_minimo'            => 'decimal:3',
-        'estoque_maximo'            => 'decimal:3',
-        'estoque_atual'             => 'decimal:3',
+        'ativo' => 'boolean',
+        'controla_estoque' => 'boolean',
+        'preco_custo' => 'decimal:2',
+        'preco_venda' => 'decimal:2',
+        'preco_minimo' => 'decimal:2',
+        'estoque_minimo' => 'decimal:3',
+        'estoque_maximo' => 'decimal:3',
+        'estoque_atual' => 'decimal:3',
     ];
 
     public function empresa()

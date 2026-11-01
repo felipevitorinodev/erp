@@ -7,6 +7,9 @@ use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
 use App\Support\SessaoLogin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class UsuariosSegurancaTest extends TestCase
@@ -36,6 +39,69 @@ class UsuariosSegurancaTest extends TestCase
             'perfil' => $perfil,
             'ativo' => true,
         ], $dados));
+    }
+
+    private function sessao(User $usuario, string $id): void
+    {
+        DB::table('sessions')->insert([
+            'id' => $id,
+            'user_id' => $usuario->id,
+            'payload' => 'teste',
+            'last_activity' => time(),
+        ]);
+    }
+
+    public function test_trocar_a_propria_senha_encerra_os_outros_acessos(): void
+    {
+        $this->sessao($this->admin, 'outro-dispositivo');
+
+        $this->actingAs($this->admin)->put(route('usuario.update', $this->admin), [
+            'name' => $this->admin->name,
+            'email' => $this->admin->email,
+            'password' => 'senha-nova',
+            'password_confirmation' => 'senha-nova',
+            'perfil' => 'admin',
+            'ativo' => 1,
+        ])->assertRedirect(route('usuario.index'));
+
+        $this->assertAuthenticatedAs($this->admin);
+        $this->assertDatabaseMissing('sessions', ['id' => 'outro-dispositivo']);
+        $this->assertTrue(Hash::check('senha-nova', $this->admin->fresh()->password));
+    }
+
+    public function test_alterar_nome_nao_encerra_sessao(): void
+    {
+        $this->sessao($this->admin, 'sessao-mantida');
+
+        $this->actingAs($this->admin)->put(route('usuario.update', $this->admin), [
+            'name' => 'Administrador renomeado',
+            'email' => $this->admin->email,
+            'perfil' => 'admin',
+            'ativo' => 1,
+        ])->assertRedirect(route('usuario.index'));
+
+        $this->assertDatabaseHas('sessions', ['id' => 'sessao-mantida']);
+        $this->assertTrue(Hash::check('password', $this->admin->fresh()->password));
+    }
+
+    public function test_trocar_senha_de_outro_usuario_encerra_as_sessoes_dele(): void
+    {
+        $vendedor = $this->usuario('vendedor');
+        $this->sessao($vendedor, 'sessao-vendedor');
+
+        $this->actingAs($this->admin)->put(route('usuario.update', $vendedor), [
+            'name' => $vendedor->name,
+            'email' => $vendedor->email,
+            'password' => 'senha-nova',
+            'password_confirmation' => 'senha-nova',
+            'perfil' => 'vendedor',
+            'ativo' => 1,
+        ])->assertRedirect(route('usuario.index'));
+
+        $this->assertAuthenticatedAs($this->admin);
+        $this->assertDatabaseMissing('sessions', ['id' => 'sessao-vendedor']);
+        $this->assertTrue(Hash::check('senha-nova', $vendedor->fresh()->password));
+        $this->assertFalse(Hash::check('password', $vendedor->fresh()->password));
     }
 
     public function test_login_bloqueia_apos_cinco_tentativas(): void
@@ -157,5 +223,136 @@ class UsuariosSegurancaTest extends TestCase
         $this->post(route('password.email'), ['email' => 'naoexiste@exemplo.com'])
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success');
+    }
+
+    public function test_redefinir_senha_nao_revela_se_o_email_existe(): void
+    {
+        $mensagem = 'Este token de redefinição de senha é inválido.';
+        $payload = fn (string $email) => [
+            'token' => 'token-invalido',
+            'email' => $email,
+            'password' => 'senha-nova',
+            'password_confirmation' => 'senha-nova',
+        ];
+
+        $this->post(route('password.update'), $payload('naoexiste@exemplo.com'))
+            ->assertSessionHasErrors(['email' => $mensagem]);
+
+        $this->post(route('password.update'), $payload($this->admin->email))
+            ->assertSessionHasErrors(['email' => $mensagem]);
+
+        $inativo = $this->usuario('vendedor', ['ativo' => false]);
+
+        $this->post(route('password.update'), $payload($inativo->email))
+            ->assertSessionHasErrors(['email' => $mensagem]);
+
+        $this->assertTrue(Hash::check('password', $this->admin->fresh()->password));
+        $this->assertTrue(Hash::check('password', $inativo->fresh()->password));
+    }
+
+    public function test_redefinir_senha_de_usuario_inativo_com_token_valido_nao_grava(): void
+    {
+        $inativo = $this->usuario('vendedor', ['ativo' => false]);
+        $token = Password::broker()->createToken($inativo);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $inativo->email,
+            'password' => 'senha-nova',
+            'password_confirmation' => 'senha-nova',
+        ])->assertSessionHasErrors([
+            'email' => 'Usuário inativo. Entre em contato com o administrador.',
+        ]);
+
+        $this->assertTrue(Hash::check('password', $inativo->fresh()->password));
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => $inativo->email]);
+    }
+
+    public function test_redefinir_senha_encerra_sessoes_anteriores(): void
+    {
+        DB::table('sessions')->insert([
+            'id' => 'sessao-anterior',
+            'user_id' => $this->admin->id,
+            'payload' => 'teste',
+            'last_activity' => time(),
+        ]);
+
+        $token = Password::broker()->createToken($this->admin);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $this->admin->email,
+            'password' => 'senha-nova',
+            'password_confirmation' => 'senha-nova',
+        ])->assertRedirect(route('login'))
+            ->assertSessionHas('success', 'Senha redefinida com sucesso. Faça login.');
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'sessao-anterior']);
+        $this->assertTrue(Hash::check('senha-nova', $this->admin->fresh()->password));
+        $this->assertGuest();
+    }
+
+    public function test_redefinir_senha_desconecta_quem_ja_estava_logado(): void
+    {
+        $token = Password::broker()->createToken($this->admin);
+
+        $this->actingAs($this->admin)
+            ->post(route('password.update'), [
+                'token' => $token,
+                'email' => $this->admin->email,
+                'password' => 'senha-nova',
+                'password_confirmation' => 'senha-nova',
+            ])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('success', 'Senha redefinida com sucesso. Faça login.');
+
+        $this->assertGuest();
+        $this->get(route('login'))->assertOk()->assertSee('Senha redefinida com sucesso. Faça login.');
+    }
+
+    public function test_usuario_inativo_em_pedido_json_recebe_401(): void
+    {
+        $inativo = $this->usuario('vendedor', ['ativo' => false]);
+
+        $this->actingAs($inativo)
+            ->getJson('/')
+            ->assertUnauthorized()
+            ->assertJson([
+                'message' => 'Usuário inativo. Entre em contato com o administrador.',
+            ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_usuario_inativo_em_pagina_continua_indo_para_o_login(): void
+    {
+        $inativo = $this->usuario('vendedor', ['ativo' => false]);
+
+        $this->actingAs($inativo)
+            ->get('/')
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors([
+                'login' => 'Usuário inativo. Entre em contato com o administrador.',
+            ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_telas_de_senha_repetem_o_retorno_do_login(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('data-ver-senha="password"', false)
+            ->assertSee('data-espera="Entrando..."', false);
+
+        $this->get(route('password.request'))
+            ->assertOk()
+            ->assertSee('data-espera="Enviando..."', false);
+
+        $this->get(route('password.reset', ['token' => 'token-teste']))
+            ->assertOk()
+            ->assertSee('data-ver-senha="password"', false)
+            ->assertSee('data-ver-senha="password_confirmation"', false)
+            ->assertSee('data-espera="Salvando..."', false);
     }
 }

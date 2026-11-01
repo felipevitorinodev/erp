@@ -20,7 +20,10 @@
             @enderror
         </div>
         <div class="form-group">
-            <label class="form-label" for="password">Nova senha</label>
+            <div class="auth-campo__topo">
+                <label class="form-label" for="password">Nova senha</label>
+                <button type="button" class="auth-ver-senha" data-ver-senha="password" aria-pressed="false">Mostrar</button>
+            </div>
             <input id="password" type="password" name="password"
                 class="form-control @error('password') is-invalid @enderror" autocomplete="new-password" required
                 @error('password') aria-invalid="true" aria-describedby="erro-password" @enderror>
@@ -29,7 +32,10 @@
             @enderror
         </div>
         <div class="form-group">
-            <label class="form-label" for="password_confirmation">Confirmar senha</label>
+            <div class="auth-campo__topo">
+                <label class="form-label" for="password_confirmation">Confirmar senha</label>
+                <button type="button" class="auth-ver-senha" data-ver-senha="password_confirmation" aria-pressed="false">Mostrar</button>
+            </div>
             <input id="password_confirmation" type="password" name="password_confirmation"
                 class="form-control @error('password_confirmation') is-invalid @enderror"
                 autocomplete="new-password" required
@@ -40,7 +46,7 @@
         </div>
         <div class="auth-actions">
             <a href="{{ route('login') }}" class="btn btn--ghost">Voltar</a>
-            <button type="submit" class="btn btn--primary">Salvar senha</button>
+            <button type="submit" class="btn btn--primary" data-espera="Salvando...">Salvar senha</button>
         </div>
     </form>
 @endsection

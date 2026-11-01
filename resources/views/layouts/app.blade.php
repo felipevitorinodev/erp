@@ -254,7 +254,7 @@
                 @endif
 
                 {{-- Financeiro --}}
-                @if ($podeFinanceiro)
+                @if ($podeFinanceiro || $podeFormas)
                     <div class="sidebar__group" data-group>
                         <div class="sidebar__group-toggle" data-toggle>
                             <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -266,6 +266,7 @@
                             <span class="sidebar__group-arrow">›</span>
                         </div>
                         <div class="sidebar__group-links" data-links>
+                            @if ($podeFinanceiro)
                             <a href="{{ route('conta-receber.index') }}"
                                 class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
                                 A Receber
@@ -282,6 +283,7 @@
                                 class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
                                 Categorias
                             </a>
+                            @endif
                             @if ($podeFormas)
                                 <a href="{{ route('formaPagamento.index') }}"
                                     class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
@@ -351,6 +353,10 @@
                         <a href="{{ route('relatorio.produtos-mais-vendidos') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.produtos-mais-vendidos*') ? 'sidebar__link--active' : '' }}">
                             Produtos Mais Vendidos
+                        </a>
+                        <a href="{{ route('relatorio.estoque') }}"
+                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
+                            Posição de estoque
                         </a>
                         @if ($podeFinanceiro)
                             <a href="{{ route('relatorio.contas-receber') }}"

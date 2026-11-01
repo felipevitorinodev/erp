@@ -66,7 +66,7 @@ class PerfilService
             return back()->withErrors(['nome' => 'Informe um nome válido.'])->withInput();
         }
 
-        if ($slug === 'operador' || Perfil::where('empresa_id', $empresaId)->where('slug', $slug)->exists()) {
+        if ($slug === 'operador' || Perfil::where('empresa_id', $empresaId)->where('slug', $slug)->exists() || $this->nomeEmUso($empresaId, $nome)) {
             return back()->withErrors(['nome' => 'Já existe um perfil com este nome.'])->withInput();
         }
 
@@ -95,8 +95,13 @@ class PerfilService
             return back()->withErrors(['nome' => 'Informe um nome válido.'])->withInput();
         }
 
+        $nome = $perfil->slug === 'admin' ? 'Administrador' : $nome;
+        if ($this->nomeEmUso((int) $perfil->empresa_id, $nome, (int) $perfil->id)) {
+            return back()->withErrors(['nome' => 'Já existe um perfil com este nome.'])->withInput();
+        }
+
         $dados = [
-            'nome' => $perfil->slug === 'admin' ? 'Administrador' : $nome,
+            'nome' => $nome,
             'ativo' => $perfil->slug === 'admin' ? true : $request->boolean('ativo', true),
             'permissoes' => $perfil->slug === 'admin'
                 ? CatalogoPermissoes::chaves()
@@ -145,13 +150,24 @@ class PerfilService
         }
     }
 
+    private function nomeEmUso(int $empresaId, string $nome, ?int $ignorarId = null): bool
+    {
+        $alvo = mb_strtolower($nome);
+
+        return Perfil::query()
+            ->where('empresa_id', $empresaId)
+            ->when($ignorarId, fn ($query) => $query->whereKeyNot($ignorarId))
+            ->pluck('nome')
+            ->contains(fn (string $existente) => mb_strtolower($existente) === $alvo);
+    }
+
     /**
      * @return list<string>
      */
     private function permissoesValidas(Request $request): array
     {
         $informadas = $request->input('permissoes', []);
-        if (!is_array($informadas)) {
+        if (! is_array($informadas)) {
             return [];
         }
 

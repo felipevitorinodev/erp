@@ -110,6 +110,36 @@ class OrdemServicoTest extends TestCase
         $this->assertEquals(350.0, (float) $os->total);
     }
 
+    public function test_faturar_a_vista_recusa_peca_sem_estoque(): void
+    {
+        $this->peca->update(['estoque_atual' => 0]);
+        $os = $this->osComItens('Dinheiro');
+
+        $resposta = app(OrdemServicoService::class)->faturar($os);
+
+        $this->assertSame(0, Venda::count());
+        $this->assertSame('em_execucao', $os->fresh()->situacao);
+        $this->assertNull($os->fresh()->venda_id);
+        $this->assertEquals(0.0, (float) $this->peca->fresh()->estoque_atual);
+        $this->assertStringContainsString('não foi concluída', (string) session('error'));
+        $this->assertSame(route('ordem-servico.show', $os), $resposta->getTargetUrl());
+    }
+
+    public function test_desconto_do_item_da_os_maior_que_o_valor_e_recusado(): void
+    {
+        $this->post(route('ordem-servico.store'), [
+            'data_abertura' => now()->toDateString(),
+            'equipamento' => 'Celular',
+            'desconto' => '0',
+            'acrescimo' => '0',
+            'itens' => [
+                ['produto_id' => $this->peca->id, 'quantidade' => '1', 'preco_unitario' => '10,00', 'desconto' => '10,01'],
+            ],
+        ])->assertSessionHasErrors('itens');
+
+        $this->assertSame(0, OrdemServico::count());
+    }
+
     public function test_faturar_a_vista_gera_venda_confirmada_e_baixa_so_a_peca(): void
     {
         $os = $this->osComItens('Dinheiro');
@@ -122,7 +152,7 @@ class OrdemServicoTest extends TestCase
         $venda = Venda::firstOrFail();
         $this->assertSame('confirmada', $venda->situacao);
         $this->assertEquals(400.0, (float) $venda->total);
-        $this->assertStringContainsString('OS #' . $os->numero, (string) $venda->observacoes);
+        $this->assertStringContainsString('OS #'.$os->numero, (string) $venda->observacoes);
         $this->assertSame(route('venda.show', $venda), $resposta->getTargetUrl());
 
         $os->refresh();
@@ -260,7 +290,7 @@ class OrdemServicoTest extends TestCase
     {
         $os = $this->osComItens('Dinheiro');
 
-        $this->get(route('ordem-servico.index'))->assertOk()->assertSee('#' . $os->numero);
+        $this->get(route('ordem-servico.index'))->assertOk()->assertSee('#'.$os->numero);
         $this->get(route('ordem-servico.create'))->assertOk();
         $this->get(route('ordem-servico.show', $os))->assertOk()->assertSee('Celular');
         $this->get(route('ordem-servico.edit', $os))->assertOk()->assertSee('Tela 6.1');

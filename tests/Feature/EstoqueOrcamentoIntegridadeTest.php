@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
 use App\Models\Estoque\EntradaEstoqueItem;
+use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Grupos\Grupo;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Produtos\Produto;
@@ -59,6 +60,56 @@ class EstoqueOrcamentoIntegridadeTest extends TestCase
         $this->assertEquals(25.0, (float) $orcamento->subtotal);
         $this->assertEquals(20.0, (float) $orcamento->total);
         $this->assertEquals(2.5, (float) $orcamento->itens->first()->quantidade);
+    }
+
+    public function test_aprovar_orcamento_a_vista_recusa_produto_sem_estoque(): void
+    {
+        FormaPagamento::create([
+            'empresa_id' => $this->empresa->id,
+            'nome' => 'Dinheiro',
+            'tipo' => 'avista',
+            'gera_conta_receber' => false,
+            'ativo' => true,
+        ]);
+        $orcamento = Orcamento::create([
+            'empresa_id' => $this->empresa->id,
+            'numero' => '000001',
+            'data_orcamento' => now()->toDateString(),
+            'subtotal' => 10,
+            'total' => 10,
+            'forma_pagamento' => 'Dinheiro',
+            'situacao' => 'pendente',
+        ]);
+        $orcamento->itens()->create([
+            'produto_id' => $this->produto->id,
+            'produto_nome' => 'Produto',
+            'quantidade' => 1,
+            'preco_unitario' => 10,
+            'total' => 10,
+        ]);
+
+        $resposta = app(OrcamentoService::class)->aprovar($orcamento);
+
+        $this->assertSame(0, Venda::count());
+        $this->assertSame('pendente', $orcamento->fresh()->situacao);
+        $this->assertNull($orcamento->fresh()->venda_id);
+        $this->assertEquals(0.0, (float) $this->produto->fresh()->estoque_atual);
+        $this->assertStringContainsString('não foi concluída', (string) session('error'));
+        $this->assertSame(route('orcamento.show', $orcamento), $resposta->getTargetUrl());
+    }
+
+    public function test_desconto_do_item_do_orcamento_maior_que_o_valor_e_recusado(): void
+    {
+        $this->post(route('orcamento.store'), [
+            'data_orcamento' => now()->toDateString(),
+            'desconto' => '0',
+            'acrescimo' => '0',
+            'itens' => [
+                ['produto_id' => $this->produto->id, 'quantidade' => '1', 'preco_unitario' => '10,00', 'desconto' => '10,01'],
+            ],
+        ])->assertSessionHasErrors('itens');
+
+        $this->assertSame(0, Orcamento::count());
     }
 
     public function test_orcamento_aprovado_duas_vezes_gera_uma_venda(): void
@@ -118,6 +169,15 @@ class EstoqueOrcamentoIntegridadeTest extends TestCase
         }
 
         $this->assertEquals(14.875, (float) $this->produto->fresh()->estoque_atual);
+    }
+
+    public function test_edicao_do_produto_mostra_o_saldo_sem_permite_alterar(): void
+    {
+        $resposta = $this->get(route('produto.edit', $this->produto));
+
+        $resposta->assertOk();
+        $resposta->assertDontSee('name="estoque_atual"', false);
+        $resposta->assertSee('O saldo muda pela entrada ou pelo ajuste de estoque.', false);
     }
 
     public function test_subgrupo_pode_ser_cadastrado(): void

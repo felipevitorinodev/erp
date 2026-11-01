@@ -93,10 +93,6 @@
                 <label>Data</label>
                 <input type="date" name="data_orcamento" class="form-control" value="{{ date('Y-m-d') }}">
             </div>
-            <div class="venda-resumo__field">
-                <label>Validade (dias)</label>
-                <input type="number" name="validade_dias" class="form-control" value="30" min="1" max="365">
-            </div>
         </div>
 
         <div class="venda-resumo__section venda-resumo__section--totais">

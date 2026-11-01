@@ -111,7 +111,8 @@
                 botao.dataset.enviando = '1';
                 botao.setAttribute('aria-busy', 'true');
                 botao.classList.add('is-loading');
-                if (botao.textContent.trim() === 'Entrar') botao.textContent = 'Entrando...';
+                var espera = botao.getAttribute('data-espera');
+                if (espera) botao.textContent = espera;
                 window.setTimeout(function () {
                     botao.disabled = true;
                 }, 0);

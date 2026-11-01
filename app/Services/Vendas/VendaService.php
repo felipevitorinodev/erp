@@ -405,15 +405,19 @@ class VendaService
             'situacao' => $jaConfirmada ? 'confirmada' : ($deveConfirmar ? $venda->situacao : $situacao),
         ];
 
-        $this->repository->update($venda, $dados, $itens);
+        try {
+            DB::transaction(function () use ($venda, $dados, $itens, $deveConfirmar) {
+                $this->repository->update($venda, $dados, $itens);
 
-        if ($deveConfirmar) {
-            try {
-                $this->repository->confirmar($venda->fresh('itens'));
-            } catch (\Exception $ex) {
-                return redirect()->route('venda.show', $venda)
-                    ->with('error', MensagemPublica::de($ex));
-            }
+                if ($deveConfirmar) {
+                    $this->repository->confirmar($venda->fresh('itens'));
+                }
+            });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $ex) {
+            return redirect()->route('venda.show', $venda)
+                ->with('error', MensagemPublica::de($ex));
         }
 
         $mensagem = 'Venda #'.$venda->numero.' atualizada com sucesso.';
@@ -505,11 +509,11 @@ class VendaService
     }
 
     /**
-     * Avisa quando a venda deixaria o estoque negativo (não bloqueia).
+     * Avisa, no rascunho, que a confirmação será recusada. Quem efetiva a baixa é o repositório.
      */
     protected function montarAvisoEstoque(array $itens): ?string
     {
-        $avisos = [];
+        $consumos = [];
         foreach ($itens as $item) {
             if (empty($item['produto_id'])) {
                 continue;
@@ -519,19 +523,28 @@ class VendaService
                 continue;
             }
 
-            $disponivel = (float) $produto->estoque_atual;
-            $quantidade = (float) $item['quantidade'];
+            $consumos[$produto->id]['produto'] = $produto;
+            $consumos[$produto->id]['quantidade'] = round(
+                ($consumos[$produto->id]['quantidade'] ?? 0) + (float) $item['quantidade'],
+                3
+            );
+        }
 
-            if ($quantidade > $disponivel) {
-                $avisos[] = "\"{$produto->nome}\" (disp. {$disponivel})";
+        $avisos = [];
+        foreach ($consumos as $consumo) {
+            $disponivel = round((float) $consumo['produto']->estoque_atual, 3);
+            if (round($disponivel - $consumo['quantidade'], 3) < 0) {
+                $avisos[] = '"'.$consumo['produto']->nome.'" (disponível '
+                    .number_format($disponivel, 3, ',', '.').')';
             }
         }
 
-        if (empty($avisos)) {
+        if ($avisos === []) {
             return null;
         }
 
-        return 'Atenção: estoque insuficiente para '.implode(', ', $avisos).'. A venda será permitida e o estoque poderá ficar negativo.';
+        return 'Estoque insuficiente para '.implode(', ', $avisos)
+            .'. A confirmação da venda será recusada enquanto o saldo não cobrir a quantidade.';
     }
 
     protected function processarItens(array $itens): array
@@ -560,7 +573,7 @@ class VendaService
             }
             $precoUnit = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
-            $total = max(0, round(($quantidade * $precoUnit) - $descItem, 2));
+            $total = $this->totalComDesconto($quantidade, $precoUnit, $descItem, $produto->nome);
 
             $somenteDigitos = static fn ($v) => preg_replace('/\D/', '', (string) $v) ?? '';
             $ncmDigitos = $somenteDigitos($item['ncm'] ?? $produto->ncm);

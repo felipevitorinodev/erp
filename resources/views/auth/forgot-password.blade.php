@@ -20,7 +20,7 @@
         </div>
         <div class="auth-actions">
             <a href="{{ route('login') }}" class="btn btn--ghost">Voltar</a>
-            <button type="submit" class="btn btn--primary">Enviar link</button>
+            <button type="submit" class="btn btn--primary" data-espera="Enviando...">Enviar link</button>
         </div>
     </form>
 @endsection

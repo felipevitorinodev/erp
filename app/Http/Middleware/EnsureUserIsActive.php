@@ -20,8 +20,14 @@ class EnsureUserIsActive
             $request->session()->regenerateToken();
             SessaoLogin::esquecer();
 
+            $mensagem = 'Usuário inativo. Entre em contato com o administrador.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $mensagem], 401);
+            }
+
             return redirect()->route('login')->withErrors([
-                'login' => 'Usuário inativo. Entre em contato com o administrador.',
+                'login' => $mensagem,
             ]);
         }
 

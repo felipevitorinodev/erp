@@ -2,6 +2,8 @@
 
 namespace App\Traits;
 
+use Illuminate\Validation\ValidationException;
+
 trait ConversorMoeda
 {
     protected function parseMoeda(mixed $valor): float
@@ -30,5 +32,18 @@ trait ConversorMoeda
         }
 
         return round((float) $str, $casas);
+    }
+
+    protected function totalComDesconto(float $quantidade, float $preco, float $desconto, string $nome): float
+    {
+        $bruto = round($quantidade * $preco, 2);
+
+        if (round($desconto, 2) > $bruto) {
+            throw ValidationException::withMessages([
+                'itens' => 'O desconto do item "'.$nome.'" não pode ser maior que o valor do item.',
+            ]);
+        }
+
+        return round($bruto - $desconto, 2);
     }
 }

@@ -257,17 +257,21 @@
 
         <div class="form-group">
             <label class="form-label">Estoque Atual</label>
-            @include('components.input-quantity', [
-                'name' => 'estoque_atual',
-                'value' => old(
-                    'estoque_atual',
-                    isset($produto) ? number_format($produto->estoque_atual ?? 0, 2, ',', '.') : '0,00'),
-                'class' => ($errors->has('estoque_atual') ? 'is-invalid' : '') . ' text-right input-qtd',
-                'decimals' => 2,
-            ])
-            @error('estoque_atual')
-                <span class="form-error">{{ $message }}</span>
-            @enderror
+            @if (isset($produto))
+                <input type="text" class="form-control text-right" readonly tabindex="-1"
+                    value="{{ number_format($produto->estoque_atual ?? 0, 2, ',', '.') }}">
+                <small class="text-muted">O saldo muda pela entrada ou pelo ajuste de estoque.</small>
+            @else
+                @include('components.input-quantity', [
+                    'name' => 'estoque_atual',
+                    'value' => old('estoque_atual', '0,00'),
+                    'class' => ($errors->has('estoque_atual') ? 'is-invalid' : '') . ' text-right input-qtd',
+                    'decimals' => 2,
+                ])
+                @error('estoque_atual')
+                    <span class="form-error">{{ $message }}</span>
+                @enderror
+            @endif
         </div>
     </div>
 </div>

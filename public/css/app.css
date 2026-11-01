@@ -4323,7 +4323,7 @@ body.auth-body {
     color: var(--color-text-muted);
 }
 
-.auth-submit.is-loading::before {
+.auth-card .btn.is-loading::before {
     content: '';
     width: 14px;
     height: 14px;
@@ -4338,7 +4338,7 @@ body.auth-body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .auth-submit.is-loading::before {
+    .auth-card .btn.is-loading::before {
         animation-duration: 1.6s;
     }
 }

@@ -7,6 +7,7 @@ use App\Support\SessaoLogin;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
@@ -31,17 +32,17 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
         $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
-        $chaveLimite = 'login|' . Str::lower((string) $request->email) . '|' . $request->ip();
+        $remember = $request->boolean('remember');
+        $chaveLimite = 'login|'.Str::lower((string) $request->email).'|'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($chaveLimite, 5)) {
             return back()->withErrors([
-                'login' => 'Muitas tentativas. Aguarde ' . RateLimiter::availableIn($chaveLimite) . ' segundos e tente novamente.',
+                'login' => 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($chaveLimite).' segundos e tente novamente.',
             ])->withInput($request->only('email'));
         }
 
@@ -110,35 +111,55 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token'    => 'required',
-            'email'    => 'required|email',
+            'token' => 'required|string',
+            'email' => 'required|email',
             'password' => 'required|min:6|confirmed',
         ], [], [
-            'email'    => 'e-mail',
+            'email' => 'e-mail',
             'password' => 'senha',
         ]);
 
         $user = User::where('email', $request->email)->first();
-        if ($user && ! $user->ativo) {
+        $token = (string) $request->token;
+
+        if ($user && ! $user->ativo && Password::broker()->tokenExists($user, $token)) {
             return back()->withErrors([
                 'email' => 'Usuário inativo. Entre em contato com o administrador.',
             ])->withInput($request->only('email'));
         }
 
+        $sessaoAtual = $request->session()->getId();
+
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
+            function (User $user, string $password) use ($sessaoAtual) {
                 $user->forceFill([
                     'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                DB::table('sessions')
+                    ->where('user_id', $user->id)
+                    ->where('id', '!=', $sessaoAtual)
+                    ->delete();
+
                 event(new PasswordReset($user));
             }
         );
 
-        return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', 'Senha redefinida com sucesso. Faça login.')
-            : back()->withErrors(['email' => [__($status)]])->withInput($request->only('email'));
+        if ($status !== Password::PASSWORD_RESET) {
+            return back()->withErrors([
+                'email' => 'Este token de redefinição de senha é inválido.',
+            ])->withInput($request->only('email'));
+        }
+
+        if ($user && (int) Auth::id() === (int) $user->id) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            SessaoLogin::esquecer();
+        }
+
+        return redirect()->route('login')->with('success', 'Senha redefinida com sucesso. Faça login.');
     }
 }

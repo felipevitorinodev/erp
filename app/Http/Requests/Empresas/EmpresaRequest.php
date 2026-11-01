@@ -67,23 +67,24 @@ class EmpresaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'razao_social' => 'required|string|max:255',
-            'nome_fantasia' => 'nullable|string|max:255',
+            'razao_social' => 'required|string|max:150',
+            'nome_fantasia' => 'nullable|string|max:150',
             'sem_cnpj' => ['sometimes', 'boolean'],
             'cnpj' => $this->boolean('sem_cnpj')
                 ? ['nullable', 'string', 'max:18']
                 : ['required', 'string', 'max:18', 'cnpj'],
             'telefone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
+            'celular' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:100',
             'cep' => 'nullable|string|max:9',
             'cidade' => 'nullable|string|max:100',
-            'logradouro' => 'nullable|string|max:255',
+            'logradouro' => 'nullable|string|max:150',
             'numero' => 'nullable|string|max:20',
             'bairro' => 'nullable|string|max:100',
             'uf' => 'nullable|string|max:2',
             'ie' => 'nullable|string|max:20',
             'im' => 'nullable|string|max:20',
-            'complemento' => 'nullable|string|max:255',
+            'complemento' => 'nullable|string|max:100',
             'certificado_pfx' => 'nullable|file|extensions:pfx,p12|max:5120',
             'certificado_senha' => 'nullable|string|max:255',
             'nfe_ambiente' => 'sometimes|required|integer|in:1,2',
