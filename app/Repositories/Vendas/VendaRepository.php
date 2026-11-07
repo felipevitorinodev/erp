@@ -130,9 +130,9 @@ class VendaRepository
         });
     }
 
-    public function confirmar(Venda $venda): Venda
+    public function confirmar(Venda $venda, ?array $parcelas = null): Venda
     {
-        return DB::transaction(function () use ($venda) {
+        return DB::transaction(function () use ($venda, $parcelas) {
             $venda = Venda::where('id', $venda->id)->lockForUpdate()->firstOrFail();
 
             if ($venda->situacao !== 'em_andamento') {
@@ -141,7 +141,7 @@ class VendaRepository
 
             $venda->update(['situacao' => 'confirmada']);
             $this->aplicarEstoque($venda->load('itens'));
-            $this->contaReceberRepository->gerarDaVendaConfirmada($venda);
+            $this->contaReceberRepository->gerarDaVendaConfirmada($venda, $parcelas);
             $this->gerarComissaoDaVenda($venda);
 
             return $venda;

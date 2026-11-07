@@ -143,7 +143,7 @@ class ContaReceberRepository
      * Retorna null se a forma for à vista ou se a venda não tiver forma informada.
      * Forma informada mas desconhecida impede a confirmação: sem isso a venda a prazo ficaria sem conta a receber.
      */
-    public function gerarDaVendaConfirmada(Venda $venda): ?ContaReceber
+    public function gerarDaVendaConfirmada(Venda $venda, ?array $parcelas = null): ?ContaReceber
     {
         if ($this->existePorVenda($venda->id)) {
             return ContaReceber::where('venda_id', $venda->id)->first();
@@ -157,6 +157,32 @@ class ContaReceberRepository
             throw new \RuntimeException(
                 'Forma de pagamento "' . $venda->forma_pagamento . '" não encontrada ou inativa. Ajuste a forma de pagamento antes de confirmar.'
             );
+        }
+
+        $categoriaId = app(CategoriaPadraoService::class)->idReceitaVendas((int) $venda->empresa_id);
+
+        if (is_array($parcelas) && $parcelas !== [] && $forma && $forma->permiteParcelar()) {
+            $primeira = null;
+            $total = count($parcelas);
+            foreach (array_values($parcelas) as $indice => $parcela) {
+                $documento = trim((string) ($parcela['documento'] ?? ''));
+                $conta = ContaReceber::create([
+                    'empresa_id'      => $venda->empresa_id,
+                    'cliente_id'      => $venda->cliente_id,
+                    'venda_id'        => $venda->id,
+                    'descricao'       => 'Venda #' . $venda->numero . ' — ' . $forma->nome . ($total > 1 ? ' (' . ($indice + 1) . '/' . $total . ')' : ''),
+                    'valor'           => $parcela['valor'],
+                    'valor_pago'      => 0,
+                    'data_vencimento' => $parcela['vencimento'],
+                    'forma_pagamento' => $forma->nome,
+                    'categoria_id'    => $categoriaId,
+                    'situacao'        => 'aberta',
+                    'observacoes'     => 'Gerada automaticamente na confirmação da venda.' . ($documento !== '' ? ' Documento ' . $documento . '.' : ''),
+                ]);
+                $primeira ??= $conta;
+            }
+
+            return $primeira;
         }
 
         if (!$forma || !$forma->isPrazo()) {
@@ -176,7 +202,7 @@ class ContaReceberRepository
             'valor_pago'      => 0,
             'data_vencimento' => $vencimento->format('Y-m-d'),
             'forma_pagamento' => $forma->nome,
-            'categoria_id'    => app(CategoriaPadraoService::class)->idReceitaVendas((int) $venda->empresa_id),
+            'categoria_id'    => $categoriaId,
             'situacao'        => 'aberta',
             'observacoes'     => 'Gerada automaticamente na confirmação da venda.',
         ]);

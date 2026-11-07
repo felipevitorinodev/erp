@@ -3,6 +3,8 @@
 namespace App\Services\Vendas;
 
 use App\Http\Requests\Vendas\VendaRequest;
+use App\Impressao\CupomDocumento;
+use App\Impressao\CupomPdf;
 use App\Models\Clientes\Cliente;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
@@ -41,7 +43,9 @@ class VendaService
 
     public function create()
     {
-        return view('venda.create');
+        return view('venda.create', [
+            'formasPagamento' => $this->formasAtivas(),
+        ]);
     }
 
     public function store(VendaRequest $request)
@@ -201,7 +205,9 @@ class VendaService
         $situacao = $situacaoDesejada;
         $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
 
-        if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId)) {
+        $parcelas = $this->parcelasInformadas($request, (float) $totais['total'], $empresaId);
+
+        if (FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId) || $parcelas) {
             $situacao = 'confirmada';
         }
 
@@ -242,7 +248,7 @@ class VendaService
 
         if ($situacao === 'confirmada') {
             try {
-                $this->repository->confirmar($venda->load('itens'));
+                $this->repository->confirmar($venda->load('itens'), $parcelas);
             } catch (\Exception $ex) {
                 throw ValidationException::withMessages([
                     'itens' => MensagemPublica::de($ex),
@@ -331,6 +337,15 @@ class VendaService
         return $pdf->stream('venda_'.$venda->numero.'.pdf');
     }
 
+    public function recibo(Venda $venda)
+    {
+        $this->autorizarVenda($venda);
+        $this->ocultarCanceladaDoVendedor($venda);
+        $venda->load(['cliente', 'itens', 'formaPagamento']);
+
+        return CupomPdf::stream(CupomDocumento::venda($venda), 'venda_80mm_'.$venda->numero.'.pdf');
+    }
+
     public function edit(Venda $venda)
     {
         $this->autorizarVenda($venda);
@@ -347,7 +362,10 @@ class VendaService
 
         $venda->load(['itens.produto', 'cliente', 'funcionario']);
 
-        return view('venda.edit', ['venda' => $venda]);
+        return view('venda.edit', [
+            'venda' => $venda,
+            'formasPagamento' => $this->formasAtivas(),
+        ]);
     }
 
     public function update(VendaRequest $request, Venda $venda)
@@ -376,6 +394,7 @@ class VendaService
         $situacao = $request->situacao ?? $venda->situacao;
         $pagamentoIntegral = FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId);
         $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
+        $parcelas = $this->parcelasInformadas($request, (float) $totais['total'], $empresaId);
 
         // Venda já confirmada: não permite rebaixar situação pelo formulário
         if ($venda->situacao === 'confirmada') {
@@ -383,7 +402,7 @@ class VendaService
         }
 
         // Forma à vista = pagamento do valor completo → confirma automaticamente
-        if ($pagamentoIntegral && $venda->situacao !== 'confirmada') {
+        if (($pagamentoIntegral || $parcelas) && $venda->situacao !== 'confirmada') {
             $situacao = 'confirmada';
         }
 
@@ -406,11 +425,11 @@ class VendaService
         ];
 
         try {
-            DB::transaction(function () use ($venda, $dados, $itens, $deveConfirmar) {
+            DB::transaction(function () use ($venda, $dados, $itens, $deveConfirmar, $parcelas) {
                 $this->repository->update($venda, $dados, $itens);
 
                 if ($deveConfirmar) {
-                    $this->repository->confirmar($venda->fresh('itens'));
+                    $this->repository->confirmar($venda->fresh('itens'), $parcelas);
                 }
             });
         } catch (ValidationException $e) {
@@ -661,5 +680,60 @@ class VendaService
             ->first();
 
         return $funcionario?->id;
+    }
+
+    private function formasAtivas()
+    {
+        return FormaPagamento::query()
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->where('ativo', true)
+            ->orderBy('tipo')
+            ->orderBy('nome')
+            ->get();
+    }
+
+    /**
+     * @return list<array{vencimento: string, valor: float, documento: string}>|null
+     */
+    private function parcelasInformadas(VendaRequest $request, float $total, int $empresaId): ?array
+    {
+        $brutas = $request->input('parcelas');
+        if (! is_array($brutas) || $brutas === []) {
+            return null;
+        }
+
+        $lista = [];
+        $soma = 0.0;
+        foreach (array_values($brutas) as $parcela) {
+            if (! is_array($parcela)) {
+                continue;
+            }
+            $valor = round((float) ($parcela['valor'] ?? 0), 2);
+            $soma += $valor;
+            $lista[] = [
+                'vencimento' => (string) ($parcela['vencimento'] ?? ''),
+                'valor' => $valor,
+                'documento' => mb_substr(trim((string) ($parcela['documento'] ?? '')), 0, 40),
+            ];
+        }
+
+        if ($lista === []) {
+            return null;
+        }
+
+        $forma = FormaPagamento::buscarPorNome($request->forma_pagamento, $empresaId);
+        if (! $forma || ! $forma->permiteParcelar()) {
+            throw ValidationException::withMessages([
+                'parcelas' => 'Forma à vista não recebe parcelamento.',
+            ]);
+        }
+
+        if (abs($soma - round($total, 2)) > 0.05) {
+            throw ValidationException::withMessages([
+                'parcelas' => 'A soma das parcelas precisa fechar o total da venda.',
+            ]);
+        }
+
+        return $lista;
     }
 }

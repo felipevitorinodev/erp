@@ -26,6 +26,10 @@ class VendaRequest extends FormRequest
             'data_venda'      => 'required|date',
             'data_entrega'    => 'nullable|date',
             'forma_pagamento' => 'nullable|string|max:100',
+            'parcelas' => 'nullable|array|max:48',
+            'parcelas.*.vencimento' => 'required|date',
+            'parcelas.*.valor' => 'required|numeric|min:0.01',
+            'parcelas.*.documento' => 'nullable|string|max:40',
             'situacao'        => 'nullable|in:em_andamento,confirmada',
             'desconto'        => 'nullable|numeric|min:0',
             'acrescimo'       => 'nullable|numeric|min:0',
@@ -121,6 +125,15 @@ class VendaRequest extends FormRequest
         }
 
         $merge = ['itens' => $items];
+        $parcelas = $this->input('parcelas');
+        if (is_array($parcelas)) {
+            foreach ($parcelas as $k => $parcela) {
+                if (is_array($parcela) && isset($parcela['valor'])) {
+                    $parcelas[$k]['valor'] = $this->normalizarNumero((string) $parcela['valor']);
+                }
+            }
+            $merge['parcelas'] = $parcelas;
+        }
         foreach (['desconto', 'acrescimo', 'subtotal', 'total', 'valor_recebido'] as $field) {
             if ($this->filled($field)) {
                 $merge[$field] = $this->normalizarNumero((string) $this->input($field));

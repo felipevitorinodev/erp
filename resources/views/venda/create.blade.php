@@ -7,6 +7,10 @@
     <a href="{{ route('venda.index') }}">Vendas</a> / Nova Venda
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/pagamento-modal.css') }}?v={{ filemtime(public_path('css/pagamento-modal.css')) }}">
+@endpush
+
 @section('content')
 
 <form method="POST" action="{{ route('venda.store') }}" id="form-venda">
@@ -89,11 +93,10 @@
             </div>
             <div class="venda-resumo__field">
                 <label>Forma de Pagamento</label>
-                <div class="autocomplete-wrap">
-                    <input type="text" id="input-forma-pagamento" class="form-control"
-                        placeholder="Selecione..." autocomplete="off">
-                    <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento" value="">
-                </div>
+                <button type="button" class="btn btn--ghost btn--block" id="btn-escolher-pagamento">Selecionar pagamento</button>
+                <p class="pg-escolha__detalhe" id="pagamento-resumo">Nenhuma forma selecionada</p>
+                <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento" value="">
+                <div id="venda-parcelas"></div>
             </div>
             <div class="venda-resumo__field">
                 <label>Data</label>
@@ -143,7 +146,7 @@
 
         <div class="venda-resumo__actions">
             <a href="{{ route('venda.index') }}" class="btn btn--ghost btn--block">Cancelar</a>
-            <button type="submit" class="btn btn--success btn--block btn--lg" id="btn-finalizar">
+            <button type="button" class="btn btn--success btn--block btn--lg" id="btn-finalizar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;margin-right:0.5rem;">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
@@ -152,6 +155,8 @@
         </div>
     </div>
 </form>
+
+@include('venda._pagamento-modal')
 
 {{-- Modal de quantidade rápida --}}
 <div class="modal-overlay" id="modal-qtd" hidden>
@@ -195,13 +200,13 @@
 
 
 @push('scripts')
+<script src="{{ asset('js/pagamento-modal.js') }}?v={{ filemtime(public_path('js/pagamento-modal.js')) }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var $ = window.jQuery;
     var urlProdutos = @json(route('api.produtos.busca'));
     var urlFuncionarios = @json(route('api.funcionarios.busca'));
     var urlClientes = @json(route('api.clientes.busca'));
-    var urlFormasPagamento = @json(route('api.formas-pagamento.busca'));
     var indice = 0;
     var produtoSelecionado = null;
 
@@ -218,9 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('display-cliente').textContent = item ? item.nome : 'Consumidor Final';
         });
 
-        initAutocomplete('#input-forma-pagamento', '#hidden-forma-pagamento', urlFormasPagamento, function(item) {
-            return item.nome;
-        }, null, null, 'nome');
     }
 
     // Funções auxiliares
@@ -545,6 +547,41 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('input-acrescimo').addEventListener('input', atualizarTotais);
 
     atualizarTotais();
+
+    if (window.PagamentoModal) {
+        var pagamentoVenda = window.PagamentoModal.iniciarVenda({
+            root: 'venda-pagamento',
+            form: 'form-venda',
+            abrir: 'btn-finalizar',
+            hidden: 'hidden-forma-pagamento',
+            resumo: 'pagamento-resumo',
+            campos: 'venda-parcelas',
+            enviar: true,
+            confirmarSituacao: true,
+            total: function () {
+                return parseFloat(document.getElementById('input-total').value) || 0;
+            },
+            dataBase: function () {
+                var campo = document.querySelector('#form-venda [name="data_venda"]');
+                return campo && campo.value ? campo.value : new Date().toISOString().slice(0, 10);
+            },
+            subtitulo: function () {
+                var cliente = document.getElementById('display-cliente');
+                return cliente ? cliente.textContent : '';
+            },
+            antes: function () {
+                if (!document.querySelector('#itens-body .venda-item')) {
+                    if (window.mostrarToast) window.mostrarToast('Adicione pelo menos um item.', 'warning');
+                    return false;
+                }
+                return true;
+            }
+        });
+        var escolherPagamento = document.getElementById('btn-escolher-pagamento');
+        if (escolherPagamento && pagamentoVenda) {
+            escolherPagamento.addEventListener('click', function () { pagamentoVenda.abrir(); });
+        }
+    }
 });
 </script>
 @endpush

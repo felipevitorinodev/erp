@@ -44,6 +44,28 @@ class FormaPagamento extends Model
         return !$this->isPrazo();
     }
 
+    public function ehCartao(): bool
+    {
+        $nome = mb_strtolower((string) $this->nome);
+        $nome = strtr($nome, [
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a',
+            'é' => 'e', 'ê' => 'e',
+            'í' => 'i',
+            'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+            'ú' => 'u',
+            'ç' => 'c',
+        ]);
+
+        return str_contains($nome, 'credito')
+            || str_contains($nome, 'debito')
+            || str_contains($nome, 'cartao');
+    }
+
+    public function permiteParcelar(): bool
+    {
+        return $this->isPrazo() || $this->ehCartao();
+    }
+
     /**
      * Pagamento integral (à vista): quita o valor total na venda.
      */

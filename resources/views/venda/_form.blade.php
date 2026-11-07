@@ -54,14 +54,13 @@
 <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
     <div class="form-group form-group--span-2">
         <label class="form-label">Forma de Pagamento</label>
-        <div class="autocomplete-wrap">
-            <input type="text" id="input-forma-pagamento" class="form-control"
-                value="{{ old('forma_pagamento', $venda->forma_pagamento ?? '') }}"
-                placeholder="Selecione a forma de pagamento..." autocomplete="off">
-            <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento"
-                value="{{ old('forma_pagamento', $venda->forma_pagamento ?? '') }}">
-        </div>
+        @php $formaAtual = old('forma_pagamento', $venda->forma_pagamento ?? ''); @endphp
+        <button type="button" class="btn btn--ghost" id="btn-escolher-pagamento">Selecionar pagamento</button>
+        <p class="pg-escolha__detalhe" id="pagamento-resumo">{{ $formaAtual !== '' ? $formaAtual : 'Nenhuma forma selecionada' }}</p>
+        <input type="hidden" name="forma_pagamento" id="hidden-forma-pagamento" value="{{ $formaAtual }}">
+        <div id="venda-parcelas"></div>
         @error('forma_pagamento')<span class="form-error">{{ $message }}</span>@enderror
+        @error('parcelas')<span class="form-error">{{ $message }}</span>@enderror
     </div>
 </div>
 
@@ -193,10 +192,6 @@
         var doc = item.cpf || item.cnpj || '';
         return item.nome + (doc ? ' — ' + doc : '');
     });
-
-    initAutocomplete('#input-forma-pagamento', '#hidden-forma-pagamento', '{{ route('api.formas-pagamento.busca') }}', function (item) {
-        return item.nome;
-    }, null, null, 'nome');
 
     function parseBR(val) {
         if (typeof window.parseBR === 'function') return window.parseBR(val);
