@@ -34,6 +34,11 @@ class ContaReceberController extends Controller
         return $this->service->show($contaReceber);
     }
 
+    public function recibo(ContaReceber $contaReceber)
+    {
+        return $this->service->recibo($contaReceber);
+    }
+
     public function edit(ContaReceber $contaReceber)
     {
         return $this->service->edit($contaReceber);

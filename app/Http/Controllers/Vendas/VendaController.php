@@ -79,4 +79,9 @@ class VendaController extends Controller
     {
         return $this->service->pdf($venda);
     }
+
+    public function recibo(Venda $venda)
+    {
+        return $this->service->recibo($venda);
+    }
 }

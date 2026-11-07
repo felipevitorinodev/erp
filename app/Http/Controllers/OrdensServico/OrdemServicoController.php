@@ -68,4 +68,9 @@ class OrdemServicoController extends Controller
     {
         return $this->service->pdf($ordemServico);
     }
+
+    public function recibo(OrdemServico $ordemServico)
+    {
+        return $this->service->recibo($ordemServico);
+    }
 }

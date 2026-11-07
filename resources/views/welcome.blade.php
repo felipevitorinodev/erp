@@ -36,7 +36,7 @@
         $empresaHomeNome = trim((string) ($empresaHome->nome_fantasia ?? ''))
             ?: trim((string) ($empresaHome->razao_social ?? ''));
 
-        $mostraVendas = $podeVendas || $podeRelatorios;
+        $mostraFaturamento = $podeRelatorios;
         $temAtencao = $podeRelatorios && ($contasReceberVencidasVal > 0 || $contasPagarVencidasVal > 0 || $estoqueCriticoVal > 0);
         $temAcoes = $podeVendas || $podeEstoque || $podeFinanceiro;
         $temConsultas = $podeVendas || $podeOrcamentos || $podeProdutos || $podeClientes || $podeFornecedores || $podeFinanceiro || $mostraRelatorios;
@@ -44,7 +44,7 @@
         $nomeMes = $meses[now()->month];
         $faturamentoMes = $faturamentoMes ?? null;
         $contasMes = $contasMes ?? null;
-        $mostraGraficoVendas = $mostraVendas && is_array($faturamentoMes);
+        $mostraGraficoVendas = $mostraFaturamento && is_array($faturamentoMes);
         $mostraGraficoContas = $podeFinanceiro && is_array($contasMes);
         $tetoContas = 0.0;
         if ($mostraGraficoContas) {
@@ -64,9 +64,9 @@
                 <p class="home-resumo__meta">{{ $empresaHomeNome !== '' ? $empresaHomeNome.' · ' : '' }}{{ $dataHoje }}</p>
             </div>
 
-            @if ($mostraVendas || $podeFinanceiro)
+            @if ($mostraFaturamento || $podeFinanceiro)
                 <div class="home-numeros">
-                    @if ($mostraVendas)
+                    @if ($mostraFaturamento)
                         <a href="{{ $podeVendas ? route('venda.index', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) : route('relatorio.vendas', ['data_inicio' => date('Y-m-d'), 'data_fim' => date('Y-m-d')]) }}" class="home-numero">
                             <span class="home-numero__rotulo">Vendas hoje</span>
                             <span class="home-numero__valor">{{ $vendasHojeVal }}</span>

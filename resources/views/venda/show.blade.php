@@ -26,7 +26,14 @@
             </form>
         @endif
 
-        <x-export-dropdown :pdf="route('venda.pdf', $venda)" />
+        <x-export-dropdown
+            label="Imprimir"
+            pdf-rotulo="A4"
+            :pdf="route('venda.pdf', $venda)"
+            :extras="[
+                ['rotulo' => '80 mm', 'url' => route('venda.recibo', $venda)],
+            ]"
+        />
 
         @if($venda->situacao === 'em_andamento')
             <a href="{{ route('venda.edit', $venda) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">

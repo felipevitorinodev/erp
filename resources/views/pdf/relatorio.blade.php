@@ -1,93 +1,121 @@
-<!doctype html>
-<html lang="pt-BR">
+@php
+    $chips = [];
+    if (! empty($periodo)) {
+        $chips[] = ['rotulo' => 'Período', 'valor' => $periodo];
+    }
+    foreach (preg_split('/\s*·\s*/', (string) ($resumo ?? '')) ?: [] as $parte) {
+        $parte = trim($parte);
+        if ($parte === '') {
+            continue;
+        }
+        if (str_contains($parte, ':')) {
+            [$rotulo, $valor] = explode(':', $parte, 2);
+            $chips[] = ['rotulo' => trim($rotulo), 'valor' => trim($valor)];
+        } else {
+            $chips[] = ['rotulo' => 'Aviso', 'valor' => $parte];
+        }
+    }
+    $colunas = collect($colunas ?? [])->values()->all();
+    $linhas = collect($linhas ?? [])->values()->all();
+    $periodoCabecalho = $periodo ?? null;
+    if (is_string($periodoCabecalho) && $periodoCabecalho !== '' && ! str_contains(mb_strtolower($periodoCabecalho), 'período') && ! str_contains(mb_strtolower($periodoCabecalho), 'periodo')) {
+        $periodoCabecalho = 'Período de '.$periodoCabecalho;
+    }
+@endphp
+<x-impressao.documento kind="Relatório" :nome="$titulo" :periodo="$periodoCabecalho">
+    <x-impressao.filtros :chips="$chips" />
 
-<head>
-    <meta charset="utf-8">
-    <title>{{ $titulo }} - Visys</title>
-    @include('pdf._estilos')
-</head>
+    @if(!empty($kpis))
+        <x-impressao.kpis :cards="$kpis" />
+    @endif
 
-<body>
-    <div class="page">
+    @if(!empty($secao))
+        <div class="sec-title">{{ $secao }}</div>
+    @endif
 
-        <table class="header">
+    <table class="grid">
+        <thead>
             <tr>
-                <td style="width: 55%;">
-                    <img src="{{ public_path('img/logo-v-sem-fundo.png') }}" alt="Visys" class="logo">
-                    <div class="brand-sub">Sistemas &amp; Gestão Empresarial</div>
-                </td>
-                <td class="doc-badge" style="width: 45%;">
-                    <span class="label">Relatório</span>
-                    <span class="numero" style="font-size:16px;">{{ $titulo }}</span>
-                    <div class="data">{{ $periodo }}</div>
-                </td>
+                @foreach($colunas as $coluna)
+                    <th class="{{ ($coluna['align'] ?? 'left') === 'right' ? 'r' : '' }}"
+                        @if(!empty($coluna['width'])) style="width: {{ $coluna['width'] }};" @endif>
+                        {{ $coluna['label'] }}
+                    </th>
+                @endforeach
             </tr>
-        </table>
+        </thead>
+        <tbody>
+            @forelse($linhas as $linha)
+                <tr>
+                    @foreach($linha as $indice => $celula)
+                        @php
+                            $rotulo = (string) ($colunas[$indice]['label'] ?? '');
+                            $direita = ($colunas[$indice]['align'] ?? 'left') === 'right';
+                            $data = preg_match('/data|validade|abertura|vencimento/i', $rotulo) === 1;
+                        @endphp
+                        <td class="{{ trim(($direita ? 'r num' : '').($data ? ' num muted' : '')) }}">
+                            <x-impressao.situacao :texto="$celula" />
+                        </td>
+                    @endforeach
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="{{ max(count($colunas), 1) }}">Nenhum registro para os filtros informados.</td>
+                </tr>
+            @endforelse
+            @if($linhas !== [])
+                <tr class="total">
+                    <td colspan="{{ max(count($colunas), 1) }}">Total de {{ count($linhas) }} {{ \Illuminate\Support\Str::plural('registro', count($linhas)) }}</td>
+                </tr>
+            @endif
+        </tbody>
+    </table>
 
-        @if (!empty($resumo))
-            <div class="status-strip">
-                {{ $resumo }}
-            </div>
-        @endif
-
-        <div class="section-heading">{{ $secao ?? 'Resultados' }}</div>
-        <table class="items">
+    @if(!empty($participacao['linhas']))
+        <div class="sec-title">{{ $participacao['titulo'] ?? 'Participação por forma' }}</div>
+        <table class="grid">
             <thead>
                 <tr>
-                    @foreach ($colunas as $coluna)
-                        <th class="{{ ($coluna['align'] ?? 'left') === 'right' ? 'text-right' : '' }}"
-                            @if (!empty($coluna['width'])) style="width: {{ $coluna['width'] }};" @endif>
-                            {{ $coluna['label'] }}
-                        </th>
-                    @endforeach
+                    <th>Forma de pagamento</th>
+                    <th class="r">Vendas</th>
+                    <th class="r">Ticket médio</th>
+                    <th>Participação</th>
+                    <th class="r">Valor</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($linhas as $linha)
+                @foreach($participacao['linhas'] as $forma)
                     <tr>
-                        @foreach ($linha as $indice => $celula)
-                            <td class="{{ ($colunas[$indice]['align'] ?? 'left') === 'right' ? 'text-right' : '' }}">
-                                {{ $celula }}
-                            </td>
-                        @endforeach
+                        <td>{{ $forma['nome'] }}</td>
+                        <td class="r num">{{ $forma['vendas'] }}</td>
+                        <td class="r num">{{ $forma['ticket'] }}</td>
+                        <td>
+                            <table>
+                                <tr>
+                                    <td style="width: 104px; padding: 0; border: none;">
+                                        <div class="bar"><div class="bar-fill" style="width: {{ (int) $forma['percentual'] }}%;"></div></div>
+                                    </td>
+                                    <td class="bar-pct num" style="border: none; padding: 0;">{{ (int) $forma['percentual'] }}%</td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td class="r num">{{ $forma['valor'] }}</td>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ count($colunas) }}" class="text-center">Nenhum registro para os filtros informados.</td>
+                @endforeach
+                @if(!empty($participacao['total']))
+                    <tr class="total">
+                        <td>Total</td>
+                        <td class="r num">{{ $participacao['total']['vendas'] }}</td>
+                        <td class="r num">{{ $participacao['total']['ticket'] }}</td>
+                        <td class="num">100%</td>
+                        <td class="r num">{{ $participacao['total']['valor'] }}</td>
                     </tr>
-                @endforelse
+                @endif
             </tbody>
         </table>
+    @endif
 
-        @if (!empty($totais))
-            <table class="totals-wrap">
-                <tr>
-                    <td style="width: 45%;"></td>
-                    <td style="width: 55%;">
-                        <div class="totals-box totals-box--wide">
-                            <table class="totals-inner">
-                                @foreach ($totais as $total)
-                                    <tr class="{{ !empty($total['destaque']) ? 'divider grand-total' : '' }}">
-                                        <td>{{ $total['label'] }}</td>
-                                        <td class="text-right">{{ $total['valor'] }}</td>
-                                    </tr>
-                                @endforeach
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        @endif
+    <x-impressao.resumo :linhas="$totais ?? []" />
 
-        <div class="footer">
-            Visys Sistemas
-            <span class="dot">·</span>
-            Documento gerado em {{ date('d/m/Y \à\s H:i:s') }}
-            <span class="dot">·</span>
-            Visys Gestão
-        </div>
-
-    </div>
-</body>
-
-</html>
+    <x-impressao.assinaturas :linhas="$assinaturas ?? ['Responsável pela conferência', 'Data de conferência']" />
+</x-impressao.documento>

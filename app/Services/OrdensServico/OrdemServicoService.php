@@ -2,6 +2,8 @@
 
 namespace App\Services\OrdensServico;
 
+use App\Impressao\CupomDocumento;
+use App\Impressao\CupomPdf;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
@@ -75,6 +77,14 @@ class OrdemServicoService
         $pdf = Pdf::loadView('ordem-servico.pdf', ['os' => $os])->setPaper('a4', 'portrait');
 
         return $pdf->stream('ordem_servico_'.$os->numero.'.pdf');
+    }
+
+    public function recibo(OrdemServico $os)
+    {
+        $this->garantirEmpresa($os);
+        $os->load(['cliente', 'tecnico', 'itens']);
+
+        return CupomPdf::stream(CupomDocumento::ordemServico($os), 'os_80mm_'.$os->numero.'.pdf');
     }
 
     public function edit(OrdemServico $os)
@@ -322,7 +332,7 @@ class OrdemServicoService
             if ($quantidade <= 0) {
                 continue;
             }
-            $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
+            $precoUnit = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
 
             $resultado[] = [

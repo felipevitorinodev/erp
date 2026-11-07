@@ -42,48 +42,62 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth')->group(function () {
 
     Route::get('/', function () {
-        $empresaId = auth()->user()->empresa_id ?? 0;
+        $usuario = auth()->user();
+        $empresaId = $usuario->empresa_id ?? 0;
         $hoje = now()->toDateString();
         $em7Dias = now()->addDays(7)->toDateString();
+        $podeRelatorios = $usuario->pode('relatorios');
+        $podeFinanceiro = $usuario->pode('financeiro');
 
-        $resumoVendasHoje = Venda::where('empresa_id', $empresaId)
-            ->whereDataEntre('data_venda', $hoje, $hoje)
-            ->toBase()
-            ->selectRaw("COUNT(*) as quantidade, COALESCE(SUM(CASE WHEN situacao = 'confirmada' THEN total END), 0) as faturamento")
-            ->first();
+        $vendasHoje = 0;
+        $faturamentoHoje = 0.0;
+        if ($podeRelatorios) {
+            $resumoVendasHoje = Venda::where('empresa_id', $empresaId)
+                ->whereDataEntre('data_venda', $hoje, $hoje)
+                ->toBase()
+                ->selectRaw("COUNT(*) as quantidade, COALESCE(SUM(CASE WHEN situacao = 'confirmada' THEN total END), 0) as faturamento")
+                ->first();
 
-        $vendasHoje = (int) $resumoVendasHoje->quantidade;
-        $faturamentoHoje = (float) $resumoVendasHoje->faturamento;
+            $vendasHoje = (int) $resumoVendasHoje->quantidade;
+            $faturamentoHoje = (float) $resumoVendasHoje->faturamento;
+        }
 
-        $contasReceberVencidas = ContaReceber::where('empresa_id', $empresaId)
-            ->where('data_vencimento', '<', $hoje)
-            ->whereIn('situacao', ['aberta', 'parcial'])
-            ->count();
+        $contasReceberVencidas = 0;
+        $contasPagarVencidas = 0;
+        $estoqueCritico = 0;
+        if ($podeRelatorios) {
+            $contasReceberVencidas = ContaReceber::where('empresa_id', $empresaId)
+                ->where('data_vencimento', '<', $hoje)
+                ->whereIn('situacao', ['aberta', 'parcial'])
+                ->count();
 
-        $contasPagarVencidas = ContaPagar::where('empresa_id', $empresaId)
-            ->where('data_vencimento', '<', $hoje)
-            ->whereIn('situacao', ['aberta', 'parcial'])
-            ->count();
+            $contasPagarVencidas = ContaPagar::where('empresa_id', $empresaId)
+                ->where('data_vencimento', '<', $hoje)
+                ->whereIn('situacao', ['aberta', 'parcial'])
+                ->count();
 
-        $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
-            ->whereDataEntre('data_vencimento', $hoje, $em7Dias)
-            ->whereIn('situacao', ['aberta', 'parcial'])
-            ->sum(DB::raw('valor - COALESCE(valor_pago, 0)'));
+            $estoqueCritico = Produto::where('empresa_id', $empresaId)
+                ->where('controla_estoque', true)
+                ->where('ativo', true)
+                ->whereColumn('estoque_atual', '<=', 'estoque_minimo')
+                ->count();
+        }
 
-        $estoqueCritico = Produto::where('empresa_id', $empresaId)
-            ->where('controla_estoque', true)
-            ->where('ativo', true)
-            ->whereColumn('estoque_atual', '<=', 'estoque_minimo')
-            ->count();
+        $aReceber7Dias = 0.0;
+        if ($podeFinanceiro) {
+            $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
+                ->whereDataEntre('data_vencimento', $hoje, $em7Dias)
+                ->whereIn('situacao', ['aberta', 'parcial'])
+                ->sum(DB::raw('valor - COALESCE(valor_pago, 0)'));
+        }
 
         $inicioMes = now()->startOfMonth();
         $fimMes = $inicioMes->copy()->endOfMonth();
         $inicioMesSql = $inicioMes->toDateString();
         $fimMesSql = $fimMes->toDateString();
-        $usuario = auth()->user();
 
         $faturamentoMes = null;
-        if ($usuario->pode('vendas') || $usuario->pode('relatorios')) {
+        if ($podeRelatorios) {
             $linhas = Venda::where('empresa_id', $empresaId)
                 ->where('situacao', 'confirmada')
                 ->whereDataEntre('data_venda', $inicioMesSql, $fimMesSql)
@@ -149,7 +163,7 @@ Route::middleware('auth')->group(function () {
         }
 
         $contasMes = null;
-        if ($usuario->pode('financeiro')) {
+        if ($podeFinanceiro) {
             $resumoConta = function (string $model) use ($empresaId, $inicioMesSql, $fimMesSql): array {
                 $linha = $model::where('empresa_id', $empresaId)
                     ->whereDataEntre('data_vencimento', $inicioMesSql, $fimMesSql)
@@ -287,6 +301,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/nova', [VendaController::class, 'create'])->name('venda.create');
         Route::post('/salvar', [VendaController::class, 'store'])->name('venda.store');
         Route::get('{venda}/pdf', [VendaController::class, 'pdf'])->name('venda.pdf');
+        Route::get('{venda}/recibo', [VendaController::class, 'recibo'])->name('venda.recibo');
         Route::get('{venda}/nfce', [NfceController::class, 'danfe'])->name('venda.nfce.danfe');
         Route::get('{venda}/ver', [VendaController::class, 'show'])->name('venda.show');
         Route::get('{venda}/editar', [VendaController::class, 'edit'])->name('venda.edit');
@@ -328,6 +343,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/novo', [OrcamentoController::class, 'create'])->name('orcamento.create');
         Route::post('/salvar', [OrcamentoController::class, 'store'])->name('orcamento.store');
         Route::get('{orcamento}/pdf', [OrcamentoController::class, 'pdf'])->name('orcamento.pdf');
+        Route::get('{orcamento}/recibo', [OrcamentoController::class, 'recibo'])->name('orcamento.recibo');
         Route::get('{orcamento}/ver', [OrcamentoController::class, 'show'])->name('orcamento.show');
         Route::get('{orcamento}/editar', [OrcamentoController::class, 'edit'])->name('orcamento.edit');
         Route::put('{orcamento}/editar/salvar', [OrcamentoController::class, 'update'])->name('orcamento.update');
@@ -345,6 +361,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/nova', [OrdemServicoController::class, 'create'])->name('ordem-servico.create');
         Route::post('/salvar', [OrdemServicoController::class, 'store'])->name('ordem-servico.store');
         Route::get('{ordemServico}/pdf', [OrdemServicoController::class, 'pdf'])->name('ordem-servico.pdf');
+        Route::get('{ordemServico}/recibo', [OrdemServicoController::class, 'recibo'])->name('ordem-servico.recibo');
         Route::get('{ordemServico}/ver', [OrdemServicoController::class, 'show'])->name('ordem-servico.show');
         Route::get('{ordemServico}/editar', [OrdemServicoController::class, 'edit'])->name('ordem-servico.edit');
         Route::put('{ordemServico}/editar/salvar', [OrdemServicoController::class, 'update'])->name('ordem-servico.update');
@@ -388,6 +405,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/nova', [ContaReceberController::class, 'create'])->name('conta-receber.create');
         Route::post('/salvar', [ContaReceberController::class, 'store'])->name('conta-receber.store');
         Route::get('{contaReceber}/ver', [ContaReceberController::class, 'show'])->name('conta-receber.show');
+        Route::get('{contaReceber}/recibo', [ContaReceberController::class, 'recibo'])->name('conta-receber.recibo');
         Route::get('{contaReceber}/editar', [ContaReceberController::class, 'edit'])->name('conta-receber.edit');
         Route::put('{contaReceber}/editar/salvar', [ContaReceberController::class, 'update'])->name('conta-receber.update');
         Route::post('{contaReceber}/receber', [ContaReceberController::class, 'receber'])->name('conta-receber.receber');

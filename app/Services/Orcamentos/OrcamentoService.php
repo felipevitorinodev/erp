@@ -2,6 +2,8 @@
 
 namespace App\Services\Orcamentos;
 
+use App\Impressao\CupomDocumento;
+use App\Impressao\CupomPdf;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Produtos\Produto;
@@ -89,6 +91,14 @@ class OrcamentoService
         $pdf = Pdf::loadView('orcamento.pdf', ['orcamento' => $orcamento])->setPaper('a4', 'portrait');
 
         return $pdf->stream('orcamento_'.$orcamento->numero.'.pdf');
+    }
+
+    public function recibo(Orcamento $orcamento)
+    {
+        $this->garantirEmpresa($orcamento);
+        $orcamento->load(['cliente', 'itens']);
+
+        return CupomPdf::stream(CupomDocumento::orcamento($orcamento), 'orcamento_80mm_'.$orcamento->numero.'.pdf');
     }
 
     public function edit(Orcamento $orcamento)
@@ -361,7 +371,7 @@ class OrcamentoService
             if ($quantidade <= 0) {
                 continue;
             }
-            $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
+            $precoUnit = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
             $total = $this->totalComDesconto($quantidade, $precoUnit, $descItem, $produto->nome);
 

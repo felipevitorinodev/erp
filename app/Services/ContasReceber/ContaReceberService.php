@@ -3,6 +3,8 @@
 namespace App\Services\ContasReceber;
 
 use App\Http\Requests\ContasReceber\ContaReceberRequest;
+use App\Impressao\CupomDocumento;
+use App\Impressao\CupomPdf;
 use App\Models\ContasReceber\ContaReceber;
 use App\Repositories\CategoriasFinanceiras\CategoriaFinanceiraRepository;
 use App\Repositories\ContasReceber\ContaReceberRepository;
@@ -61,6 +63,14 @@ class ContaReceberService
         $contaReceber->load(['cliente', 'venda', 'categoria', 'baixas']);
 
         return view('conta-receber.show', ['conta' => $contaReceber]);
+    }
+
+    public function recibo(ContaReceber $contaReceber)
+    {
+        $this->garantirEmpresa($contaReceber);
+        $contaReceber->load(['cliente', 'baixas', 'venda']);
+
+        return CupomPdf::stream(CupomDocumento::reciboConta($contaReceber), 'recibo_conta_'.$contaReceber->id.'.pdf');
     }
 
     public function edit(ContaReceber $contaReceber)

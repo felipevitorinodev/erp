@@ -73,4 +73,9 @@ class OrcamentoController extends Controller
     {
         return $this->service->pdf($orcamento);
     }
+
+    public function recibo(Orcamento $orcamento)
+    {
+        return $this->service->recibo($orcamento);
+    }
 }

@@ -13,7 +13,14 @@
             <x-icon name="arrow-left" />
         </a>
 
-        <x-export-dropdown :pdf="route('orcamento.pdf', $orcamento)" />
+        <x-export-dropdown
+            label="Imprimir"
+            pdf-rotulo="A4"
+            :pdf="route('orcamento.pdf', $orcamento)"
+            :extras="[
+                ['rotulo' => '80 mm', 'url' => route('orcamento.recibo', $orcamento)],
+            ]"
+        />
 
         @if ($orcamento->situacao === 'pendente')
             <form method="POST" action="{{ route('orcamento.aprovar', $orcamento) }}">

@@ -13,7 +13,14 @@
             <x-icon name="arrow-left" />
         </a>
 
-        <x-export-dropdown :pdf="route('ordem-servico.pdf', $os)" />
+        <x-export-dropdown
+            label="Imprimir"
+            pdf-rotulo="A4"
+            :pdf="route('ordem-servico.pdf', $os)"
+            :extras="[
+                ['rotulo' => '80 mm', 'url' => route('ordem-servico.recibo', $os)],
+            ]"
+        />
 
         @if ($os->estaAberta())
             <form method="POST" action="{{ route('ordem-servico.faturar', $os) }}">

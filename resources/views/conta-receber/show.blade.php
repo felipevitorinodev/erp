@@ -12,6 +12,7 @@
         <a href="{{ route('conta-receber.index') }}" class="btn btn--ghost btn--sm btn--icon" title="Voltar" aria-label="Voltar">
             <x-icon name="arrow-left" />
         </a>
+        <a href="{{ route('conta-receber.recibo', $conta) }}" class="btn btn--ghost btn--sm" target="_blank" rel="noopener">Recibo</a>
         @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
             <button type="button" class="btn btn--success btn--sm" id="btn-abrir-receber">Registrar Recebimento</button>
             <a href="{{ route('conta-receber.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
