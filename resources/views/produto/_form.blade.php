@@ -6,7 +6,7 @@
         <div class="form-group form-group--span-1">
             <label class="form-label">Código</label>
             <input disabled type="text" name="codigo" class="form-control @error('codigo') is-invalid @enderror"
-                value="{{ old('codigo', $produto->codigo ?? '') }}" maxlength="50">
+                value="{{ old('codigo', $produto->codigo ?? ($proximoCodigo ?? '')) }}" maxlength="50">
             @error('codigo')
                 <span class="form-error">{{ $message }}</span>
             @enderror

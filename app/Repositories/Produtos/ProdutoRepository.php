@@ -47,6 +47,9 @@ class ProdutoRepository
     {
         return DB::transaction(function () use ($data) {
             $data['empresa_id'] = auth()->user()->empresa_id;
+            if (trim((string) ($data['codigo'] ?? '')) === '') {
+                $data['codigo'] = $this->proximoCodigo((int) $data['empresa_id']);
+            }
 
             $estoqueInicial = (float) ($data['estoque_atual'] ?? 0);
             if (empty($data['controla_estoque'])) {
@@ -78,10 +81,29 @@ class ProdutoRepository
     public function update(Produto $produto, array $data)
     {
         unset($data['empresa_id'], $data['estoque_atual']);
+        if (trim((string) ($produto->codigo ?? '')) === '') {
+            $data['codigo'] = $this->proximoCodigo((int) $produto->empresa_id);
+        } else {
+            unset($data['codigo']);
+        }
 
         $produto->update($data);
 
         return $produto;
+    }
+
+    public function proximoCodigo(int $empresaId): string
+    {
+        $ultimo = Produto::query()
+            ->where('empresa_id', $empresaId)
+            ->whereRaw("codigo REGEXP '^[0-9]+$'")
+            ->lockForUpdate()
+            ->orderByRaw('CAST(codigo AS UNSIGNED) DESC')
+            ->value('codigo');
+
+        $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
+
+        return str_pad((string) $proximo, 6, '0', STR_PAD_LEFT);
     }
 
     public function destroy($id)

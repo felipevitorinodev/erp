@@ -22,7 +22,7 @@ class OrcamentoItem extends Model
 
     protected $casts = [
         'quantidade'     => 'decimal:3',
-        'preco_unitario' => 'decimal:4',
+        'preco_unitario' => 'decimal:2',
         'desconto'       => 'decimal:2',
         'total'          => 'decimal:2',
     ];

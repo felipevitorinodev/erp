@@ -32,6 +32,7 @@ class ProdutoService
     {
         return view('produto.create', [
             'perfisFiscais' => $this->perfisFiscais(),
+            'proximoCodigo' => $this->repository->proximoCodigo((int) auth()->user()->empresa_id),
         ]);
     }
 

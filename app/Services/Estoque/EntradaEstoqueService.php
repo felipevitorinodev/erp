@@ -543,7 +543,7 @@ class EntradaEstoqueService
                 continue;
             }
 
-            $precoUnit = $this->parseDecimal($item['preco_unitario'] ?? 0, 4);
+            $precoUnit = $this->parseMoeda($item['preco_unitario'] ?? 0);
             $descItem = $this->parseMoeda($item['desconto'] ?? 0);
 
             // Se tem produto_id, usa o produto existente
