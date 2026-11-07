@@ -42,7 +42,7 @@ class FuncionarioService
         }
 
         return view('funcionario.edit', [
-            'funcionario' => $funcionario
+            'funcionario' => $funcionario->load('usuario'),
         ]);
     }
 

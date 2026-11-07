@@ -8,6 +8,7 @@ use App\Models\Funcionarios\Funcionario;
 use App\Models\Grupos\Grupo;
 use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
+use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use App\Services\Nfes\NfeVinculoFiscal;
 use App\Support\NaturezasOperacao;
@@ -32,6 +33,27 @@ Route::middleware('auth')->group(function () {
             ->limit($limit)
             ->get();
     })->name('api.clientes.busca');
+
+    Route::get('/api/usuarios/busca', function () {
+        $q = trim((string) request('q', ''));
+        $limit = $q === '' ? 5 : 10;
+
+        $query = User::query()
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->where('ativo', true);
+
+        if ($q !== '') {
+            $query->where(function ($builder) use ($q) {
+                $builder->where('name', 'like', '%'.$q.'%')
+                    ->orWhere('email', 'like', '%'.$q.'%');
+            });
+        }
+
+        return $query->orderBy('name')
+            ->select('id', 'name', 'email')
+            ->limit($limit)
+            ->get();
+    })->middleware('permissao:funcionarios')->name('api.usuarios.busca');
 
     Route::get('/api/funcionarios/busca', function () {
         $q = trim((string) request('q', ''));
@@ -69,7 +91,13 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/api/produtos/busca', function () {
         $q = trim((string) request('q', ''));
-        $limit = $q === '' ? 5 : 10;
+        $limitePadrao = $q === '' ? 5 : 10;
+        $limit = (int) request('limit', $limitePadrao);
+        if ($limit < 1) {
+            $limit = $limitePadrao;
+        }
+        $limit = min($limit, 2000);
+        $simples = (string) request('simples') === '1';
 
         $query = Produto::where('empresa_id', auth()->user()->empresa_id)
             ->where('ativo', true);
@@ -84,6 +112,39 @@ Route::middleware('auth')->group(function () {
                     ->orWhere('codigo', 'like', '%' . $q . '%')
                     ->orWhere('codigo_barras', $q);
             });
+        }
+
+        if ($simples) {
+            return $query->orderBy('nome')
+                ->with('unidadeMedida:id,sigla')
+                ->select(
+                    'id',
+                    'nome',
+                    'codigo',
+                    'referencia',
+                    'preco_venda',
+                    'estoque_atual',
+                    'unidade_medida_id',
+                    'codigo_barras',
+                    'tipo',
+                    'controla_estoque'
+                )
+                ->limit($limit)
+                ->get()
+                ->map(function (Produto $produto) {
+                    return [
+                        'id' => $produto->id,
+                        'nome' => $produto->nome,
+                        'codigo' => $produto->codigo,
+                        'referencia' => $produto->referencia,
+                        'preco_venda' => $produto->preco_venda,
+                        'estoque_atual' => $produto->estoque_atual,
+                        'unidade' => $produto->unidadeMedida?->sigla ?: 'UN',
+                        'ean' => $produto->codigo_barras,
+                        'tipo' => $produto->tipo,
+                        'controla_estoque' => (bool) $produto->controla_estoque,
+                    ];
+                });
         }
 
         $empresaBusca = Empresa::query()->find(auth()->user()->empresa_id);

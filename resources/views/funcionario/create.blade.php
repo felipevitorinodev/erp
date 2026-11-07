@@ -29,14 +29,7 @@
                             @error('nome')<span class="form-error">{{ $message }}</span>@enderror
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Usuário do sistema</label>
-                            <input type="text" name="usuario_id"
-                                class="form-control @error('usuario_id') is-invalid @enderror"
-                                value="{{ old('usuario_id') }}" maxlength="36"
-                                placeholder="Deixe em branco se não tiver acesso ao sistema">
-                            @error('usuario_id')<span class="form-error">{{ $message }}</span>@enderror
-                        </div>
+                        @include('funcionario._usuario')
                     </div>
 
                     <div class="form-grid form-grid--col-3" style="margin-top:1rem;">

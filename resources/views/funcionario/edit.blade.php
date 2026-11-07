@@ -31,11 +31,7 @@
                         @error('nome')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Usuário do sistema</label>
-                        <input type="text" class="form-control" value="{{ optional($funcionario->usuario)->name }}" readonly>
-                        <input type="hidden" name="usuario_id" value="{{ old('usuario_id', $funcionario->usuario_id) }}">
-                    </div>
+                    @include('funcionario._usuario')
                 </div>
 
                 <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
