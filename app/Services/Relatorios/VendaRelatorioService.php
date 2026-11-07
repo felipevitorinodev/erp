@@ -142,11 +142,41 @@ class VendaRelatorioService implements ConsultaRelatorio
             $resumo[] = $aviso;
         }
 
+        $formas = $this->repository->formas($this->repository->consulta($empresaId, $periodo, $filtros), $filtros);
+        $somaFormas = array_sum(array_column($formas, 'total'));
+        $qtdFormas = array_sum(array_column($formas, 'vendas'));
+        $participacao = array_map(function (array $forma) use ($somaFormas) {
+            $percentual = $somaFormas > 0 ? (int) round($forma['total'] / $somaFormas * 100) : 0;
+            $ticket = $forma['vendas'] > 0 ? $forma['total'] / $forma['vendas'] : 0;
+
+            return [
+                'nome' => $forma['nome'],
+                'vendas' => $forma['vendas'],
+                'ticket' => number_format($ticket, 2, ',', '.'),
+                'percentual' => $percentual,
+                'valor' => number_format($forma['total'], 2, ',', '.'),
+            ];
+        }, $formas);
+
         return PdfRelatorio::stream('relatorio-vendas-'.date('Y-m-d').'.pdf', [
-            'titulo' => 'Vendas por período',
+            'titulo' => 'Vendas',
             'periodo' => $periodo->rotulo(),
             'resumo' => implode(' · ', $resumo),
             'secao' => 'Vendas',
+            'kpis' => [
+                ['label' => 'Vendas', 'valor' => (string) $totais['qtd_confirmadas'], 'detalhe' => 'no período'],
+                ['label' => 'Faturamento', 'valor' => $this->moeda($totais['valor_confirmadas']), 'detalhe' => 'total das vendas'],
+                ['label' => 'Ticket médio', 'valor' => $this->moeda($totais['ticket_medio']), 'detalhe' => 'por venda'],
+            ],
+            'participacao' => [
+                'titulo' => 'Participação por forma',
+                'linhas' => $participacao,
+                'total' => [
+                    'vendas' => $qtdFormas,
+                    'ticket' => $qtdFormas > 0 ? number_format($somaFormas / $qtdFormas, 2, ',', '.') : '0,00',
+                    'valor' => number_format($somaFormas, 2, ',', '.'),
+                ],
+            ],
             'colunas' => [
                 ['label' => 'Número', 'width' => '12%'],
                 ['label' => 'Data', 'width' => '12%'],
@@ -170,7 +200,7 @@ class VendaRelatorioService implements ConsultaRelatorio
                 ['label' => 'Canceladas ('.$totais['qtd_canceladas'].')', 'valor' => $this->moeda($totais['valor_canceladas'])],
                 ['label' => 'Total das confirmadas', 'valor' => $this->moeda($totais['valor_confirmadas']), 'destaque' => true],
             ],
-        ], 'landscape');
+        ]);
     }
 
     /**

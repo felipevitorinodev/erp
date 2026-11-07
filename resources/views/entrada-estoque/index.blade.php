@@ -161,7 +161,7 @@
                 </div>
                 <div class="modal-box__footer">
                     <button type="button" class="btn btn--ghost" data-close-modal>Cancelar</button>
-                    <button type="submit" class="btn btn--primary" id="btn-submit-xml">Importar</button>
+                    <button type="submit" class="btn btn--primary" id="btn-submit-xml" data-espera="Importando..." data-demora="Lendo o XML da nota.">Importar</button>
                 </div>
             </form>
         </div>

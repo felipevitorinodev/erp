@@ -43,10 +43,9 @@
         @endif
 
         @if ($nfe->situacao === 'pendente')
-            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;"
-                onsubmit="this.querySelector('button').disabled = true;">
+            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;">
                 @csrf
-                <button type="submit" class="btn btn--primary btn--sm">Consultar SEFAZ</button>
+                <button type="submit" class="btn btn--primary btn--sm" data-espera="Consultando..." data-demora="Consultando a situação na SEFAZ.">Consultar SEFAZ</button>
             </form>
         @endif
 

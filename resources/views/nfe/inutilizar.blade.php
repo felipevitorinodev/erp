@@ -60,6 +60,8 @@
             <div class="card__footer">
                 <a href="{{ route('nfe.index') }}" class="btn btn--ghost">Voltar</a>
                 <button type="submit" class="btn btn--danger" id="btn-inutilizar"
+                    data-espera="Inutilizando..."
+                    data-demora="Enviando a inutilização para a SEFAZ."
                     data-confirm="Inutilizar esta faixa na SEFAZ? Os números não poderão ser usados."
                     data-confirm-title="Inutilizar numeração"
                     data-confirm-ok="Inutilizar"

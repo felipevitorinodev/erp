@@ -21,7 +21,7 @@ class CatalogoRelatorios
         return [
             'vendas' => [
                 'titulo' => 'Vendas',
-                'icone' => 'trending-up',
+                'icone' => 'cart',
                 'ordem' => 1,
             ],
             'produtos-estoque' => [

@@ -114,38 +114,61 @@
         });
     }
 
+    function textoFalha(xhr) {
+        var texto = 'Não foi possível carregar os gráficos.';
+        if (xhr && xhr.status === 419) texto = 'Sua sessão expirou. Atualize a página.';
+        if (xhr && xhr.status === 403) texto = 'Você não tem permissão para ver este relatório.';
+        if (xhr && xhr.status === 422) texto = 'Os filtros informados são inválidos.';
+        return texto;
+    }
+
     function carregar() {
-        var $raiz = $('#relatorio-graficos');
-        if (!$raiz.length) {
-            return;
-        }
+        var raiz = document.getElementById('relatorio-graficos');
+        if (!raiz) return;
 
         $('#relatorio-graficos-erro').addClass('relatorio-vazio--oculto');
 
-        $.ajax({
-            url: $raiz.attr('data-url') + (window.location.search || ''),
-            method: 'GET',
-            dataType: 'json',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        }).done(function (dados) {
+        var pedido = function () {
+            return $.ajax({
+                url: raiz.getAttribute('data-url') + (window.location.search || ''),
+                method: 'GET',
+                dataType: 'json',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+        };
+
+        var tratar = function (dados) {
             desenhar(dados || {});
-        }).fail(function (xhr) {
+        };
+        var falhar = function (xhr) {
             destruir();
-            var texto = 'Não foi possível carregar os gráficos.';
-            if (xhr.status === 419) {
-                texto = 'Sua sessão expirou. Atualize a página.';
+            mostrarErro(textoFalha(xhr));
+        };
+
+        if (!window.ErpCarregamento) {
+            pedido().done(tratar).fail(falhar);
+            return;
+        }
+
+        window.ErpCarregamento.durante(pedido, {
+            tipo: 'ajax',
+            detalhe: 'relatorio-graficos',
+            mostrar: function () {
+                raiz.setAttribute('aria-busy', 'true');
+                raiz.querySelectorAll('[data-grafico] .relatorio-grafico__area').forEach(function (area) {
+                    window.ErpCarregamento.preencher(area, 'grafico');
+                });
+            },
+            limpar: function () {
+                raiz.removeAttribute('aria-busy');
+                raiz.querySelectorAll('.sk-host').forEach(function (host) {
+                    host.remove();
+                });
             }
-            if (xhr.status === 403) {
-                texto = 'Você não tem permissão para ver este relatório.';
-            }
-            if (xhr.status === 422) {
-                texto = 'Os filtros informados são inválidos.';
-            }
-            mostrarErro(texto);
-        });
+        }).then(tratar, falhar);
     }
 
     $(function () {
@@ -164,10 +187,6 @@
                     return item.codigo ? nome + ' (' + item.codigo + ')' : nome;
                 }
             );
-        });
-
-        $(document).on('submit', '#form-relatorio', function () {
-            $(this).find('[data-relatorio-aplicar]').prop('disabled', true);
         });
 
         $(document).on('click', '[data-periodo-personalizado]', function () {

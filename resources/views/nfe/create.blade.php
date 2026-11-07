@@ -304,6 +304,9 @@
                 Emitir NF-e
             </button>
             <button type="submit" id="btn-emitir-confirmar" data-acao="emitir" hidden
+                data-espera="Emitindo..."
+                data-espera-para="#btn-emitir"
+                data-demora="Enviando a NF-e para a SEFAZ. Não feche esta tela."
                 data-confirm="Confirmar emissão da NF-e para a SEFAZ? A venda será confirmada e o estoque baixado."
                 data-confirm-title="Emitir NF-e"
                 data-confirm-ok="Emitir agora"></button>

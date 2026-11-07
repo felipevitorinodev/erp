@@ -115,6 +115,7 @@
         e.preventDefault();
         erroEl.hidden = true;
         btnSubmit.disabled = true;
+        btnSubmit.setAttribute('aria-busy', 'true');
         btnText.hidden = true;
         btnLoading.hidden = false;
 
@@ -138,6 +139,7 @@
         })
         .then(function(result) {
             btnSubmit.disabled = false;
+            btnSubmit.removeAttribute('aria-busy');
             btnText.hidden = false;
             btnLoading.hidden = true;
 
@@ -160,6 +162,7 @@
         })
         .catch(function(err) {
             btnSubmit.disabled = false;
+            btnSubmit.removeAttribute('aria-busy');
             btnText.hidden = false;
             btnLoading.hidden = true;
             erroEl.textContent = 'Erro de conexão. Tente novamente.';

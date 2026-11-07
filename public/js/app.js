@@ -248,6 +248,7 @@
                     form.requestSubmit(submitter || undefined);
                 } else {
                     console.debug && console.debug('modal-confirm: using form.submit() fallback');
+                    if (window.ErpCarregamento) window.ErpCarregamento.anotarEnvio(form, submitter);
                     form.submit();
                 }
             });
@@ -966,8 +967,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var pedido = 0;
 
     function fechar() {
+        pedido += 1;
         modal.hidden = true;
         document.body.classList.remove('modal-ver-aberto');
+        corpo.removeAttribute('aria-busy');
+        corpo.replaceChildren();
     }
 
     function abrir() {
@@ -1014,9 +1018,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         url.searchParams.set('modal', '1');
         var id = ++pedido;
-        titulo.textContent = 'Carregando…';
-        corpo.textContent = 'Carregando…';
+        titulo.textContent = 'Detalhe';
+        corpo.replaceChildren();
+        corpo.setAttribute('aria-busy', 'true');
         abrir();
+
+        var cancelarEsqueleto = window.ErpCarregamento
+            ? window.ErpCarregamento.adiar(200, function () {
+                if (id !== pedido) return;
+                window.ErpCarregamento.preencher(corpo, 'ficha');
+            })
+            : function () {};
 
         fetch(url.toString(), {
             headers: {
@@ -1029,13 +1041,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return resposta.text();
         }).then(function (html) {
             if (id !== pedido) return;
+            cancelarEsqueleto();
             corpo.innerHTML = html;
+            corpo.removeAttribute('aria-busy');
             var fragmento = corpo.querySelector('.ver-fragment');
             var nome = fragmento ? fragmento.getAttribute('data-titulo') : '';
             titulo.textContent = nome || 'Detalhe';
             executarScripts(corpo);
         }).catch(function () {
             if (id !== pedido) return;
+            cancelarEsqueleto();
+            corpo.removeAttribute('aria-busy');
             mostrarErro(href);
         });
     }

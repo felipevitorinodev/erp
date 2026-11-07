@@ -152,6 +152,7 @@ class VendaRelatorioRepository
         return $consulta
             ->selectRaw("COALESCE(NULLIF(forma_pagamento, ''), 'Não informada') as nome")
             ->selectRaw('COALESCE(SUM(total), 0) as total')
+            ->selectRaw('COUNT(*) as vendas')
             ->groupByRaw("COALESCE(NULLIF(forma_pagamento, ''), 'Não informada')")
             ->orderByDesc('total')
             ->limit(8)
@@ -159,6 +160,7 @@ class VendaRelatorioRepository
             ->map(fn ($linha) => [
                 'nome' => (string) $linha->nome,
                 'total' => round((float) $linha->total, 2),
+                'vendas' => (int) $linha->vendas,
             ])
             ->all();
     }

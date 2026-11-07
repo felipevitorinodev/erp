@@ -82,7 +82,7 @@
             </div>
             <div class="relatorio-grafico__area">
                 <canvas hidden></canvas>
-                <p class="relatorio-grafico__estado">Carregando…</p>
+                <p class="relatorio-grafico__estado relatorio-vazio--oculto"></p>
             </div>
         </section>
         <section class="relatorio-grafico" data-grafico>
@@ -91,7 +91,7 @@
             </div>
             <div class="relatorio-grafico__area">
                 <canvas hidden></canvas>
-                <p class="relatorio-grafico__estado">Carregando…</p>
+                <p class="relatorio-grafico__estado relatorio-vazio--oculto"></p>
             </div>
         </section>
     </div>

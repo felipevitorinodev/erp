@@ -25,6 +25,7 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
 
     var debounceTimer = null;
     var requestId = 0;
+    var loadingTimer = null;
     var $list = $('<ul class="autocomplete-list"></ul>').hide().appendTo('body');
     var ns = 'ac' + Math.random().toString(36).slice(2);
 
@@ -94,7 +95,13 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
 
     function buscar(q) {
         var current = ++requestId;
-        $input.addClass('is-loading');
+        window.clearTimeout(loadingTimer);
+        $input.removeClass('is-loading').removeAttr('aria-busy');
+        loadingTimer = window.setTimeout(function () {
+            if (current === requestId) {
+                $input.addClass('is-loading').attr('aria-busy', 'true');
+            }
+        }, 200);
 
         $.ajax({
             url: url,
@@ -106,9 +113,9 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
                 renderLista(data);
             },
             complete: function () {
-                if (current === requestId) {
-                    $input.removeClass('is-loading');
-                }
+                if (current !== requestId) return;
+                window.clearTimeout(loadingTimer);
+                $input.removeClass('is-loading').removeAttr('aria-busy');
             }
         });
     }

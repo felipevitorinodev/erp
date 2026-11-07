@@ -75,7 +75,7 @@
             </div>
         </main>
     </div>
-    @include('partials.page-loader-script')
+    <script src="{{ asset('js/carregamento.js') }}?v={{ filemtime(public_path('js/carregamento.js')) }}"></script>
     @include('partials.toast-stack', ['ignorarErros' => true, 'ignorarSessao' => true])
     <script>
         document.querySelectorAll('[data-ver-senha]').forEach(function (botao) {

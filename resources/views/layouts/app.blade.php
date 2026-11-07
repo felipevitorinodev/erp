@@ -490,10 +490,10 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/carregamento.js') }}?v={{ filemtime(public_path('js/carregamento.js')) }}"></script>
     <script src="{{ asset('js/jquery.min.js') }}?v={{ filemtime(public_path('js/jquery.min.js')) }}"></script>
     <script src="{{ asset('js/autocomplete.js') }}?v={{ filemtime(public_path('js/autocomplete.js')) }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
-    @include('partials.page-loader-script')
     @include('partials.toast-stack')
 
     {{-- Modais são colocados fora de qualquer form --}}
