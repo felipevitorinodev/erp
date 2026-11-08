@@ -101,7 +101,7 @@ class EmpresaRequest extends FormRequest
                 'digits:7',
                 Rule::requiredIf(fn () => $this->enderecoExigeIbge()),
             ],
-            'crt' => 'sometimes|required|integer|in:1,2,3',
+            'crt' => 'sometimes|required|integer|in:1,2,3,4',
             'nfe_destino' => 'sometimes|required|integer|in:1,2,3',
             'nfe_cfop_padrao' => 'sometimes|required|digits:4',
             'nfe_csosn_padrao' => 'sometimes|required|digits:3',

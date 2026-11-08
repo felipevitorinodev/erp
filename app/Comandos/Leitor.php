@@ -28,7 +28,7 @@ final class Leitor
     ];
 
     /** Palavras que encerram um nome com rótulo ("cliente Maria Souza vence amanhã"). */
-    private const PARADAS = 'referente|ref|descricao|sobre|vence|vencendo|vencimento|valor|categoria|no|na|via|pago|paga|pagamento|forma|com|cpf|cnpj|telefone|tel|fone|celular|email|e-mail';
+    private const PARADAS = 'referente|ref|descricao|sobre|vence|vencendo|vencimento|valor|categoria|no|na|via|pago|paga|pagamento|forma|com|cpf|cnpj|telefone|tel|fone|celular|email|e-mail|defeito|problema|previsao|entrega|equipamento|aparelho|marca|modelo|estoque';
 
     private const NUMERO = '\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?';
 

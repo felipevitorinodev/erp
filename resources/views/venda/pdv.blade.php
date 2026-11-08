@@ -59,7 +59,6 @@
                                    class="pdv-input-busca"
                                    placeholder="Nome, código ou código de barras"
                                    autocomplete="off"
-                                   autofocus
                                    enterkeyhint="done"
                                    aria-label="Buscar produto">
                             <kbd class="pdv-kbd pdv-busca__kbd">F2</kbd>

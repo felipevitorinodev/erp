@@ -105,28 +105,39 @@
             @enderror
         </div>
 
+        @php
+            $ncmCodigo = preg_replace('/\D/', '', (string) old('ncm', $produto->ncm ?? ''));
+            $ncmDescricao = strlen($ncmCodigo) === 8 ? \App\Models\Fiscal\Ncm::query()->where('codigo', $ncmCodigo)->value('descricao') : null;
+            $cestCodigo = substr(preg_replace('/\D/', '', (string) old('cest', $produto->cest ?? '')), 0, 7);
+            $cestDescricao = strlen($cestCodigo) === 7 ? \App\Models\Fiscal\Cest::query()->where('codigo', $cestCodigo)->value('descricao') : null;
+            $cfopCodigo = substr(preg_replace('/\D/', '', (string) old('cfop_padrao', $produto->cfop_padrao ?? '')), 0, 4);
+            $cfopDescricao = strlen($cfopCodigo) === 4 ? \App\Models\Fiscal\Cfop::query()->where('codigo', $cfopCodigo)->value('descricao') : null;
+        @endphp
         <div class="form-group">
-            <label class="form-label">NCM</label>
-            <input type="text" name="ncm" class="form-control @error('ncm') is-invalid @enderror"
-                value="{{ old('ncm', $produto->ncm ?? '') }}" maxlength="10">
+            <label class="form-label" for="produto-ncm-busca">NCM</label>
+            <input type="text" id="produto-ncm-busca" class="form-control @error('ncm') is-invalid @enderror"
+                value="{{ $ncmDescricao ? $ncmCodigo.' - '.$ncmDescricao : $ncmCodigo }}" autocomplete="off" placeholder="Código ou descrição">
+            <input type="hidden" name="ncm" id="produto-ncm" value="{{ $ncmCodigo }}">
             @error('ncm')
                 <span class="form-error">{{ $message }}</span>
             @enderror
         </div>
 
         <div class="form-group">
-            <label class="form-label">CEST</label>
-            <input type="text" name="cest" class="form-control @error('cest') is-invalid @enderror"
-                value="{{ old('cest', $produto->cest ?? '') }}" maxlength="10">
+            <label class="form-label" for="produto-cest-busca">CEST</label>
+            <input type="text" id="produto-cest-busca" class="form-control @error('cest') is-invalid @enderror"
+                value="{{ $cestDescricao ? $cestCodigo.' - '.$cestDescricao : $cestCodigo }}" autocomplete="off" placeholder="Código ou descrição">
+            <input type="hidden" name="cest" id="produto-cest" value="{{ $cestCodigo }}">
             @error('cest')
                 <span class="form-error">{{ $message }}</span>
             @enderror
         </div>
 
         <div class="form-group">
-            <label class="form-label">CFOP padrão</label>
-            <input type="text" name="cfop_padrao" class="form-control @error('cfop_padrao') is-invalid @enderror"
-                value="{{ old('cfop_padrao', $produto->cfop_padrao ?? '') }}" maxlength="5">
+            <label class="form-label" for="produto-cfop-busca">CFOP padrão</label>
+            <input type="text" id="produto-cfop-busca" class="form-control @error('cfop_padrao') is-invalid @enderror"
+                value="{{ $cfopDescricao ? $cfopCodigo.' - '.$cfopDescricao : $cfopCodigo }}" autocomplete="off" placeholder="Código ou descrição">
+            <input type="hidden" name="cfop_padrao" id="produto-cfop" value="{{ $cfopCodigo }}">
             @error('cfop_padrao')
                 <span class="form-error">{{ $message }}</span>
             @enderror
@@ -368,6 +379,40 @@
             var doc = item.cpf || item.cnpj || '';
             return item.nome + (doc ? ' — ' + doc : '');
         });
+
+    function rotuloFiscal(item) {
+        return item.rotulo || (item.codigo + ' - ' + item.descricao);
+    }
+
+    function alinharCodigo(busca, oculto, tamanho) {
+        var texto = busca.value.trim();
+        if (texto === '') {
+            oculto.value = '';
+            return;
+        }
+        var inicio = (texto.match(/^(\d+)/) || [null, ''])[1];
+        if (inicio.length === tamanho && (texto === inicio || texto.indexOf(inicio + ' - ') === 0)) {
+            oculto.value = inicio;
+            return;
+        }
+        if (oculto.value && texto.indexOf(oculto.value) !== 0) oculto.value = '';
+    }
+
+    initAutocomplete('#produto-ncm-busca', '#produto-ncm', '{{ route('api.ncms.busca') }}', rotuloFiscal, null, null, 'codigo');
+    initAutocomplete('#produto-cest-busca', '#produto-cest', '{{ route('api.cests.busca') }}', rotuloFiscal, null, function () {
+        var ncm = (document.getElementById('produto-ncm').value || '').replace(/\D/g, '').slice(0, 8);
+        return ncm.length === 8 ? { ncm: ncm } : {};
+    }, 'codigo');
+    initAutocomplete('#produto-cfop-busca', '#produto-cfop', '{{ route('api.cfops.busca') }}', rotuloFiscal, null, null, 'codigo');
+
+    var formProduto = document.getElementById('produto-ncm')?.form;
+    if (formProduto) {
+        formProduto.addEventListener('submit', function () {
+            alinharCodigo(document.getElementById('produto-ncm-busca'), document.getElementById('produto-ncm'), 8);
+            alinharCodigo(document.getElementById('produto-cest-busca'), document.getElementById('produto-cest'), 7);
+            alinharCodigo(document.getElementById('produto-cfop-busca'), document.getElementById('produto-cfop'), 4);
+        });
+    }
 
     // Callbacks dos modais de cadastro rápido
     document.addEventListener('modal-novo-grupo:success', function(e) {

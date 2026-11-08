@@ -95,8 +95,10 @@
         form.reset();
         erroEl.hidden = true;
         modal.hidden = false;
+        var toque = window.matchMedia('(pointer: coarse)').matches
+            || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
         var firstInput = form.querySelector('input, textarea, select');
-        if (firstInput) setTimeout(function() { firstInput.focus(); }, 100);
+        if (firstInput && !toque) setTimeout(function() { firstInput.focus(); }, 100);
     };
 
     // Fechar modal

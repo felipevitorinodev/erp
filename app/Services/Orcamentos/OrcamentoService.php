@@ -16,6 +16,7 @@ use App\Traits\ConversorMoeda;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrcamentoService
 {
@@ -76,6 +77,44 @@ class OrcamentoService
 
         return redirect()->route('orcamento.show', $orcamento)
             ->with('success', 'Orçamento #'.$orcamento->numero.' cadastrado com sucesso.');
+    }
+
+    /**
+     * Grava o orçamento sem montar resposta HTTP (comandos). Mesmas regras da tela.
+     *
+     * @throws ValidationException
+     */
+    public function gravar(Request $request): Orcamento
+    {
+        $itens = $this->processarItens($request->itens ?? []);
+
+        if ($itens === []) {
+            throw ValidationException::withMessages([
+                'itens' => 'Adicione pelo menos um item.',
+            ]);
+        }
+
+        $totais = $this->calcularTotais($itens, $request);
+
+        if ($totais === null) {
+            throw ValidationException::withMessages([
+                'desconto' => 'O desconto não pode ser maior que o subtotal dos itens.',
+            ]);
+        }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
+
+        return $this->repository->store([
+            'empresa_id' => auth()->user()->empresa_id,
+            'cliente_id' => $request->cliente_id ?: null,
+            'usuario_id' => auth()->id(),
+            'data_orcamento' => $request->data_orcamento,
+            'data_entrega' => $request->data_entrega ?: null,
+            ...$totais,
+            'forma_pagamento' => $request->forma_pagamento,
+            'observacoes' => $request->observacoes,
+            'situacao' => 'pendente',
+        ], $itens);
     }
 
     public function show(Orcamento $orcamento)

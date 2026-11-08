@@ -15,6 +15,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Clientes\ClienteRepository;
 use App\Repositories\Fornecedores\FornecedorRepository;
 use App\Services\Nfes\NfeVinculoFiscal;
+use App\Http\Controllers\Fiscal\CatalogoFiscalController;
 use App\Support\NaturezasOperacao;
 use Illuminate\Support\Facades\Route;
 
@@ -393,6 +394,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/naturezas-operacao/busca', function () {
         return NaturezasOperacao::buscar((string) request('q', ''));
     })->name('api.naturezas-operacao.busca');
+
+    Route::get('/api/cfops/busca', [CatalogoFiscalController::class, 'cfops'])->name('api.cfops.busca');
+    Route::get('/api/ncms/busca', [CatalogoFiscalController::class, 'ncms'])->name('api.ncms.busca');
+    Route::get('/api/cests/busca', [CatalogoFiscalController::class, 'cests'])->name('api.cests.busca');
 
     Route::get('/api/formas-pagamento/busca', function () {
         $q = trim((string) request('q', ''));

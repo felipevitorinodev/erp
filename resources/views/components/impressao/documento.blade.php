@@ -8,6 +8,11 @@
     $empresa = \App\Impressao\EmpresaDocumento::atual();
     $logo = $pdf ? $empresa->logoArquivo : $empresa->logoUrl;
     $periodoTexto = $periodo;
+    $iniciais = '';
+    foreach (array_slice(array_values(array_filter(preg_split('/\s+/u', trim($empresa->nome)) ?: [])), 0, 2) as $parte) {
+        $iniciais .= mb_strtoupper(mb_substr($parte, 0, 1));
+    }
+    $iniciais = $iniciais !== '' ? $iniciais : 'V';
 @endphp
 <!doctype html>
 <html lang="pt-BR">
@@ -17,21 +22,23 @@
     @include('impressao.estilos', ['pdf' => $pdf])
     @if($pdf)
         <style>
-            body { margin: 36pt 40pt 32pt 40pt; }
+            body { margin: 0 36pt 26pt; }
+            .doc-accent { margin: 0 -36pt 18px; }
         </style>
     @endif
 </head>
 <body>
+    <div class="doc-accent"></div>
     <table class="doc-head">
         <tr>
-            <td>
+            <td class="doc-brand">
                 <table>
                     <tr>
                         <td class="co-logo-cell">
                             @if($logo)
                                 <img src="{{ $logo }}" alt="" class="co-logo-img">
                             @else
-                                <div class="co-logo">Logo</div>
+                                <div class="co-logo">{{ $iniciais }}</div>
                             @endif
                         </td>
                         <td>

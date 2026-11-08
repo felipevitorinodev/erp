@@ -32,9 +32,9 @@ final class Assistente
 
     /** Pedidos incompletos que servem para mais de uma rotina: pergunta qual. */
     private const AMBIGUOS = [
-        '/^(?:cadastr|registr|cri|adicion|inclu|salv)\w*(?:\s+(?:um|uma|novo|nova|o|a))?(?:\s+(?:cadastro|registro|pessoa|contato))?$/u' => ['Cadastrar o quê?', ['cliente', 'fornecedor']],
-        '/^(?:(?:lanc|registr|cri|adicion|inclu)\w*\s+)?(?:uma\s+|nova\s+|a\s+)?(?:contas?|lancamentos?|financeiro)$/u' => ['Que tipo de conta?', ['conta_receber', 'conta_pagar']],
-        '/^(?:consult|ver|mostr|busc|procur|pesquis)\w*$/u' => ['O que você quer consultar?', ['produto', 'resumo']],
+        '/^(?:cadastr|registr|cri|adicion|inclu|salv)\w*(?:\s+(?:um|uma|novo|nova|o|a))?(?:\s+(?:cadastro|registro|pessoa|contato))?$/u' => ['Cadastrar o quê?', ['cadastrar_produto', 'cadastrar_servico', 'cliente', 'fornecedor']],
+        '/^(?:(?:lanc|registr|cri|adicion|inclu)\w*\s+)?(?:uma\s+|nova\s+|a\s+)?(?:contas?|lancamentos?|financeiro)$/u' => ['Que tipo de conta?', ['conta_receber', 'conta_pagar', 'consulta_contas']],
+        '/^(?:consult|ver|mostr|busc|procur|pesquis)\w*$/u' => ['O que você quer consultar?', ['produto', 'consulta_venda', 'consulta_contas', 'resumo']],
     ];
 
     private const ATALHOS_NA_SAUDACAO = 4;

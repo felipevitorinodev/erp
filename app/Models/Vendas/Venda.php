@@ -29,6 +29,7 @@ class Venda extends Model
         'funcionario_id',
         'numero',
         'data_venda',
+        'data_saida',
         'data_entrega',
         'subtotal',
         'desconto',
@@ -49,6 +50,7 @@ class Venda extends Model
 
     protected $casts = [
         'data_venda' => 'date',
+        'data_saida' => 'date',
         'data_entrega' => 'date',
         'subtotal' => 'decimal:2',
         'desconto' => 'decimal:2',

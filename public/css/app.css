@@ -762,6 +762,35 @@ a:hover {
     word-break: break-all;
 }
 
+.venda-pagamento {
+    margin-top: 1rem;
+}
+
+.venda-pagamento .ficha__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .venda-pagamento .ficha__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .venda-pagamento .ficha__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.venda-pagamento__nota {
+    margin: 0.85rem 0 0;
+    color: var(--color-text-muted);
+}
+
+.venda-pagamento .table-wrap {
+    border-top: 1px solid var(--color-border);
+}
+
 .venda-doc__totais {
     display: flex;
     justify-content: flex-end;
@@ -954,6 +983,43 @@ a:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
     gap: 1rem 1.5rem;
+    align-items: stretch;
+    container-type: inline-size;
+}
+
+.nota-fiscal__opcao {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.nota-fiscal__opcao + .nota-fiscal__opcao {
+    position: relative;
+}
+
+.nota-fiscal__opcao + .nota-fiscal__opcao::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(-0.75rem - 0.5px);
+    width: 1px;
+    background: var(--color-border);
+}
+
+@container (max-width: 560px) {
+    .nota-fiscal__opcao + .nota-fiscal__opcao::before {
+        top: calc(-0.5rem - 0.5px);
+        right: 0;
+        bottom: auto;
+        left: 0;
+        width: auto;
+        height: 1px;
+    }
+}
+
+.nota-fiscal__opcao > form {
+    margin-top: auto;
 }
 
 .nota-fiscal__opcao-titulo {
@@ -5767,7 +5833,7 @@ body.auth-body {
 
 .nfe-meta-row {
     display: grid;
-    grid-template-columns: minmax(90px, 120px) minmax(140px, 200px) minmax(180px, 280px);
+    grid-template-columns: minmax(90px, 120px) minmax(140px, 200px) minmax(160px, 1fr) minmax(160px, 1fr);
     gap: 0.85rem;
     margin-bottom: 1.15rem;
     padding-bottom: 1.15rem;
@@ -5900,6 +5966,25 @@ body.auth-body {
     border: 1px solid currentColor;
     border-radius: var(--radius-sm);
     opacity: 0.7;
+}
+
+.nfe-busca-fiscal {
+    position: relative;
+}
+
+.nfe-busca-fiscal__lista {
+    z-index: 80;
+}
+
+.nfe-busca-fiscal__lista[hidden] {
+    display: none;
+}
+
+.nfe-item-cfop {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-text-muted);
 }
 
 .nfe-item-busca {
@@ -6388,10 +6473,6 @@ body.auth-body {
 
     .nfe-meta-row {
         grid-template-columns: 1fr 1fr;
-    }
-
-    .nfe-meta-row .form-group:last-child {
-        grid-column: 1 / -1;
     }
 
     #form-nfe .form-grid--col-2,

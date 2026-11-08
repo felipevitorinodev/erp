@@ -24,6 +24,10 @@ class NfePendenciasService
             $pendencias[] = 'Informe a natureza da operação.';
         }
 
+        if ($venda->data_saida && $venda->data_venda && $venda->data_saida->copy()->startOfDay()->lt($venda->data_venda->copy()->startOfDay())) {
+            $pendencias[] = 'A data de saída não pode ser anterior à data de emissão.';
+        }
+
         if (blank($venda->forma_pagamento)) {
             $pendencias[] = 'Selecione a forma de pagamento.';
         }

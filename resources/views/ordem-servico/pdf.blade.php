@@ -8,19 +8,14 @@
     $situacaoLabel = $os->situacaoLabel();
 @endphp
 <x-impressao.documento kind="Ordem de serviço" :nome="'Nº '.$numero" :periodo="$os->data_abertura->format('d/m/Y')">
-    <x-impressao.filtros :chips="array_values(array_filter([
-        ['rotulo' => 'Situação', 'valor' => $situacaoLabel],
-        ['rotulo' => 'Técnico', 'valor' => $tecnico],
-        ['rotulo' => 'Previsão', 'valor' => $os->data_previsao ? $os->data_previsao->format('d/m/Y') : '—'],
-        $os->venda ? ['rotulo' => 'Venda', 'valor' => '#'.$os->venda->numero] : null,
-    ]))" />
-
     <table class="fichas">
         <tr>
             <td class="ficha">
                 <div class="ficha-titulo">Cliente</div>
                 <p><span>Nome</span> {{ $cliente->nome ?? 'Consumidor final' }}</p>
-                <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @if($documento !== '—')
+                    <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @endif
                 @if($telefone)
                     <p><span>Telefone</span> {{ $telefone }}</p>
                 @endif
@@ -31,11 +26,26 @@
             <td class="ficha-gap"></td>
             <td class="ficha">
                 <div class="ficha-titulo">Equipamento</div>
-                <p><span>Equipamento</span> {{ $equipamento }}</p>
-                <p><span>Nº de série</span> {{ $os->numero_serie ?: '—' }}</p>
-                <p><span>Acessórios</span> {{ $os->acessorios ?: '—' }}</p>
+                @if($equipamento !== '—')
+                    <p><span>Equipamento</span> {{ $equipamento }}</p>
+                @endif
+                @if($os->numero_serie)
+                    <p><span>Nº de série</span> {{ $os->numero_serie }}</p>
+                @endif
+                @if($os->acessorios)
+                    <p><span>Acessórios</span> {{ $os->acessorios }}</p>
+                @endif
                 @if($os->garantia)
                     <p><span>Garantia</span> {{ $os->garantia }}</p>
+                @endif
+                @if($tecnico !== '—')
+                    <p><span>Técnico</span> {{ $tecnico }}</p>
+                @endif
+                @if($os->data_previsao)
+                    <p><span>Previsão</span> {{ $os->data_previsao->format('d/m/Y') }}</p>
+                @endif
+                @if($os->venda)
+                    <p><span>Venda</span> #{{ $os->venda->numero }}</p>
                 @endif
                 <p><span>Situação</span> <x-impressao.situacao :texto="$situacaoLabel" /></p>
             </td>

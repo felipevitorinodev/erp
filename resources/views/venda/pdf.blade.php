@@ -14,19 +14,14 @@
     $numero = \App\Impressao\CupomDocumento::numero($venda->numero);
 @endphp
 <x-impressao.documento kind="Comprovante de venda" :nome="'Nº '.$numero" :periodo="$venda->data_venda->format('d/m/Y')">
-    <x-impressao.filtros :chips="[
-        ['rotulo' => 'Situação', 'valor' => $situacaoLabel],
-        ['rotulo' => 'Vendedor', 'valor' => $vendedor],
-        ['rotulo' => 'Pagamento', 'valor' => $pagamento],
-        ['rotulo' => 'Entrega', 'valor' => $venda->data_entrega ? $venda->data_entrega->format('d/m/Y') : '—'],
-    ]" />
-
     <table class="fichas">
         <tr>
             <td class="ficha">
                 <div class="ficha-titulo">Cliente</div>
                 <p><span>Nome</span> {{ $cliente->nome ?? 'Consumidor final' }}</p>
-                <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @if($documento !== '—')
+                    <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @endif
                 @if($telefone)
                     <p><span>Telefone</span> {{ $telefone }}</p>
                 @endif
@@ -39,7 +34,9 @@
                 <div class="ficha-titulo">Operação</div>
                 <p><span>Vendedor</span> {{ $vendedor }}</p>
                 <p><span>Pagamento</span> {{ $pagamento }}</p>
-                <p><span>Entrega</span> {{ $venda->data_entrega ? $venda->data_entrega->format('d/m/Y') : '—' }}</p>
+                @if($venda->data_entrega)
+                    <p><span>Entrega</span> {{ $venda->data_entrega->format('d/m/Y') }}</p>
+                @endif
                 <p><span>Situação</span> <x-impressao.situacao :texto="$situacaoLabel" /></p>
             </td>
         </tr>

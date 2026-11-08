@@ -275,7 +275,7 @@ class NfeService
         }
 
         if ((int) $empresa->crt === 3) {
-            $alertas[] = 'Regime Normal ainda não é emitido nesta versão. Use Simples Nacional.';
+            $alertas[] = 'Regime Normal ainda não é emitido nesta versão. Use Simples Nacional ou MEI.';
         }
 
         return $alertas;

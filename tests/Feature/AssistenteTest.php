@@ -7,6 +7,8 @@ use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
+use App\Models\Orcamentos\Orcamento;
+use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
@@ -330,9 +332,12 @@ class AssistenteTest extends TestCase
         $this->diz('2 coca lata')
             ->assertJsonPath('texto', 'Como foi pago?')
             ->assertJsonPath('opcoes', [['rotulo' => 'Dinheiro', 'enviar' => 'Dinheiro'], ['rotulo' => 'Pix', 'enviar' => 'Pix']]);
-        $this->diz('é no pix')
+        $this->diz('é no pix')->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('qualquer dia')->assertJsonPath('texto', 'Não entendi. Qual a data da venda?');
+        $this->diz('hoje')
             ->assertJsonPath('tipo', 'confirmacao')
             ->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix?')
+            ->assertJsonPath('detalhes', ['Data: 07/11/2026', 'Situação: confirmada'])
             ->assertJsonPath('itens', [['descricao' => '2 × Coca lata', 'valor' => 'R$ 13,00']]);
         $this->assertSame(0, Venda::count());
 
@@ -351,8 +356,8 @@ class AssistenteTest extends TestCase
         $this->forma('Pix');
         $maria = $this->cliente('Maria Souza');
 
-        $this->diz('a Maria comprou 2 coca lata no pix')
-            ->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix para Maria Souza?');
+        $this->diz('a Maria comprou 2 coca lata no pix')->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix para Maria Souza?');
 
         $pergunta = $this->diz('a Mria comprou 2 coca lata no pix')
             ->assertJsonPath('tipo', 'pergunta')
@@ -360,12 +365,15 @@ class AssistenteTest extends TestCase
         $this->assertSame(['Maria Souza', 'Sem cliente', 'Cadastrar “Mria”'], $this->rotulos($pergunta));
         $pergunta->assertJsonPath('opcoes.0.enviar', '#'.$maria->id);
 
-        $this->diz('#'.$maria->id)->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix para Maria Souza?');
+        $this->diz('#'.$maria->id)->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix para Maria Souza?');
 
-        $this->diz('ele comprou 1 coca lata no pix')->assertJsonPath('texto', 'Registrar venda de R$ 6,50 no Pix?');
+        $this->diz('ele comprou 1 coca lata no pix')->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Registrar venda de R$ 6,50 no Pix?');
 
         $this->diz('a Mria comprou 2 coca lata no pix');
-        $this->diz('sem cliente')->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix?');
+        $this->diz('sem cliente')->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix?');
     }
 
     public function test_venda_a_prazo_e_produto_ambiguo(): void
@@ -385,7 +393,8 @@ class AssistenteTest extends TestCase
             ->assertJsonPath('texto', 'Achei mais de um “parafuso”. Qual deles?');
         $this->assertSame(['Parafuso 10mm · R$ 1,00', 'Parafuso 8mm · R$ 1,00'], $this->rotulos($pergunta));
 
-        $this->diz('#'.$dezMm->id)
+        $this->diz('#'.$dezMm->id)->assertJsonPath('texto', 'Qual a data da venda?');
+        $this->diz('hoje')
             ->assertJsonPath('texto', 'Registrar venda de R$ 3,00 no Dinheiro?')
             ->assertJsonPath('itens.0.descricao', '3 × Parafuso 10mm');
     }
@@ -424,6 +433,8 @@ class AssistenteTest extends TestCase
         $this->diz('cadastrar')
             ->assertJsonPath('texto', 'Cadastrar o quê?')
             ->assertJsonPath('opcoes', [
+                ['rotulo' => 'Cadastrar produto', 'enviar' => 'cadastrar produto'],
+                ['rotulo' => 'Cadastrar serviço', 'enviar' => 'cadastrar serviço'],
                 ['rotulo' => 'Cadastrar cliente', 'enviar' => 'cadastrar cliente'],
                 ['rotulo' => 'Cadastrar fornecedor', 'enviar' => 'cadastrar fornecedor'],
             ]);
@@ -475,5 +486,202 @@ class AssistenteTest extends TestCase
 
         $this->actingAs($this->admin)->postJson(route('comandos.confirmar'), ['token' => str_repeat('a', 32), 'acao' => 'apagar'])
             ->assertStatus(422);
+    }
+
+    public function test_cadastra_produto_e_servico(): void
+    {
+        $this->diz('cadastrar produto')->assertJsonPath('texto', 'Qual o nome do produto?');
+        $this->diz('X')->assertJsonPath('texto', 'Qual o nome completo do produto?');
+        $this->diz('Coca lata')->assertJsonPath('texto', 'Qual o preço de venda?');
+        $this->diz('barato')->assertJsonPath('texto', 'Não entendi. Qual o preço de venda?');
+        $this->diz('6,50')
+            ->assertJsonPath('texto', 'Qual o estoque inicial?')
+            ->assertJsonPath('opcoes.0', ['rotulo' => 'Sem estoque', 'enviar' => 'sem estoque']);
+        $this->diz('cheio')->assertJsonPath('texto', 'Não entendi. Qual o estoque inicial?');
+
+        $previa = $this->diz('sem estoque')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Cadastrar o produto Coca lata por R$ 6,50?')
+            ->assertJsonPath('detalhes', ['Sem estoque inicial.']);
+        $this->assertSame(0, Produto::count());
+
+        $this->confirmar($previa->json('token'))
+            ->assertJsonPath('tipo', 'sucesso')
+            ->assertJsonPath('texto', 'Pronto! Produto cadastrado: Coca lata.');
+
+        $coca = Produto::where('nome', 'Coca lata')->sole();
+        $this->assertSame('1', (string) $coca->tipo);
+        $this->assertSame('000001', $coca->codigo);
+        $this->assertEquals(6.5, (float) $coca->preco_venda);
+        $this->assertTrue($coca->controla_estoque);
+
+        $this->diz('novo produto Parafuso 8mm por 1,20 estoque 50')
+            ->assertJsonPath('texto', 'Cadastrar o produto Parafuso 8mm por R$ 1,20?')
+            ->assertJsonPath('detalhes', ['Estoque inicial: 50']);
+        $this->diz('sim')->assertJsonPath('tipo', 'sucesso');
+
+        $parafuso = Produto::where('nome', 'Parafuso 8mm')->sole();
+        $this->assertSame('000002', $parafuso->codigo);
+        $this->assertEquals(50.0, (float) $parafuso->estoque_atual);
+
+        $this->diz('cadastrar serviço')->assertJsonPath('texto', 'Qual o nome do serviço?');
+        $this->diz('não')->assertJsonPath('texto', 'Tudo bem, deixei de lado.');
+
+        $servico = $this->diz('cadastrar serviço Troca de tela 150')
+            ->assertJsonPath('texto', 'Cadastrar o serviço Troca de tela por R$ 150,00?')
+            ->assertJsonPath('detalhes', ['Serviço, sem controle de estoque.']);
+        $this->confirmar($servico->json('token'))->assertJsonPath('tipo', 'sucesso');
+
+        $troca = Produto::where('nome', 'Troca de tela')->sole();
+        $this->assertSame('2', (string) $troca->tipo);
+        $this->assertFalse($troca->controla_estoque);
+        $this->assertEquals(0.0, (float) $troca->estoque_atual);
+
+        $usuario = $this->usuarioCom(['comandos', 'vendas']);
+        $this->diz('cadastrar produto Caneta', $usuario)
+            ->assertJsonPath('tipo', 'erro')
+            ->assertJsonPath('texto', 'Seu perfil não pode usar “Cadastrar produto”. Se precisar, peça a liberação ao administrador.');
+    }
+
+    public function test_orcamento_e_ordem_de_servico(): void
+    {
+        $this->produto('Coca lata', 6.5);
+        $this->produto('Troca de tela', 80, 0);
+        Produto::query()->where('nome', 'Troca de tela')->update(['tipo' => 2, 'controla_estoque' => false]);
+        $this->forma('Pix');
+        $maria = $this->cliente('Maria Souza');
+
+        $this->diz('novo orçamento')->assertJsonPath('texto', 'O que entra no orçamento?');
+        $this->diz('depois')->assertJsonPath('texto', 'Não encontrei o produto “depois”. Qual é o nome certo?');
+        $this->diz('não')->assertJsonPath('texto', 'Tudo bem, deixei de lado.');
+
+        $this->diz('orçamento 2 coca lata para Maria')->assertJsonPath('texto', 'Qual a data do orçamento?');
+        $this->diz('não sei')->assertJsonPath('texto', 'Não entendi. Qual a data do orçamento?');
+        $previa = $this->diz('hoje')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Registrar orçamento de R$ 13,00 para Maria Souza?')
+            ->assertJsonPath('detalhes', ['Data: 07/11/2026'])
+            ->assertJsonPath('itens', [['descricao' => '2 × Coca lata', 'valor' => 'R$ 13,00']]);
+        $this->assertSame(0, Orcamento::count());
+
+        $this->confirmar($previa->json('token'))
+            ->assertJsonPath('tipo', 'sucesso')
+            ->assertJsonPath('texto', 'Pronto! Orçamento nº 000001 registrado.');
+
+        $orcamento = Orcamento::sole();
+        $this->assertSame('pendente', $orcamento->situacao);
+        $this->assertSame($maria->id, $orcamento->cliente_id);
+        $this->assertEquals(13.0, (float) $orcamento->total);
+        $this->assertSame('2026-11-07', $orcamento->data_orcamento->toDateString());
+
+        $this->diz('orçar 1 troca de tela no pix')->assertJsonPath('texto', 'Para qual cliente?');
+        $this->diz('sem cliente')->assertJsonPath('texto', 'Qual a data do orçamento?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Registrar orçamento de R$ 80,00 no Pix?');
+
+        $this->diz('nova ordem de serviço')->assertJsonPath('texto', 'Qual o equipamento?');
+        $this->diz('impressora')->assertJsonPath('texto', 'Qual a data de abertura?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Qual o defeito relatado?');
+        $this->diz('sem defeito')->assertJsonPath('texto', 'Para qual cliente?');
+        $this->diz('não')->assertJsonPath('texto', 'Tudo bem, deixei de lado.');
+
+        $this->diz('nova ordem de serviço')->assertJsonPath('texto', 'Qual o equipamento?');
+        $this->diz('notebook da Maria, não liga')->assertJsonPath('texto', 'Qual a data de abertura?');
+        $os = $this->diz('hoje')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Abrir ordem de serviço do notebook para Maria Souza?')
+            ->assertJsonPath('detalhes', ['Abertura: 07/11/2026', 'Defeito: não liga'])
+            ->assertJsonPath('avisos', ['Sem itens lançados.']);
+        $this->confirmar($os->json('token'))
+            ->assertJsonPath('texto', 'Pronto! Ordem de serviço nº 000001 aberta.');
+
+        $ordem = OrdemServico::sole();
+        $this->assertSame('aberta', $ordem->situacao);
+        $this->assertSame('notebook', $ordem->equipamento);
+        $this->assertSame('não liga', $ordem->defeito_relatado);
+        $this->assertSame($maria->id, $ordem->cliente_id);
+        $this->assertSame('2026-11-07', $ordem->data_abertura->toDateString());
+
+        $this->diz('abrir os celular, 1 troca de tela, cliente Maria previsão sexta')
+            ->assertJsonPath('texto', 'Qual a data de abertura?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Qual o defeito relatado?');
+        $this->diz('tela trincada')
+            ->assertJsonPath('texto', 'Abrir ordem de serviço do celular para Maria Souza, no total de R$ 80,00?')
+            ->assertJsonPath('detalhes.0', 'Abertura: 07/11/2026')
+            ->assertJsonPath('detalhes.1', 'Defeito: tela trincada')
+            ->assertJsonPath('detalhes.2', 'Previsão: 13/11/2026')
+            ->assertJsonPath('itens.0.descricao', '1 × Troca de tela');
+    }
+
+    public function test_busca_vendas_e_contas_por_data(): void
+    {
+        $maria = $this->cliente('Maria Souza');
+        $outra = $this->criarEmpresa('11555666000172');
+
+        Venda::create([
+            'empresa_id' => $this->empresa->id, 'cliente_id' => $maria->id, 'usuario_id' => $this->admin->id,
+            'numero' => '000010', 'data_venda' => '2026-11-06', 'subtotal' => 40, 'total' => 40,
+            'situacao' => 'confirmada', 'forma_pagamento' => 'Pix',
+        ]);
+        Venda::create([
+            'empresa_id' => $this->empresa->id, 'usuario_id' => $this->admin->id,
+            'numero' => '000011', 'data_venda' => '2026-11-07', 'subtotal' => 10, 'total' => 10,
+            'situacao' => 'confirmada', 'forma_pagamento' => 'Dinheiro',
+        ]);
+        Venda::create([
+            'empresa_id' => $outra->id, 'numero' => '000099', 'data_venda' => '2026-11-06',
+            'subtotal' => 999, 'total' => 999, 'situacao' => 'confirmada',
+        ]);
+
+        $this->diz('vendas')->assertJsonPath('texto', 'De qual período?');
+        $this->diz('qualquer')->assertJsonPath('texto', 'Não entendi. De qual período?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Hoje (07/11/2026): R$ 10,00 em 1 venda.');
+
+        $this->diz('buscar contas')->assertJsonPath('texto', 'Qual vencimento?');
+        $this->diz('nenhuma data')->assertJsonPath('texto', 'Não entendi. Qual vencimento?');
+        $this->diz('hoje')->assertJsonPath('texto', 'Hoje (07/11/2026): nenhuma conta com esse vencimento.');
+
+        $ontem = $this->diz('vendas de ontem');
+        $ontem->assertJsonPath('tipo', 'info');
+        $this->assertStringContainsString('Ontem (06/11/2026): R$ 40,00 em 1 venda.', $ontem->json('texto'));
+        $ontem->assertJsonPath('itens.0', ['descricao' => 'nº 000010 · Maria Souza', 'valor' => 'R$ 40,00']);
+        $this->assertStringNotContainsString('000011', $ontem->getContent());
+        $this->assertStringNotContainsString('999', $ontem->getContent());
+
+        $this->assertStringStartsWith('Hoje:', $this->diz('vendas de hoje')->json('texto'));
+
+        $faixa = $this->diz('vendas de 06/11 a 07/11');
+        $this->assertStringContainsString('06/11/2026 a 07/11/2026: R$ 50,00 em 2 vendas.', $faixa->json('texto'));
+
+        ContaReceber::create([
+            'empresa_id' => $this->empresa->id, 'cliente_id' => $maria->id, 'descricao' => 'mensalidade',
+            'valor' => 150, 'valor_pago' => 0, 'data_vencimento' => '2026-11-08', 'situacao' => 'aberta',
+        ]);
+        ContaPagar::create([
+            'empresa_id' => $this->empresa->id, 'descricao' => 'energia',
+            'valor' => 80, 'valor_pago' => 0, 'data_vencimento' => '2026-11-08', 'situacao' => 'aberta',
+        ]);
+        ContaReceber::create([
+            'empresa_id' => $this->empresa->id, 'descricao' => 'já era',
+            'valor' => 10, 'valor_pago' => 0, 'data_vencimento' => '2026-11-07', 'situacao' => 'aberta',
+        ]);
+        ContaReceber::create([
+            'empresa_id' => $outra->id, 'descricao' => 'alheia',
+            'valor' => 500, 'valor_pago' => 0, 'data_vencimento' => '2026-11-08', 'situacao' => 'aberta',
+        ]);
+
+        $contas = $this->diz('contas que vencem amanhã');
+        $this->assertStringContainsString('Amanhã (08/11/2026): 2 contas, R$ 230,00.', $contas->json('texto'));
+        $this->assertStringContainsString('mensalidade', $contas->getContent());
+        $this->assertStringContainsString('energia', $contas->getContent());
+        $this->assertStringNotContainsString('alheia', $contas->getContent());
+        $this->assertStringNotContainsString('já era', $contas->getContent());
+
+        $soReceber = $this->diz('contas a receber que vencem amanhã');
+        $this->assertStringContainsString('Amanhã (08/11/2026), a receber: 1 conta, R$ 150,00.', $soReceber->json('texto'));
+        $this->assertStringNotContainsString('energia', $soReceber->getContent());
+
+        $this->diz('conta de luz 230 vence sexta')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Lançar R$ 230,00 a pagar?');
     }
 }

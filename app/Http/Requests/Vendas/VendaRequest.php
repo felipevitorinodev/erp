@@ -24,6 +24,7 @@ class VendaRequest extends FormRequest
             'cliente_id' => 'nullable|exists:clientes,id',
             'funcionario_id' => 'nullable|exists:funcionarios,id',
             'data_venda' => 'required|date',
+            'data_saida' => 'nullable|date|after_or_equal:data_venda',
             'data_entrega' => 'nullable|date',
             'forma_pagamento' => 'nullable|string|max:100',
             'parcelas' => 'nullable|array|max:48',
@@ -92,6 +93,7 @@ class VendaRequest extends FormRequest
             'min' => 'O campo :attribute deve ter no mínimo :min.',
             'itens.required' => 'Adicione pelo menos um item.',
             'itens.min' => 'Adicione pelo menos um item.',
+            'data_saida.after_or_equal' => 'A data de saída não pode ser anterior à data de emissão.',
         ];
     }
 
@@ -101,6 +103,7 @@ class VendaRequest extends FormRequest
             'cliente_id' => 'cliente',
             'funcionario_id' => 'vendedor',
             'data_venda' => 'data da venda',
+            'data_saida' => 'data de saída',
             'data_entrega' => 'data de entrega',
             'forma_pagamento' => 'forma de pagamento',
             'desconto' => 'desconto',

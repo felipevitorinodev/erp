@@ -189,6 +189,36 @@
 
                 @endif
 
+                @if ($podeProdutos)
+                {{-- Produtos --}}
+                <div class="sidebar__group" data-group>
+                    <div class="sidebar__group-toggle" data-toggle>
+                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" aria-hidden="true">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                        </svg>
+                        <span class="sidebar__group-label">Produtos</span>
+                        <span class="sidebar__group-arrow">›</span>
+                    </div>
+                    <div class="sidebar__group-links" data-links>
+                        <a href="{{ route('produto.index') }}"
+                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
+                            Produtos
+                        </a>
+                        <a href="{{ route('unidadeMedida.index') }}"
+                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
+                            Unidades
+                        </a>
+                        <a href="{{ route('grupo.index') }}"
+                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
+                            Grupos
+                        </a>
+                    </div>
+                </div>
+
+                @endif
+
                 @if ($podeEstoque)
                 {{-- Estoque --}}
                 <div class="sidebar__group" data-group>
@@ -219,37 +249,6 @@
                             Posição atual
                         </a>
                         @endif
-                    </div>
-                </div>
-
-                @endif
-
-                @if ($podeProdutos)
-                {{-- Produtos --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                            <line x1="3.27" y1="6.96" x2="12" y2="12.01"></line>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                        </svg>
-                        <span class="sidebar__group-label">Produtos</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('produto.index') }}"
-                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                            Produtos
-                        </a>
-                        <a href="{{ route('unidadeMedida.index') }}"
-                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
-                            Unidades
-                        </a>
-                        <a href="{{ route('grupo.index') }}"
-                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
-                            Grupos
-                        </a>
                     </div>
                 </div>
 

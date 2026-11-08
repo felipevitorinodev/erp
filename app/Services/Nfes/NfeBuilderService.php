@@ -102,7 +102,7 @@ class NfeBuilderService
         }
 
         if ((int) $this->empresa->crt === 3) {
-            throw new RuntimeException('Regime Normal ainda não é emitido. Use Simples Nacional ou aguarde a revisão contábil do regime.');
+            throw new RuntimeException('Regime Normal ainda não é emitido. Use Simples Nacional ou MEI, que emitem com CSOSN sem destaque de imposto.');
         }
 
         if ($this->somenteDigitos($this->empresa->cod_ibge) === '' || strlen($this->somenteDigitos($this->empresa->cod_ibge)) !== 7) {
@@ -163,14 +163,16 @@ class NfeBuilderService
             $indFinal = strlen($cnpjDestino) === 14 ? 0 : 1;
         }
 
-        $make->tagide($this->dados([
+        $fuso = $this->fuso($cUf);
+        $dhEmi = (new NfeDatas())->emissao($venda->data_venda, $fuso);
+        $ide = [
             'cUF' => $cUf,
             'cNF' => $cNf,
             'natOp' => $this->limitar($venda->natureza_operacao ?: 'VENDA DE MERCADORIA', 60),
             'mod' => 55,
             'serie' => (int) ($this->empresa->nfe_serie ?: 1),
             'nNF' => (int) $numero,
-            'dhEmi' => Carbon::now($this->fuso($cUf))->format('Y-m-d\TH:i:sP'),
+            'dhEmi' => $dhEmi->format('Y-m-d\TH:i:sP'),
             'tpNF' => 1,
             'idDest' => 1,
             'cMunFG' => $this->somenteDigitos($this->empresa->cod_ibge),
@@ -182,7 +184,13 @@ class NfeBuilderService
             'indPres' => 1,
             'procEmi' => 0,
             'verProc' => '1.0.0',
-        ]));
+        ];
+        $saida = (new NfeDatas())->saida($venda->data_saida, $dhEmi);
+        if ($saida !== null) {
+            $ide['dhSaiEnt'] = $saida;
+        }
+
+        $make->tagide($this->dados($ide));
     }
 
     protected function montarEmitente(Make $make): void
@@ -437,6 +445,11 @@ class NfeBuilderService
     {
         $texto = trim((string) $venda->observacoes);
         $fisco = trim((string) $venda->inf_ad_fisco);
+
+        if ((int) $this->empresa->crt === 4) {
+            $aviso = 'Documento emitido por Microempreendedor Individual (MEI).';
+            $texto = trim($aviso.($texto !== '' ? ' '.$texto : ''));
+        }
 
         if ($texto === '' && $fisco === '') {
             return;

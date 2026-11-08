@@ -592,8 +592,10 @@
         if (!isMobileClient()) return;
         createKeypad();
         activeInput = input;
-        // prevent native keyboard: set readonly attribute before focusing
-        input._wasReadonly = input.readOnly || false;
+        // readonly marcado só para o gesto de toque não conta como readonly original
+        var temporario = input.dataset.readonlyToque === '1';
+        input._wasReadonly = temporario ? false : !!(input.readOnly || (input.hasAttribute && input.hasAttribute('readonly')));
+        if (temporario) delete input.dataset.readonlyToque;
         try { input.setAttribute('readonly', 'readonly'); } catch (e) { input.readOnly = true; }
         var display = keypad.querySelector('.nk-display');
         var val = String(input.value || '');
@@ -730,37 +732,111 @@
         }
     }
 
-    // attach to input-numeric focus on mobile
-    // intercept touchstart to prevent native keyboard from opening (run before focus)
-    document.addEventListener('touchstart', function (e) {
-        var selector = '.input-numeric, .input-preco, .input-desc-item, .input-moeda, .totals-box__input, #input-desconto, #input-acrescimo, .input-qtd';
-        var el = e.target.closest ? e.target.closest(selector) : null;
-        if (!el) return;
-        if (!isMobileClient()) return;
-        // prevent native keyboard
-        e.preventDefault();
-        // ensure data-decimals exists for legacy classes
+    var seletorTeclado = '.input-numeric, .input-preco, .input-desc-item, .input-moeda, .totals-box__input, #input-desconto, #input-acrescimo, .input-qtd';
+    var seletorNumerico = seletorTeclado + ', input[inputmode="numeric"], input[inputmode="decimal"], input[inputmode="tel"], input[type="tel"], input[type="number"]';
+    var gesto = null;
+    var rolouEm = 0;
+    var LIMIAR_ROLAGEM = 12;
+
+    function usaToque() {
+        return ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    }
+
+    function campoNumerico(el) {
+        if (!el || !el.closest) return null;
+        return el.closest(seletorNumerico);
+    }
+
+    function prepararTeclado(el) {
         if (!el.classList.contains('input-numeric')) {
             el.classList.add('input-numeric');
-            if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
-            else el.setAttribute('data-decimals', '2');
+            if (!el.getAttribute('data-decimals')) el.setAttribute('data-decimals', '2');
         }
-        showKeypadFor(el);
+    }
+
+    function marcarSomenteLeitura(el) {
+        if (el.readOnly || (el.hasAttribute && el.hasAttribute('readonly'))) return;
+        el.dataset.readonlyToque = '1';
+        el.setAttribute('readonly', 'readonly');
+    }
+
+    function soltarSomenteLeitura(el) {
+        if (!el || el.dataset.readonlyToque !== '1') return;
+        el.removeAttribute('readonly');
+        delete el.dataset.readonlyToque;
+    }
+
+    function gestoFoiRolagem() {
+        return rolouEm && (Date.now() - rolouEm) < 600;
+    }
+
+    // O toque só abre o teclado se o dedo não se mover. Rolagem segue normal.
+    document.addEventListener('touchstart', function (e) {
+        if (!usaToque()) return;
+        var el = campoNumerico(e.target);
+        if (!el || el.disabled) {
+            gesto = null;
+            return;
+        }
+        gesto = {
+            el: el,
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            moved: false
+        };
+        marcarSomenteLeitura(el);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+        if (!gesto || !e.touches || !e.touches.length) return;
+        var dx = Math.abs(e.touches[0].clientX - gesto.x);
+        var dy = Math.abs(e.touches[0].clientY - gesto.y);
+        if (dx > LIMIAR_ROLAGEM || dy > LIMIAR_ROLAGEM) {
+            gesto.moved = true;
+            rolouEm = Date.now();
+            if (document.activeElement === gesto.el) gesto.el.blur();
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function (e) {
+        if (!gesto) return;
+        var g = gesto;
+        gesto = null;
+        if (g.moved) {
+            rolouEm = Date.now();
+            if (activeInput === g.el) hideKeypad();
+            setTimeout(function () {
+                if (document.activeElement === g.el) g.el.blur();
+                soltarSomenteLeitura(g.el);
+            }, 80);
+            return;
+        }
+        if (e.cancelable) e.preventDefault();
+        if (isMobileClient() && g.el.matches(seletorTeclado)) {
+            prepararTeclado(g.el);
+            showKeypadFor(g.el);
+            return;
+        }
+        soltarSomenteLeitura(g.el);
+        try { g.el.focus(); } catch (err) {}
     }, { passive: false });
 
-    // fallback: on focusin show keypad (if touchstart didn't run)
+    document.addEventListener('touchcancel', function () {
+        if (gesto) soltarSomenteLeitura(gesto.el);
+        gesto = null;
+    }, { passive: true });
+
     document.addEventListener('focusin', function (e) {
         var el = e.target;
-        if (!el || !el.matches) return;
-        var selector = '.input-numeric, .input-preco, .input-desc-item, .input-moeda, .totals-box__input, #input-desconto, #input-acrescimo, .input-qtd';
-        if (el.matches(selector) && isMobileClient()) {
-            if (!el.classList.contains('input-numeric')) {
-                el.classList.add('input-numeric');
-                if (el.classList.contains('input-qtd')) el.setAttribute('data-decimals', '2');
-                else el.setAttribute('data-decimals', '2');
-            }
-            showKeypadFor(el);
+        if (!el || !el.matches || !campoNumerico(el)) return;
+        if (gestoFoiRolagem()) {
+            el.blur();
+            soltarSomenteLeitura(el);
+            return;
         }
+        if (!isMobileClient() || !el.matches(seletorTeclado)) return;
+        prepararTeclado(el);
+        showKeypadFor(el);
     });
 
     // hide on resize (desktop)

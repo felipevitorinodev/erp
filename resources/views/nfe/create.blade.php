@@ -20,7 +20,15 @@
         {{ (int) ($empresa->nfe_ambiente ?? 2) === 1 ? 'Produção' : 'Homologação' }}
     </span>
     <span class="nfe-status__chip">Série {{ $empresa->nfe_serie ?? '001' }}</span>
-    <span class="nfe-status__texto">Venda interna no Simples. Interestadual, ST e devolução ficam de fora.</span>
+    @php
+        $rotuloRegime = match ((int) ($empresa->crt ?? 1)) {
+            4 => 'MEI',
+            2 => 'Simples Nacional, com excesso de sublimite',
+            3 => 'Regime Normal',
+            default => 'Simples Nacional',
+        };
+    @endphp
+    <span class="nfe-status__texto">Venda interna no {{ $rotuloRegime }}. Interestadual, ST e devolução ficam de fora.</span>
     <div class="nfe-pendencias-fab" id="nfe-pendencias-fab">
         <button type="button" class="nfe-pendencias-fab__btn" id="nfe-pendencias-toggle" aria-expanded="false" aria-controls="nfe-pendencias-pop">
             <span class="nfe-pendencias-fab__count" id="nfe-pendencias-count" hidden>0</span>
@@ -90,17 +98,34 @@
                             value="{{ old('data_venda', $rascunho?->data_venda?->format('Y-m-d') ?? date('Y-m-d')) }}">
                         @error('data_venda')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
+                    <div class="form-group">
+                        <label class="form-label" for="data-saida">Data de saída</label>
+                        <input type="date" name="data_saida" id="data-saida" class="form-control"
+                            value="{{ old('data_saida', $rascunho?->data_saida?->format('Y-m-d')) }}">
+                        <small class="text-muted">Opcional. Não pode ser anterior à emissão.</small>
+                        @error('data_saida')<span class="form-error">{{ $message }}</span>@enderror
+                    </div>
                 </div>
 
+                @php
+                    $cfopInicial = preg_replace('/\D/', '', (string) ($empresa->nfe_cfop_padrao ?? '5102'));
+                    $cfopInicial = strlen($cfopInicial) === 4 ? $cfopInicial : '5102';
+                    $descricaoCfop = \App\Models\Fiscal\Cfop::query()->where('codigo', $cfopInicial)->value('descricao');
+                    $naturezaSalva = old('natureza_operacao', $rascunho?->natureza_operacao);
+                    $usarCfop = $naturezaSalva === null || $naturezaSalva === '' || $naturezaSalva === 'VENDA DE MERCADORIA' || $naturezaSalva === $descricaoCfop;
+                    $naturezaVisivel = ($usarCfop && $descricaoCfop) ? ($cfopInicial.' - '.$descricaoCfop) : $naturezaSalva;
+                    $naturezaEnvio = ($usarCfop && $descricaoCfop) ? mb_substr($descricaoCfop, 0, 60) : mb_substr((string) $naturezaSalva, 0, 60);
+                @endphp
                 <div class="form-group">
                     <label class="form-label form-label--required" for="input-natureza">Natureza da operação</label>
                     <div class="autocomplete-wrap">
-                        <input type="text" name="natureza_operacao" id="input-natureza" class="form-control" maxlength="60"
-                            autocomplete="off" placeholder="Buscar natureza..."
-                            value="{{ old('natureza_operacao', $rascunho?->natureza_operacao ?? 'VENDA DE MERCADORIA') }}">
-                        <input type="hidden" id="hidden-natureza" value="">
+                        <input type="text" id="input-natureza" class="form-control"
+                            autocomplete="off" placeholder="Buscar CFOP..."
+                            value="{{ $naturezaVisivel }}">
+                        <input type="hidden" id="hidden-natureza" value="{{ $usarCfop ? $cfopInicial : '' }}">
+                        <input type="hidden" name="natureza_operacao" id="natureza-envio" value="{{ $naturezaEnvio }}">
                     </div>
-                    <small class="text-muted">Escolha uma natureza da lista ou digite outra, com até 60 caracteres.</small>
+                    <small class="text-muted">A lista mostra o código e a descrição do CFOP. A descrição, com até 60 caracteres, segue como natureza da operação.</small>
                     @error('natureza_operacao')<span class="form-error">{{ $message }}</span>@enderror
                 </div>
             </div>
@@ -381,11 +406,19 @@
                     <div class="form-grid form-grid--col-4">
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-ncm">NCM</label>
-                            <input type="tel" id="item-ncm" class="form-control" maxlength="8" inputmode="numeric" placeholder="00000000">
+                            <div class="nfe-busca-fiscal">
+                                <input type="text" id="item-ncm" class="form-control" maxlength="160" autocomplete="off" placeholder="Código ou descrição">
+                                <input type="hidden" id="item-ncm-codigo" value="">
+                                <div id="lista-ncm" class="autocomplete-dropdown nfe-busca-fiscal__lista" hidden></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="item-cest">CEST</label>
-                            <input type="tel" id="item-cest" class="form-control" maxlength="9" inputmode="numeric">
+                            <div class="nfe-busca-fiscal">
+                                <input type="text" id="item-cest" class="form-control" maxlength="160" autocomplete="off" placeholder="Código ou descrição">
+                                <input type="hidden" id="item-cest-codigo" value="">
+                                <div id="lista-cest" class="autocomplete-dropdown nfe-busca-fiscal__lista" hidden></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-unidade">Unidade</label>
@@ -399,15 +432,11 @@
                     <div class="form-grid form-grid--col-2" style="margin-top:0.75rem;">
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-cfop">CFOP</label>
-                            <select id="item-cfop" class="form-control">
-                                <option value="5102">5102 — Venda de mercadoria adquirida</option>
-                                <option value="5101">5101 — Venda de produção do estabelecimento</option>
-                                <option value="5405">5405 — Venda de mercadoria com ST</option>
-                                <option value="5656">5656 — Venda de combustível</option>
-                                <option value="5910">5910 — Remessa em bonificação</option>
-                            </select>
-                            <input type="text" id="item-cfop-livre" class="form-control" maxlength="4"
-                                placeholder="Ou digite outro CFOP" style="margin-top:0.35rem;" inputmode="numeric">
+                            <div class="nfe-busca-fiscal">
+                                <input type="text" id="item-cfop" class="form-control" maxlength="180" autocomplete="off" placeholder="Código ou descrição">
+                                <input type="hidden" id="item-cfop-codigo" value="">
+                                <div id="lista-cfop" class="autocomplete-dropdown nfe-busca-fiscal__lista" hidden></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-origem">Origem</label>
@@ -458,7 +487,7 @@
                         </div>
                     </div>
                     <p class="text-muted" style="margin:0.75rem 0 0;font-size:12px;">
-                        Os dados vêm do cadastro do produto. Simples Nacional: CSOSN 102/103/300/400 e PIS/COFINS isentos (CST 07) cobrem o caso mais comum.
+                        Os dados vêm do cadastro do produto. Simples Nacional e MEI: CSOSN 102, 103, 300 ou 400, e PIS/COFINS sem destaque (CST 04 a 09; o caso mais comum é 07).
                     </p>
                 </div>
             </details>
@@ -508,9 +537,12 @@ document.addEventListener('DOMContentLoaded', function () {
         clientes: @json(route('api.clientes.busca')),
         formas: @json(route('api.formas-pagamento.busca')),
         funcionarios: @json(route('api.funcionarios.busca')),
-        naturezas: @json(route('api.naturezas-operacao.busca'))
+        naturezas: @json(route('api.naturezas-operacao.busca')),
+        cfops: @json(route('api.cfops.busca')),
+        ncms: @json(route('api.ncms.busca')),
+        cests: @json(route('api.cests.busca'))
     };
-    var CFOPS_LISTA = ['5101', '5102', '5405', '5656', '5910'];
+    var CFOPS = @json(\App\Models\Fiscal\Cfop::query()->pluck('descricao', 'codigo'));
     var CSOSN_OK = ['102', '103', '300', '400'];
     var CST_OK = ['04', '05', '06', '07', '08', '09'];
 
@@ -586,10 +618,34 @@ document.addEventListener('DOMContentLoaded', function () {
         initAutocomplete('#input-forma-pagamento', '#hidden-forma-pagamento', urls.formas, function (i) {
             return i.nome;
         }, function () { renderPendencias(); }, null, 'nome');
-        initAutocomplete('#input-natureza', '#hidden-natureza', urls.naturezas, function (i) {
-            return i.nome;
-        }, function () { renderPendencias(); }, null, 'nome');
+        initAutocomplete('#input-natureza', '#hidden-natureza', urls.cfops, function (i) {
+            return i.rotulo || (i.codigo + ' - ' + i.descricao);
+        }, function (i) {
+            if (i && i.codigo) defaults.cfop = i.codigo;
+            sincronizarNatureza();
+            renderPendencias();
+        }, null, 'codigo');
     }
+
+    function sincronizarNatureza() {
+        var campo = document.getElementById('input-natureza');
+        var envio = document.getElementById('natureza-envio');
+        if (!campo || !envio) return;
+        var texto = campo.value.trim();
+        var codigo = texto.match(/^(\d{4})\s*-\s*(.*)$/);
+        if (codigo) {
+            defaults.cfop = codigo[1];
+            envio.value = codigo[2].slice(0, 60);
+            return;
+        }
+        envio.value = texto.slice(0, 60);
+    }
+
+    document.getElementById('input-natureza')?.addEventListener('input', function () {
+        sincronizarNatureza();
+        renderPendencias();
+    });
+    document.getElementById('form-nfe')?.addEventListener('submit', sincronizarNatureza);
 
     document.getElementById('btn-novo-cliente')?.addEventListener('click', function () {
         var m = document.getElementById('modal-novo-cliente-nfe');
@@ -676,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function listarPendencias() {
         var lista = [];
         if (!document.querySelector('[name="natureza_operacao"]').value.trim()) {
-            lista.push({ msg: 'Informe a natureza da operação.', passo: 1, campo: '[name="natureza_operacao"]' });
+            lista.push({ msg: 'Informe a natureza da operação.', passo: 1, campo: '#input-natureza' });
         }
         if (!document.getElementById('hidden-forma-pagamento').value) {
             lista.push({ msg: 'Selecione a forma de pagamento.', passo: 4, campo: '#input-forma-pagamento' });
@@ -748,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
             html += '</ul>';
         }
 
-        html += '<p class="nfe-pendencias-pop__nota">Esta versão emite só venda interna no Simples. Se a SEFAZ estiver fora, a emissão para e nenhum número é usado.</p>';
+        html += '<p class="nfe-pendencias-pop__nota">Esta versão emite só venda interna no Simples Nacional e no MEI. Se a SEFAZ estiver fora, a emissão para e nenhum número é usado.</p>';
         box.innerHTML = html;
 
         var total = lista.length + alertasEmpresa.length;
@@ -822,7 +878,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function atualizarResumo() {
-        var nat = document.querySelector('[name="natureza_operacao"]').value;
+        var nat = document.getElementById('input-natureza').value;
         var forma = document.getElementById('hidden-forma-pagamento').value || '—';
         var cli = document.getElementById('input-cliente').value || 'Consumidor Final';
         document.getElementById('resumo-cabecalho').textContent = cli + ' · ' + nat + ' · ' + forma;
@@ -854,8 +910,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         ? '<span class="badge badge--warning" title="' + esc('Falta: ' + faltas.join(', ')) + '">Incompleto</span> '
                         : '') +
                     '<span class="badge badge--neutral">NCM ' + esc(it.ncm || '—') + '</span> ' +
-                    '<span class="badge badge--neutral">CFOP ' + esc(it.cfop) + '</span> ' +
                     '<span class="badge badge--neutral">CSOSN ' + esc(it.csosn) + '</span>' +
+                    '<div class="nfe-item-cfop">' + esc(rotuloCfop(it.cfop)) + '</div>' +
                     (it.vinculo_motivo ? '<div class="text-muted" style="font-size:11px;">' + esc(it.vinculo_motivo) + '</div>' : '') +
                     '</td>' +
                 '<td data-label="Qtd" class="col-num">' + formatQtd(it.quantidade) + '</td>' +
@@ -940,9 +996,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         modal.hidden = false;
         setTimeout(function () {
-            if (editIndex === null) buscaItem.focus();
-            else if (fiscalBox.open && abrirFiscal) el('item-ncm').focus();
-            else { el('item-quantidade').focus(); el('item-quantidade').select(); }
+            if (editIndex === null || emTelaDeToque()) return;
+            el('item-quantidade').focus();
+            el('item-quantidade').select();
         }, 60);
     }
 
@@ -974,7 +1030,9 @@ document.addEventListener('DOMContentLoaded', function () {
         el('item-preco').value = '0,00';
         el('item-desconto').value = '0,00';
         el('item-ncm').value = '';
+        el('item-ncm-codigo').value = '';
         el('item-cest').value = '';
+        el('item-cest-codigo').value = '';
         definirCfop(defaults.cfop);
         el('item-origem').value = '0';
         el('item-csosn').value = defaults.csosn;
@@ -985,13 +1043,44 @@ document.addEventListener('DOMContentLoaded', function () {
         atualizarResumoFiscal();
     }
 
+    function emTelaDeToque() {
+        return window.matchMedia('(pointer: coarse)').matches
+            || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+    }
+
+    function rotuloCfop(codigo) {
+        var c = digits(codigo, 4);
+        if (!c) return '';
+        return CFOPS[c] ? (c + ' - ' + CFOPS[c]) : c;
+    }
+
+    function codigoDoCampo(visivelId, ocultoId, tamanho) {
+        var visivel = el(visivelId).value.trim();
+        var oculto = (el(ocultoId).value || '').trim();
+        if (/^\d+$/.test(visivel)) return visivel.slice(0, tamanho);
+        if (oculto && visivel.indexOf(oculto) === 0) return oculto.slice(0, tamanho);
+        return digits(visivel, tamanho);
+    }
+
+    function completarRotulo(campo, oculto, url, tamanho) {
+        var codigo = digits(campo.value, tamanho);
+        if (codigo.length !== tamanho) return;
+        oculto.value = codigo;
+        fetch(url + '?q=' + encodeURIComponent(codigo), {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        }).then(function (resposta) { return resposta.ok ? resposta.json() : []; })
+            .then(function (itensBusca) {
+                if (document.activeElement === campo) return;
+                var item = (itensBusca || []).find(function (i) { return i.codigo === codigo; });
+                if (item && item.rotulo && digits(campo.value, tamanho) === codigo) campo.value = item.rotulo;
+            }).catch(function () {});
+    }
+
     function definirCfop(cfop) {
-        if (CFOPS_LISTA.indexOf(cfop) >= 0) {
-            el('item-cfop').value = cfop;
-            el('item-cfop-livre').value = '';
-        } else {
-            el('item-cfop-livre').value = cfop || '';
-        }
+        var codigo = digits(cfop, 4);
+        el('item-cfop-codigo').value = codigo;
+        el('item-cfop').value = rotuloCfop(codigo);
     }
 
     function selecionarOpcao(select, valor) {
@@ -1007,7 +1096,11 @@ document.addEventListener('DOMContentLoaded', function () {
         el('item-preco').value = formatInput(it.preco);
         el('item-desconto').value = formatInput(it.desconto || 0);
         el('item-ncm').value = it.ncm || '';
+        el('item-ncm-codigo').value = digits(it.ncm, 8);
         el('item-cest').value = it.cest || '';
+        el('item-cest-codigo').value = digits(it.cest, 7);
+        completarRotulo(el('item-ncm'), el('item-ncm-codigo'), urls.ncms, 8);
+        completarRotulo(el('item-cest'), el('item-cest-codigo'), urls.cests, 7);
         definirCfop(it.cfop || defaults.cfop);
         el('item-origem').value = String(it.origem ?? 0);
         selecionarOpcao(el('item-csosn'), it.csosn || defaults.csosn);
@@ -1033,9 +1126,9 @@ document.addEventListener('DOMContentLoaded', function () {
             quantidade: parseBR(el('item-quantidade').value),
             preco: parseBR(el('item-preco').value),
             desconto: parseBR(el('item-desconto').value),
-            ncm: digits(el('item-ncm').value, 8),
-            cest: digits(el('item-cest').value, 9),
-            cfop: digits(el('item-cfop-livre').value, 4) || el('item-cfop').value,
+            ncm: codigoDoCampo('item-ncm', 'item-ncm-codigo', 8),
+            cest: codigoDoCampo('item-cest', 'item-cest-codigo', 7),
+            cfop: codigoDoCampo('item-cfop', 'item-cfop-codigo', 4),
             origem: parseInt(el('item-origem').value, 10) || 0,
             csosn: el('item-csosn').value,
             cst_pis: el('item-cst-pis').value,
@@ -1059,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var faltas = pendenciasDoItem(it).filter(function (f) { return f !== 'quantidade'; });
         var chips = [
             '<span class="nfe-item-fiscal-chip' + (digits(it.ncm).length === 8 ? '' : ' is-falta') + '">NCM ' + esc(it.ncm || 'falta') + '</span>',
-            '<span class="nfe-item-fiscal-chip">CFOP ' + esc(it.cfop) + '</span>',
+            '<span class="nfe-item-fiscal-chip">' + esc(rotuloCfop(it.cfop) || 'CFOP') + '</span>',
             '<span class="nfe-item-fiscal-chip">CSOSN ' + esc(it.csosn) + '</span>',
             '<span class="nfe-item-fiscal-chip">PIS/COFINS ' + esc(it.cst_pis) + '/' + esc(it.cst_cofins) + '</span>'
         ];
@@ -1072,7 +1165,25 @@ document.addEventListener('DOMContentLoaded', function () {
     ['item-quantidade', 'item-preco', 'item-desconto'].forEach(function (id) {
         el(id).addEventListener('input', atualizarTotalModalItem);
     });
-    ['item-ncm', 'item-cest', 'item-cfop', 'item-cfop-livre', 'item-csosn', 'item-cst-pis', 'item-cst-cofins'].forEach(function (id) {
+    ['item-csosn', 'item-cst-pis', 'item-cst-cofins'].forEach(function (id) {
+        el(id).addEventListener('input', atualizarResumoFiscal);
+        el(id).addEventListener('change', atualizarResumoFiscal);
+    });
+
+    function rotuloFiscal(item) {
+        return item.rotulo || (item.codigo + ' - ' + item.descricao);
+    }
+
+    if (typeof initAutocomplete === 'function') {
+        initAutocomplete('#item-ncm', '#item-ncm-codigo', urls.ncms, rotuloFiscal, atualizarResumoFiscal, null, 'codigo');
+        initAutocomplete('#item-cest', '#item-cest-codigo', urls.cests, rotuloFiscal, atualizarResumoFiscal, function () {
+            var ncm = codigoDoCampo('item-ncm', 'item-ncm-codigo', 8);
+            return ncm.length === 8 ? { ncm: ncm } : {};
+        }, 'codigo');
+        initAutocomplete('#item-cfop', '#item-cfop-codigo', urls.cfops, rotuloFiscal, atualizarResumoFiscal, null, 'codigo');
+    }
+
+    ['item-ncm', 'item-cest', 'item-cfop'].forEach(function (id) {
         el(id).addEventListener('input', atualizarResumoFiscal);
         el(id).addEventListener('change', atualizarResumoFiscal);
     });
@@ -1080,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function () {
     el('btn-abrir-item').addEventListener('click', function () { abrirModalItem(null); });
     el('btn-trocar-produto').addEventListener('click', function () {
         mostrarBusca();
-        buscaItem.focus();
+        if (!emTelaDeToque()) buscaItem.focus();
     });
     document.querySelectorAll('[data-modal-item-close]').forEach(function (btn) {
         btn.addEventListener('click', fecharModal);
@@ -1192,7 +1303,11 @@ document.addEventListener('DOMContentLoaded', function () {
         el('item-ean').value = p.ean || '';
         el('item-preco').value = formatInput(p.preco_venda || 0);
         el('item-ncm').value = digits(p.ncm, 8);
-        el('item-cest').value = digits(p.cest, 9);
+        el('item-ncm-codigo').value = digits(p.ncm, 8);
+        el('item-cest').value = digits(p.cest, 7);
+        el('item-cest-codigo').value = digits(p.cest, 7);
+        completarRotulo(el('item-ncm'), el('item-ncm-codigo'), urls.ncms, 8);
+        completarRotulo(el('item-cest'), el('item-cest-codigo'), urls.cests, 7);
         definirCfop(digits(p.cfop_padrao || p.cfop_sugerido || defaults.cfop, 4) || defaults.cfop);
         el('item-origem').value = String(p.origem ?? 0);
         selecionarOpcao(el('item-csosn'), digits(p.cst_icms || p.csosn_sugerido || defaults.csosn, 3) || defaults.csosn);
@@ -1207,8 +1322,10 @@ document.addEventListener('DOMContentLoaded', function () {
         atualizarTotalModalItem();
         atualizarResumoFiscal();
         fiscalBox.open = pendenciasDoItem(lerItemDoModal()).length > 0;
-        el('item-quantidade').focus();
-        el('item-quantidade').select();
+        if (!emTelaDeToque()) {
+            el('item-quantidade').focus();
+            el('item-quantidade').select();
+        }
     }
 
     buscaItem.addEventListener('input', function () { buscarProdutosModal(this.value.trim()); });
@@ -1265,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (item.cfop.length !== 4) {
             mostrarAviso('Informe um CFOP com 4 dígitos.', { modal: true });
             fiscalBox.open = true;
-            marcarInvalido(el('item-cfop-livre'));
+            marcarInvalido(el('item-cfop'));
             return;
         }
 

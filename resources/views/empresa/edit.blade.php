@@ -234,16 +234,18 @@
                         $crtEmpresa = (int) old('crt', $empresa->crt ?? 1);
                     @endphp
                     <div id="alerta-crt-normal" class="alert alert--warning" style="margin-bottom: 1rem; {{ $crtEmpresa === 3 ? '' : 'display: none;' }}">
-                        Regime Normal não calcula Lucro Presumido nem Lucro Real nesta emissão. A nota usa o CSOSN informado abaixo.
+                        Regime Normal não emite por esta tela. Simples Nacional e MEI emitem com CSOSN, sem destaque de ICMS, PIS e COFINS.
                     </div>
                     <div class="form-grid form-grid--col-2">
                         <div class="form-group">
                             <label class="form-label form-label--required">Regime tributário (CRT)</label>
                             <select name="crt" id="crt" class="form-control @error('crt') is-invalid @enderror">
                                 <option value="1" {{ $crtEmpresa === 1 ? 'selected' : '' }}>Simples Nacional</option>
+                                <option value="4" {{ $crtEmpresa === 4 ? 'selected' : '' }}>Simples Nacional — MEI</option>
                                 <option value="2" {{ $crtEmpresa === 2 ? 'selected' : '' }}>Simples Nacional — excesso de sublimite</option>
                                 <option value="3" {{ $crtEmpresa === 3 ? 'selected' : '' }}>Regime Normal</option>
                             </select>
+                            <small class="text-muted">Simples Nacional e MEI emitem com CSOSN, sem destaque de ICMS, PIS e COFINS. O excesso de sublimite, nesta versão, segue a mesma regra. Regime Normal ainda não emite por esta tela.</small>
                             @error('crt')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -375,7 +377,7 @@
                 </div>
 
                 <div class="form-section" id="nfce">
-                    <div class="form-section__title">NFC-e</div>
+                    <div class="form-section__title">Configurações NFC-e</div>
                     <p class="text-muted" style="margin-bottom: 1rem;">
                         O CSC é gravado criptografado e a tela só mostra se está preenchido ou vazio.
                         A série 001 é provisória até o contador informar a série definitiva. Ela não altera a série da NF-e.

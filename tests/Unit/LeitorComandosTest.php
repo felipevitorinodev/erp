@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Comandos\EntradaInvalida;
 use App\Comandos\Leitor;
+use App\Comandos\PeriodoFalado;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -111,6 +112,41 @@ class LeitorComandosTest extends TestCase
         $this->expectExceptionMessage('tem 10 dígitos');
 
         (new Leitor('Maria cpf 1234567890'))->contatos();
+    }
+
+    public function test_periodo_falado_entende_ontem_semana_e_intervalo(): void
+    {
+        $hoje = $this->hoje();
+
+        $ontem = PeriodoFalado::interpretar('ontem', $hoje);
+        $this->assertSame('2026-11-06', $ontem->inicio->toDateString());
+        $this->assertSame('2026-11-06', $ontem->fim->toDateString());
+        $this->assertSame('Ontem (06/11/2026)', $ontem->rotulo());
+
+        $semana = PeriodoFalado::interpretar('esta semana', $hoje);
+        $this->assertSame('2026-11-02', $semana->inicio->toDateString());
+        $this->assertSame('2026-11-08', $semana->fim->toDateString());
+
+        $passado = PeriodoFalado::interpretar('mês passado', $hoje);
+        $this->assertSame('2026-10-01', $passado->inicio->toDateString());
+        $this->assertSame('2026-10-31', $passado->fim->toDateString());
+
+        // Sem ano, a busca fica no ano corrente — mesmo quando o dia já passou.
+        $faixa = PeriodoFalado::interpretar('de 01/11 a 05/11', $hoje);
+        $this->assertSame('2026-11-01', $faixa->inicio->toDateString());
+        $this->assertSame('2026-11-05', $faixa->fim->toDateString());
+
+        $this->assertSame('2026-11-13', PeriodoFalado::dataUnica('sexta', $hoje)?->toDateString());
+        $this->assertSame('2026-11-30', PeriodoFalado::interpretar('fim do mês', $hoje)->inicio->toDateString());
+        $this->assertNull(PeriodoFalado::interpretar('qualquer coisa', $hoje));
+    }
+
+    public function test_periodo_falado_recusa_data_que_nao_existe(): void
+    {
+        $this->expectException(EntradaInvalida::class);
+        $this->expectExceptionMessage('A data 31/02 não existe no calendário.');
+
+        PeriodoFalado::interpretar('31/02', $this->hoje());
     }
 
     public function test_nome_com_rotulo_para_na_proxima_palavra_chave(): void

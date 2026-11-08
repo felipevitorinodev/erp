@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrdemServicoService
 {
@@ -62,6 +63,33 @@ class OrdemServicoService
 
         return redirect()->route('ordem-servico.show', $os)
             ->with('success', 'Ordem de serviço #'.$os->numero.' aberta com sucesso.');
+    }
+
+    /**
+     * Abre a ordem sem montar resposta HTTP (comandos). Mesmas regras da tela.
+     *
+     * @throws ValidationException
+     */
+    public function gravar(Request $request): OrdemServico
+    {
+        $itens = $this->processarItens($request->itens ?? []);
+        $totais = $this->calcularTotais($itens, $request);
+
+        if ($totais === null) {
+            throw ValidationException::withMessages([
+                'desconto' => 'O desconto não pode ser maior que o subtotal dos itens.',
+            ]);
+        }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
+
+        return $this->repository->store([
+            'empresa_id' => auth()->user()->empresa_id,
+            'usuario_id' => auth()->id(),
+            ...$this->dadosFormulario($request),
+            ...$totais,
+            'situacao' => 'aberta',
+        ], $itens);
     }
 
     public function show(OrdemServico $os)

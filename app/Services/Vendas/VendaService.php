@@ -171,6 +171,7 @@ class VendaService
             'cliente_id' => $request->cliente_id ?: null,
             'funcionario_id' => $this->resolverFuncionarioId($request->funcionario_id, $empresaId),
             'data_venda' => $request->data_venda,
+            'data_saida' => $request->filled('data_saida') ? $request->data_saida : null,
             'subtotal' => $totais['subtotal'],
             'desconto' => $totais['desconto'],
             'acrescimo' => $totais['acrescimo'],
@@ -474,7 +475,15 @@ class VendaService
         $this->autorizarVenda($venda);
         $this->ocultarCanceladaDoVendedor($venda);
 
-        $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario', 'nfes' => fn ($q) => $q->orderByDesc('id')]);
+        $venda->load([
+            'cliente',
+            'funcionario',
+            'itens.produto',
+            'usuario',
+            'formaPagamento',
+            'contasReceber' => fn ($q) => $q->orderBy('data_vencimento')->orderBy('id'),
+            'nfes' => fn ($q) => $q->orderByDesc('id'),
+        ]);
         $empresa = Empresa::query()->findOrFail($venda->empresa_id);
 
         // NFC-e e NF-e em quadros próprios: cada uma tem as rotas e a permissão dela.

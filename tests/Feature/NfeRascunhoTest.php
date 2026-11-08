@@ -162,4 +162,58 @@ class NfeRascunhoTest extends TestCase
         $this->assertStringContainsString('série 5', $texto);
         $this->assertStringContainsString('CSOSN 101', $texto);
     }
+
+    public function test_catalogo_fiscal_devolve_codigo_e_descricao(): void
+    {
+        $cfop = $this->getJson(route('api.cfops.busca', ['q' => '5102']))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('5102 - VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCEIROS', $cfop[0]['rotulo']);
+
+        $ncm = $this->getJson(route('api.ncms.busca', ['q' => 'camiseta']))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('61091000', $ncm[0]['codigo']);
+
+        $cest = $this->getJson(route('api.cests.busca', ['q' => 'cerveja', 'ncm' => '22030000']))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('0300100', $cest[0]['codigo']);
+    }
+
+    public function test_rascunho_grava_a_data_de_saida_e_recusa_data_anterior(): void
+    {
+        $saida = now()->addDay()->toDateString();
+
+        $this->post(route('nfe.store'), $this->payload([], ['data_saida' => $saida]))
+            ->assertSessionHasNoErrors();
+
+        $venda = Venda::firstOrFail();
+        $this->assertSame($saida, $venda->data_saida->toDateString());
+        $this->get(route('nfe.rascunho.edit', $venda))->assertOk()->assertSee($saida, false);
+
+        $this->post(route('nfe.store'), $this->payload([], [
+            'data_saida' => now()->subDay()->toDateString(),
+        ]))->assertSessionHasErrors('data_saida');
+    }
+
+    public function test_tela_mostra_data_de_saida_sem_focar_a_busca_e_o_regime(): void
+    {
+        $this->get(route('nfe.create'))
+            ->assertOk()
+            ->assertSee('Data de saída', false)
+            ->assertSee('id="lista-cfop"', false)
+            ->assertSee('id="lista-ncm"', false)
+            ->assertSee('Venda interna no Simples Nacional', false)
+            ->assertDontSee('if (editIndex === null) buscaItem.focus()', false);
+
+        $this->empresa->update(['crt' => 4]);
+        $this->get(route('nfe.create'))->assertOk()->assertSee('Venda interna no MEI', false);
+
+        $this->empresa->update(['crt' => 3]);
+        $this->get(route('nfe.create'))->assertOk()->assertSee('Use Simples Nacional ou MEI', false);
+    }
 }

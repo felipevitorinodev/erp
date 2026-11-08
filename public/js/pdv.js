@@ -217,8 +217,14 @@
         return /^[A-Za-z0-9\-_.\/]+$/.test(termo);
     }
 
+    function semFocoAutomatico() {
+        return window.matchMedia('(pointer: coarse)').matches
+            || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+    }
+
     function focarBusca(opcoes) {
         if (!el.inputBusca) return;
+        if (semFocoAutomatico() && !(opcoes && opcoes.forcar)) return;
         el.inputBusca.focus();
         try {
             if (opcoes && opcoes.selecionar && el.inputBusca.value) {
@@ -740,7 +746,9 @@
         el.pagamento.hidden = false;
         syncCamadaDialogo();
         atualizarResumoPagamento();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         setTimeout(function () {
+            if (semFocoAutomatico()) return;
             if (!formaAtualEhPrazo() && el.recebido) {
                 el.recebido.focus();
                 el.recebido.select();
@@ -1288,7 +1296,9 @@
         syncCamadaDialogo();
         tabelaAtiva = 0;
         carregarCatalogoDaTabela();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         setTimeout(function () {
+            if (semFocoAutomatico()) return;
             if (el.tabelaFiltro) {
                 el.tabelaFiltro.focus();
                 el.tabelaFiltro.select();
@@ -1617,7 +1627,7 @@
 
             if (e.key === 'F5') {
                 e.preventDefault();
-                if (!sucessoAberto && !tabelaAberta() && !pagamentoAberto() && !ajudaAberta()) focarBusca();
+                if (!sucessoAberto && !tabelaAberta() && !pagamentoAberto() && !ajudaAberta()) focarBusca({ forcar: true });
                 return;
             }
 
@@ -1700,9 +1710,9 @@
                 e.preventDefault();
                 if (e.key === 'F2') {
                     fecharSugestoes();
-                    focarBusca({ selecionar: true });
+                    focarBusca({ selecionar: true, forcar: true });
                 } else {
-                    focarBusca();
+                    focarBusca({ forcar: true });
                 }
                 return;
             }
@@ -2015,7 +2025,7 @@
             el.formasGrid.querySelectorAll('.pdv-forma-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     selecionarFormaPagamento(btn, true);
-                    if (!formaAtualEhPrazo() && el.recebido) el.recebido.focus();
+                    if (!semFocoAutomatico() && !formaAtualEhPrazo() && el.recebido) el.recebido.focus();
                 });
             });
         }
@@ -2135,8 +2145,9 @@
             );
         }
 
-        // mantém foco no campo de bipagem (exceto ao digitar em outros inputs)
+        // No mouse, um clique fora dos controles devolve a bipagem. No toque, isso abre o teclado.
         document.addEventListener('click', function (e) {
+            if (semFocoAutomatico()) return;
             var t = e.target;
             if (!t) return;
             if (t.closest && (t.closest('input, textarea, select, button, a, .autocomplete-list, .pdv-qtd-controles, .pdv-ajustes, .pdv-pag-overlay'))) {

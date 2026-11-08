@@ -2,11 +2,17 @@
 
 namespace App\Comandos;
 
+use App\Comandos\Rotinas\AbrirOrdemServico;
 use App\Comandos\Rotinas\CadastrarCliente;
 use App\Comandos\Rotinas\CadastrarFornecedor;
+use App\Comandos\Rotinas\CadastrarProduto;
+use App\Comandos\Rotinas\CadastrarServico;
+use App\Comandos\Rotinas\ConsultarContas;
 use App\Comandos\Rotinas\ConsultarProduto;
+use App\Comandos\Rotinas\ConsultarVendas;
 use App\Comandos\Rotinas\LancarContaPagar;
 use App\Comandos\Rotinas\LancarContaReceber;
+use App\Comandos\Rotinas\RegistrarOrcamento;
 use App\Comandos\Rotinas\RegistrarVenda;
 use App\Comandos\Rotinas\ResumoDoDia;
 use App\Models\Usuarios\User;
@@ -16,21 +22,41 @@ use Illuminate\Contracts\Container\Container;
 final class RegistroComandos
 {
     /**
-     * A ordem importa: padrões mais específicos antes ("vendas de hoje" antes de "venda";
-     * "a Maria vai me pagar" é conta a receber, antes de "pagar").
+     * A ordem importa: padrões mais específicos antes ("vendas de hoje" antes de "vendas de ontem";
+     * "contas que vencem" antes de "conta a receber"; "a Maria vai me pagar" antes de "pagar").
      */
     private const ROTINAS = [
         ResumoDoDia::class,
+        ConsultarVendas::class,
         RegistrarVenda::class,
+        RegistrarOrcamento::class,
+        AbrirOrdemServico::class,
         CadastrarCliente::class,
         CadastrarFornecedor::class,
+        CadastrarProduto::class,
+        CadastrarServico::class,
+        ConsultarContas::class,
         LancarContaReceber::class,
         LancarContaPagar::class,
         ConsultarProduto::class,
     ];
 
     /** Ordem em que as tarefas aparecem para o usuário: as mais usadas no dia a dia primeiro. */
-    private const ORDEM_DE_USO = ['venda', 'conta_receber', 'produto', 'cliente', 'conta_pagar', 'fornecedor', 'resumo'];
+    private const ORDEM_DE_USO = [
+        'venda',
+        'orcamento',
+        'ordem_servico',
+        'conta_receber',
+        'produto',
+        'consulta_venda',
+        'consulta_contas',
+        'cadastrar_produto',
+        'cadastrar_servico',
+        'cliente',
+        'conta_pagar',
+        'fornecedor',
+        'resumo',
+    ];
 
     /** @var list<Comando>|null */
     private ?array $instancias = null;

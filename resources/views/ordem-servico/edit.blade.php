@@ -22,4 +22,6 @@
         </div>
     </form>
 
+    @include('components.cliente-rapido')
+
 @endsection

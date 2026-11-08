@@ -31,6 +31,7 @@
                 <button type="submit" class="btn btn--primary">Salvar</button>
             </div>
         </form>
+        @include('components.cliente-rapido')
         @include('venda._pagamento-modal')
     </div>
 

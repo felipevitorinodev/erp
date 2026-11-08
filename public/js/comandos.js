@@ -33,6 +33,21 @@
     var ocupado = false;
     var focoAnterior = null;
 
+    /* O Safari do iPhone desenha uma barra de atalhos (setas e OK) em cima das teclas. O Chrome não. */
+    function safariNoIphone() {
+        var ua = navigator.userAgent || '';
+        if (/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA\//.test(ua)) return false;
+        return /iPhone|iPad|iPod/.test(ua);
+    }
+
+    function focarCampo() {
+        try {
+            campo.focus({ preventScroll: true });
+        } catch (erro) {
+            campo.focus();
+        }
+    }
+
     /* Prévia aberta (só uma vale por vez) e botões da última pergunta. */
     var previaAberta = null;
     var opcoesDaPergunta = null;
@@ -49,7 +64,7 @@
 
     function abrir() {
         if (aberto()) {
-            campo.focus();
+            focarCampo();
             return;
         }
         focoAnterior = document.activeElement;
@@ -59,24 +74,130 @@
         ajustarAoTeclado();
         window.requestAnimationFrame(function () { painel.classList.add('is-aberto'); });
         rolarParaFim();
-        campo.focus();
+        focarCampo();
     }
 
     function fechar() {
         if (!aberto()) return;
         painel.classList.remove('is-aberto');
         painel.hidden = true;
-        painel.style.removeProperty('height');
+        soltarPainel();
         document.body.classList.remove('comandos-aberto');
         marcarAbridores(false);
         if (focoAnterior && typeof focoAnterior.focus === 'function') focoAnterior.focus();
     }
 
-    /* No celular o teclado virtual encolhe a área visível: o painel acompanha para o campo não sumir. */
+    /* Altura visível anterior, para só reposicionar a conversa quando o teclado abre ou fecha. */
+    var alturaVisivel = 0;
+    /* Altura da tela antes do teclado. No iOS 26 o innerHeight encolhe junto e a conta antiga zera. */
+    var alturaRepouso = 0;
+    var sangria = null;
+
+    function lembrarRepouso() {
+        var vista = window.visualViewport;
+        var visivel = vista ? vista.height + vista.offsetTop : 0;
+        alturaRepouso = Math.round(Math.max(window.innerHeight, document.documentElement.clientHeight, visivel));
+    }
+
+    function esconderSangria() {
+        if (!sangria) return;
+        sangria.remove();
+        sangria = null;
+    }
+
+    /* Faixa da cor do assistente logo abaixo do campo. A barra nativa do Safari amostra essa região. */
+    function mostrarSangria(topo, faixa) {
+        if (!sangria) {
+            sangria = document.createElement('div');
+            sangria.className = 'comandos-sangria';
+            sangria.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(sangria);
+        }
+        sangria.style.top = topo + 'px';
+        sangria.style.height = faixa + 'px';
+    }
+
+    function soltarPainel() {
+        painel.style.removeProperty('top');
+        painel.style.removeProperty('bottom');
+        painel.style.removeProperty('height');
+        painel.style.removeProperty('transform');
+        painel.style.removeProperty('transition');
+        painel.classList.remove('is-teclado');
+        document.documentElement.classList.remove('comandos-safari-teclado');
+        esconderSangria();
+        alturaVisivel = 0;
+    }
+
+    /* O teclado só conta com o campo de texto focado. Um zoom ou a barra do Safari também mexem na área visível. */
+    function digitandoNoPainel() {
+        var ativo = document.activeElement;
+        if (!ativo || !painel.contains(ativo)) return false;
+        return ativo.tagName === 'INPUT' || ativo.tagName === 'TEXTAREA';
+    }
+
+    /*
+     * No Safari o teclado não encolhe a página: só a área visível. Ela ainda desce
+     * (offsetTop) para o campo não sumir. Mudar "top" num elemento fixo não acompanha
+     * essa descida e sobra uma faixa acima do teclado. O translateY cola o painel na
+     * área visível.
+     *
+     * A barra de atalhos do Safari (setas e OK) fica nessa faixa e mostra a página
+     * por baixo, não o painel. O Chrome não tem essa barra, então o campo encosta nas teclas.
+     */
     function ajustarAoTeclado() {
-        if (!window.visualViewport || !celular.matches || !aberto()) return;
-        painel.style.height = window.visualViewport.height + 'px';
-        rolarParaFim();
+        if (!celular.matches || !aberto()) {
+            soltarPainel();
+            return;
+        }
+        var vista = window.visualViewport;
+        if (!vista) return;
+
+        if (!digitandoNoPainel() || vista.scale > 1.01) {
+            soltarPainel();
+            alturaVisivel = window.innerHeight;
+            lembrarRepouso();
+            return;
+        }
+
+        var deslocamento = Math.round(vista.offsetTop);
+        var altura = Math.round(vista.height);
+        var peloInner = Math.max(0, window.innerHeight - altura - deslocamento);
+        var peloRepouso = Math.max(0, (alturaRepouso || document.documentElement.clientHeight) - altura - deslocamento);
+        var coberto = Math.max(peloInner, peloRepouso);
+        var tecladoAberto = coberto > 80;
+        /* Só reserva a barra quando as duas medidas discordam no tamanho dela. Senão abre um vão. */
+        var folga = peloRepouso - peloInner;
+        var barra = (safariNoIphone() && tecladoAberto && folga >= 32 && folga <= 80) ? Math.round(folga) : 0;
+        var alturaPainel = Math.max(160, altura - barra);
+
+        painel.style.top = '0px';
+        painel.style.bottom = 'auto';
+        painel.style.height = alturaPainel + 'px';
+        painel.style.transform = 'translateY(' + deslocamento + 'px)';
+        painel.style.transition = 'none';
+        painel.classList.toggle('is-teclado', tecladoAberto);
+
+        var safari = tecladoAberto && safariNoIphone();
+        document.documentElement.classList.toggle('comandos-safari-teclado', safari);
+        if (safari) mostrarSangria(deslocamento + alturaPainel - 1, Math.max(barra, 64));
+        else esconderSangria();
+
+        if (tecladoAberto && altura < alturaVisivel - 80) {
+            mostrarInformacaoVisivel();
+        }
+        alturaVisivel = altura;
+    }
+
+    /* Com o teclado aberto, o começo da última resposta fica à vista. A boas-vindas permanece no topo. */
+    function mostrarInformacaoVisivel() {
+        var ultima = conversa.querySelector('.comandos-msg:last-of-type');
+        if (!ultima) {
+            conversa.scrollTop = 0;
+            return;
+        }
+        var topo = ultima.getBoundingClientRect().top - conversa.getBoundingClientRect().top + conversa.scrollTop;
+        conversa.scrollTop = Math.max(0, topo - 8);
     }
 
     /* ---------- Montagem das mensagens ---------- */
@@ -202,7 +323,7 @@
             if (ocupado) return;
             encerrarPrevia('cancelada');
             postar(URL_CONFIRMAR, { token: token, acao: 'cancelar' });
-            campo.focus();
+            focarCampo();
         });
 
         acoes.appendChild(confirmar);
@@ -303,7 +424,7 @@
             receber(resposta);
             ocupar(false);
             if (window.ErpIlustracoes) window.ErpIlustracoes.iniciar(conversa);
-            if (!celular.matches) campo.focus();
+            if (!celular.matches) focarCampo();
         });
     }
 
@@ -326,7 +447,7 @@
     formulario.addEventListener('submit', function (e) {
         e.preventDefault();
         if (campo.value.trim() === '') {
-            campo.focus();
+            focarCampo();
             return;
         }
         enviar(campo.value);
@@ -337,7 +458,7 @@
         var exemplo = e.target.closest('[data-comandos-exemplo]');
         if (exemplo) {
             campo.value = exemplo.getAttribute('data-comandos-exemplo');
-            campo.focus();
+            focarCampo();
             campo.setSelectionRange(campo.value.length, campo.value.length);
             return;
         }
@@ -377,7 +498,34 @@
         }
     });
 
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', ajustarAoTeclado);
+    var quadroTeclado = 0;
+    var fasesDoTeclado = [];
+
+    function agendarAjuste() {
+        if (quadroTeclado) return;
+        quadroTeclado = window.requestAnimationFrame(function () {
+            quadroTeclado = 0;
+            ajustarAoTeclado();
+        });
     }
+
+    /* A barra de atalhos entra numa segunda leva, às vezes sem novo resize. Mede de novo. */
+    function agendarFasesDoTeclado() {
+        fasesDoTeclado.forEach(clearTimeout);
+        fasesDoTeclado = [80, 250, 500].map(function (ms) {
+            return window.setTimeout(agendarAjuste, ms);
+        });
+    }
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', agendarAjuste);
+        window.visualViewport.addEventListener('scroll', agendarAjuste);
+    }
+    document.addEventListener('focusin', function () {
+        agendarAjuste();
+        if (celular.matches && digitandoNoPainel()) agendarFasesDoTeclado();
+    });
+    document.addEventListener('focusout', agendarAjuste);
+    celular.addEventListener('change', agendarAjuste);
+    lembrarRepouso();
 })();

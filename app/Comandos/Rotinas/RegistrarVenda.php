@@ -2,16 +2,19 @@
 
 namespace App\Comandos\Rotinas;
 
+use App\Comandos\EntradaInvalida;
+use App\Comandos\FormaNaFrase;
 use App\Comandos\FormularioInterno;
 use App\Comandos\Leitor;
+use App\Comandos\PeriodoFalado;
 use App\Comandos\Resposta;
 use App\Comandos\Rotina;
 use App\Http\Requests\Vendas\VendaRequest;
-use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Produtos\Produto;
 use App\Services\Vendas\VendaService;
+use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,8 +26,6 @@ use Illuminate\Validation\ValidationException;
  */
 final class RegistrarVenda extends Rotina
 {
-    private const UNIDADES = 'x|un|und|unid|unidades?|kg|g|l|lt|pc|pcs|pecas?|cx|caixas?|pct|pacotes?';
-
     /** "ele comprou", "um cliente levou": não é nome de cliente. */
     private const SEM_NOME = ['ele', 'ela', 'eles', 'elas', 'alguem', 'cliente', 'um cliente', 'uma cliente', 'consumidor', 'consumidor final', 'a gente', 'gente', 'eu', 'nos'];
 
@@ -87,13 +88,16 @@ final class RegistrarVenda extends Rotina
 
     protected function conectores(): array
     {
-        return ['itens' => ',', 'forma' => 'no'];
+        return ['itens' => ',', 'forma' => 'no', 'data' => 'data'];
     }
 
     /** A forma de pagamento só entra se existir; senão a pergunta volta. */
     public function completar(string $argumento, string $campo, string $resposta, ?string $termo): string
     {
         if ($campo === 'forma' && $this->localizador()->formaPagamento($resposta)->nenhum()) {
+            return $argumento;
+        }
+        if ($campo === 'data' && ! $this->entendeData($resposta)) {
             return $argumento;
         }
 
@@ -104,19 +108,26 @@ final class RegistrarVenda extends Rotina
     {
         $leitor = new Leitor($argumento);
 
+        try {
+            $dataDita = PeriodoFalado::extrairRotulo($leitor, 'data(?:\s+da\s+venda)?', CarbonImmutable::today())
+                ?? $leitor->data(CarbonImmutable::today());
+        } catch (EntradaInvalida $e) {
+            return $this->corrigirEntrada($e, 'Qual é a data certa?', ['Hoje', 'Ontem']);
+        }
+
         [$forma, $problemaForma] = $this->formaDePagamento($leitor);
         if ($problemaForma?->tipo === 'info') {
             return $problemaForma; // venda a prazo: vai para a tela de venda
         }
 
-        [$cliente, $problemaCliente] = $this->cliente($leitor);
+        [$cliente, $problemaCliente] = $this->clienteInformado($leitor);
 
         $resto = $leitor->resto();
         if ($resto === '') {
             return $this->perguntar('O que foi vendido?', 'itens');
         }
 
-        [$itens, $problemaItens] = $this->itens($resto);
+        [$itens, $problemaItens] = $this->itensInformados($resto, 'O que foi vendido?');
         if ($problemaItens !== null) {
             return $problemaItens;
         }
@@ -129,24 +140,31 @@ final class RegistrarVenda extends Rotina
         if ($forma === null) {
             return $this->perguntar('Como foi pago?', 'forma', $this->formasAVista());
         }
+        if ($dataDita === null) {
+            return $this->perguntar('Qual a data da venda?', 'data', ['Hoje', 'Ontem']);
+        }
 
-        $total = array_sum(array_map(fn (array $item) => round($item['quantidade'] * $item['preco'], 2), $itens));
+        $total = $this->totalDosItens($itens);
 
         $dados = [
             'cliente_id' => $cliente?->getKey(),
+            'data_venda' => $dataDita->toDateString(),
+            'data_informada' => true,
             'forma_pagamento' => $forma->nome,
             'situacao' => 'confirmada',
-            'itens' => array_map(fn (array $item) => [
-                'produto_id' => $item['produto']->getKey(),
-                'quantidade' => (string) $item['quantidade'],
-                'preco_unitario' => number_format($item['preco'], 2, '.', ''),
-                'desconto' => '0',
-            ], $itens),
+            'itens' => $this->itensParaGravar($itens),
         ];
 
         try {
-            FormularioInterno::validar(VendaRequest::class, $dados + ['data_venda' => today()->toDateString()]);
+            FormularioInterno::validar(VendaRequest::class, $this->semMarcador($dados));
         } catch (ValidationException $e) {
+            if ($this->faltaCampo($e, 'itens')) {
+                return $this->perguntar('O que foi vendido?', 'itens');
+            }
+            if ($this->faltaCampo($e, 'data_venda')) {
+                return $this->perguntar('Qual a data da venda?', 'data', ['Hoje', 'Ontem']);
+            }
+
             return $this->erroDeValidacao($e);
         }
 
@@ -154,20 +172,20 @@ final class RegistrarVenda extends Rotina
             $this->chave(),
             'Registrar venda de '.self::moeda($total).' no '.$forma->nome.($cliente ? ' para '.$cliente->nome : '').'?',
             $dados,
-            itens: array_map(fn (array $item) => [
-                'descricao' => self::quantidade($item['quantidade']).' × '.$item['produto']->nome,
-                'valor' => self::moeda(round($item['quantidade'] * $item['preco'], 2)),
-            ], $itens),
+            ['Data: '.self::data($dataDita), 'Situação: confirmada'],
+            itens: $this->itensParaConfirmacao($itens),
             avisos: $this->avisos($itens),
         );
     }
 
     public function executar(array $dados): Resposta
     {
-        $dados['data_venda'] = today()->toDateString();
+        if (empty($dados['data_informada'])) {
+            $dados['data_venda'] = today()->toDateString();
+        }
 
         try {
-            $resultado = $this->vendas->gravar(FormularioInterno::validar(VendaRequest::class, $dados));
+            $resultado = $this->vendas->gravar(FormularioInterno::validar(VendaRequest::class, $this->semMarcador($dados)));
         } catch (ValidationException $e) {
             return $this->erroDeValidacao($e);
         }
@@ -193,17 +211,11 @@ final class RegistrarVenda extends Rotina
      */
     private function formaDePagamento(Leitor $leitor): array
     {
-        $achado = $this->localizador()->formaPagamento($leitor->resto());
-
-        if ($achado->nenhum()) {
-            return [null, null];
-        }
-        if (! $achado->encontrou()) {
-            return [null, $this->perguntar('Qual forma de pagamento?', 'forma', $achado->opcoes->pluck('nome')->all())];
+        [$forma, $problema] = $this->formaInformada($leitor);
+        if ($problema !== null || $forma === null) {
+            return [$forma, $problema];
         }
 
-        /** @var FormaPagamento $forma */
-        $forma = $achado->registro;
         if (! $forma->isAvista()) {
             return [null, Resposta::info(
                 'Venda a prazo precisa das parcelas, então é feita na tela de venda.',
@@ -211,115 +223,26 @@ final class RegistrarVenda extends Rotina
             )];
         }
 
-        $this->tirarDaFrase($leitor, $forma);
+        FormaNaFrase::remover($leitor, $forma);
 
         return [$forma, null];
     }
 
-    /**
-     * Com conector ("no cartão") sai toda menção, inclusive a de uma resposta anterior;
-     * sem conector, só a primeira. Assim "cartão presente no cartão" mantém o produto.
-     */
-    private function tirarDaFrase(Leitor $leitor, FormaPagamento $forma): void
+    /** @param array<string, mixed> $dados */
+    private function semMarcador(array $dados): array
     {
-        $nome = Leitor::normalizar($forma->nome);
-        $termos = array_values(array_filter(
-            array_unique([$nome, ...(preg_split('/[\s\/-]+/', $nome) ?: [])]),
-            fn (string $termo) => strlen($termo) >= 3,
-        ));
+        unset($dados['data_informada']);
 
-        $removeu = false;
-        foreach ($termos as $termo) {
-            $comConector = '/(?:\b(?:pago|paga|pagamento)\s+(?:(?:no|na|em|via|com)\s+)?|\b(?:no|na|em|via|com)\s+)(?:cartao\s+(?:de\s+)?)?'.preg_quote($termo, '/').'\b/u';
-            while ($leitor->extrair($comConector) !== null) {
-                $removeu = true;
-            }
-        }
-
-        if ($removeu) {
-            return;
-        }
-
-        foreach ($termos as $termo) {
-            if ($leitor->extrair('/\b(?:cartao\s+(?:de\s+)?)?'.preg_quote($termo, '/').'\b/u') !== null) {
-                return;
-            }
-        }
+        return $dados;
     }
 
-    /**
-     * "cliente Maria" é explícito; "para Maria" só conta se Maria for cliente ("suporte para TV" é produto).
-     *
-     * @return array{0: ?Cliente, 1: ?Resposta}
-     */
-    private function cliente(Leitor $leitor): array
+    private function entendeData(string $resposta): bool
     {
-        $nome = $leitor->rotulado('para o cliente|para a cliente|cliente')
-            ?? $leitor->rotulado('para|pra|pro', fn (string $nome) => ! $this->localizador()->cliente($nome)->nenhum());
-
-        if ($nome === null) {
-            return [null, null];
+        try {
+            return (new Leitor('data '.$resposta))->data(CarbonImmutable::today()) !== null;
+        } catch (EntradaInvalida) {
+            return true;
         }
-
-        $achado = $this->localizador()->cliente($nome);
-        $extras = [Resposta::opcao('Sem cliente', 'sem cliente')];
-        if ($this->usuario()->pode('clientes.balcao')) {
-            $extras[] = Resposta::opcao('Cadastrar “'.$nome.'”', 'cadastrar cliente '.$nome);
-        }
-
-        return [$achado->registro, $this->problemaNaBusca($achado, 'o cliente', 'cliente', $extras)];
-    }
-
-    /**
-     * "2 coca lata, 1 salgado", "coca x3", "3 un parafuso e 2 porca", "000012".
-     *
-     * @return array{0: list<array{produto: Produto, quantidade: float, preco: float}>, 1: ?Resposta}
-     */
-    private function itens(string $texto): array
-    {
-        // Vírgula entre dígitos é decimal ("1,5 kg"), não separa itens.
-        $partes = array_filter(array_map('trim', preg_split('/\s*[;+]\s*|\s*,(?!\d)\s*|(?<!\d)\s*,\s*|\s+e\s+(?=\d)|\s+mais\s+/u', $texto) ?: []));
-        if ($partes === []) {
-            return [[], $this->perguntar('O que foi vendido?', 'itens')];
-        }
-
-        $itens = [];
-        foreach ($partes as $parte) {
-            [$quantidade, $termo] = $this->quantidadeETermo($parte);
-            if ($quantidade <= 0) {
-                return [[], Resposta::erro('A quantidade de “'.$termo.'” precisa ser maior que zero.')];
-            }
-
-            $achado = $this->localizador()->produto($termo);
-            if ($problema = $this->problemaNaBusca($achado, 'o produto', 'produto')) {
-                return [[], $problema];
-            }
-
-            /** @var Produto $produto */
-            $produto = $achado->registro;
-            if ((float) $produto->preco_venda <= 0) {
-                return [[], Resposta::erro('O produto “'.$produto->nome.'” está sem preço de venda. Ajuste o cadastro antes de vender.')];
-            }
-
-            $chave = $produto->getKey();
-            $itens[$chave] ??= ['produto' => $produto, 'quantidade' => 0.0, 'preco' => (float) $produto->preco_venda];
-            $itens[$chave]['quantidade'] += $quantidade;
-        }
-
-        return [array_values($itens), null];
-    }
-
-    /** @return array{0: float, 1: string} */
-    private function quantidadeETermo(string $parte): array
-    {
-        if (preg_match('/^(?<qtd>\d+(?:[.,]\d{1,3})?)\s*(?:(?:'.self::UNIDADES.')\b\.?)?\s+(?<termo>.+)$/iu', $parte, $m)) {
-            return [Leitor::numero($m['qtd']), Leitor::aparar($m['termo'])];
-        }
-        if (preg_match('/^(?<termo>.+?)\s*x\s*(?<qtd>\d+(?:[.,]\d{1,3})?)$/iu', $parte, $m)) {
-            return [Leitor::numero($m['qtd']), Leitor::aparar($m['termo'])];
-        }
-
-        return [1.0, Leitor::aparar($parte)];
     }
 
     /** @return list<string> */

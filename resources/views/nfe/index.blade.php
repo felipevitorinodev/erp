@@ -11,7 +11,7 @@
 @section('content')
 
     <div class="alert alert--warning" style="margin-bottom:1rem;">
-        Emissão atual: venda interna no Simples, sem destaque de imposto. Fora disso, a nota é recusada.
+        Emissão atual: venda interna no Simples Nacional e no MEI, sem destaque de imposto. Fora disso, a nota é recusada.
         Com a SEFAZ indisponível, a emissão trava e o número não é consumido. Não há contingência SVC/EPEC.
     </div>
 

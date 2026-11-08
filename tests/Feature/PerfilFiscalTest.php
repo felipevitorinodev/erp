@@ -251,4 +251,38 @@ class PerfilFiscalTest extends TestCase
 
         $this->assertSame(0, PerfilFiscal::count());
     }
+
+    public function test_cadastro_aceita_cfop_da_tabela_e_recusa_codigo_fora_dela(): void
+    {
+        $empresa = $this->empresa();
+        $admin = User::factory()->create([
+            'empresa_id' => $empresa->id,
+            'perfil' => 'admin',
+            'ativo' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('perfilFiscal.store'), [
+            'nome' => 'Revenda interna',
+            'cfop' => '5102',
+            'csosn' => '400',
+            'cst_pis' => '07',
+            'cst_cofins' => '07',
+            'ativo' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('perfis_fiscais', ['nome' => 'Revenda interna', 'cfop' => '5102']);
+
+        $this->actingAs($admin)->get(route('perfilFiscal.index'))
+            ->assertOk()
+            ->assertSee('5102 - VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCEIROS', false);
+
+        $this->actingAs($admin)->post(route('perfilFiscal.store'), [
+            'nome' => 'Fora da tabela',
+            'cfop' => '5999',
+            'csosn' => '400',
+            'cst_pis' => '07',
+            'cst_cofins' => '07',
+            'ativo' => '1',
+        ])->assertSessionHasErrors('cfop');
+    }
 }

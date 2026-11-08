@@ -119,9 +119,6 @@
         @endif
     </x-ficha>
 
-    {{-- Nota fiscal (NFC-e ou NF-e): emitir, consultar, imprimir, cancelar --}}
-    @include('venda._nota-fiscal')
-
     {{-- Itens --}}
     <div class="card" style="margin-top:1rem;">
         <div class="card__header">
@@ -186,5 +183,9 @@
             </div>
         </div>
     </div>
+
+    @include('venda._pagamento')
+
+    @include('venda._nota-fiscal')
 
 @endsection

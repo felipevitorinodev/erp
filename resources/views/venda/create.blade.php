@@ -72,7 +72,7 @@
         <div class="venda-resumo__section venda-resumo__section--dados">
             <h4>Dados da venda</h4>
             <div class="venda-resumo__field">
-                <label>Cliente</label>
+                <label>Cliente <button type="button" class="btn-add-inline" id="btn-add-cliente" title="Criar novo cliente">+</button></label>
                 <div class="autocomplete-wrap">
                     <input type="text" id="input-cliente" class="form-control"
                         placeholder="Consumidor Final" autocomplete="off">
@@ -152,6 +152,7 @@
     </div>
 </form>
 
+@include('components.cliente-rapido')
 @include('venda._pagamento-modal')
 
 {{-- Modal de quantidade rápida --}}
@@ -332,7 +333,23 @@ document.addEventListener('DOMContentLoaded', function() {
         modalPrecoInput.value = formatInput(produto.preco_venda || 0);
         atualizarTotalModal();
         modalQtd.hidden = false;
-        setTimeout(function() { modalQtdInput.focus(); modalQtdInput.select(); }, 100);
+        var busca = document.getElementById('busca-produto-rapida');
+        if (busca) busca.blur();
+        fecharDropdownBusca();
+        if (!emTelaDeToque()) {
+            setTimeout(function() { modalQtdInput.focus(); modalQtdInput.select(); }, 100);
+        }
+    }
+
+    function emTelaDeToque() {
+        return window.matchMedia('(pointer: coarse)').matches
+            || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+    }
+
+    function focarBuscaRapida() {
+        if (emTelaDeToque()) return;
+        var campo = document.getElementById('busca-produto-rapida');
+        if (campo) campo.focus();
     }
 
     function atualizarTotalModal() {
@@ -353,20 +370,20 @@ document.addEventListener('DOMContentLoaded', function() {
         modalQtd.hidden = true;
         produtoSelecionado = null;
         document.getElementById('busca-produto-rapida').value = '';
-        document.getElementById('busca-produto-rapida').focus();
+        focarBuscaRapida();
     });
 
     // Fechar modal
     modalQtd.querySelectorAll('[data-modal-close]').forEach(function(btn) {
         btn.addEventListener('click', function() {
             modalQtd.hidden = true;
-            document.getElementById('busca-produto-rapida').focus();
+            focarBuscaRapida();
         });
     });
     modalQtd.addEventListener('click', function(e) {
         if (e.target === modalQtd) {
             modalQtd.hidden = true;
-            document.getElementById('busca-produto-rapida').focus();
+            focarBuscaRapida();
         }
     });
 
@@ -563,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('input-cliente').focus();
         } else if (e.key === 'Escape' && !modalQtd.hidden) {
             modalQtd.hidden = true;
-            buscaInput.focus();
+            focarBuscaRapida();
         }
     });
 

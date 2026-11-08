@@ -14,20 +14,14 @@
     $numero = \App\Impressao\CupomDocumento::numero($orcamento->numero);
 @endphp
 <x-impressao.documento kind="Orçamento" :nome="'Nº '.$numero" :periodo="$orcamento->data_orcamento->format('d/m/Y')">
-    <x-impressao.filtros :chips="array_values(array_filter([
-        ['rotulo' => 'Situação', 'valor' => $situacaoLabel],
-        ['rotulo' => 'Vendedor', 'valor' => $vendedor],
-        ['rotulo' => 'Pagamento', 'valor' => $pagamento],
-        ['rotulo' => 'Entrega', 'valor' => $orcamento->data_entrega ? $orcamento->data_entrega->format('d/m/Y') : '—'],
-        $orcamento->venda_id && $orcamento->venda ? ['rotulo' => 'Venda', 'valor' => '#'.$orcamento->venda->numero] : null,
-    ]))" />
-
     <table class="fichas">
         <tr>
             <td class="ficha">
                 <div class="ficha-titulo">Cliente</div>
                 <p><span>Nome</span> {{ $cliente->nome ?? 'Consumidor final' }}</p>
-                <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @if($documento !== '—')
+                    <p><span>CPF/CNPJ</span> {{ $documento }}</p>
+                @endif
                 @if($telefone)
                     <p><span>Telefone</span> {{ $telefone }}</p>
                 @endif
@@ -40,7 +34,12 @@
                 <div class="ficha-titulo">Orçamento</div>
                 <p><span>Vendedor</span> {{ $vendedor }}</p>
                 <p><span>Emissão</span> {{ $orcamento->data_orcamento->format('d/m/Y') }}</p>
-                <p><span>Entrega</span> {{ $orcamento->data_entrega ? $orcamento->data_entrega->format('d/m/Y') : '—' }}</p>
+                @if($orcamento->data_entrega)
+                    <p><span>Entrega</span> {{ $orcamento->data_entrega->format('d/m/Y') }}</p>
+                @endif
+                @if($orcamento->venda_id && $orcamento->venda)
+                    <p><span>Venda</span> #{{ $orcamento->venda->numero }}</p>
+                @endif
                 <p><span>Situação</span> <x-impressao.situacao :texto="$situacaoLabel" /></p>
             </td>
         </tr>

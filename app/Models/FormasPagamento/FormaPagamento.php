@@ -46,8 +46,32 @@ class FormaPagamento extends Model
 
     public function ehCartao(): bool
     {
+        $nome = $this->nomeComparavel();
+
+        return str_contains($nome, 'credito')
+            || str_contains($nome, 'debito')
+            || str_contains($nome, 'cartao');
+    }
+
+    public function ehCartaoDebito(): bool
+    {
+        return str_contains($this->nomeComparavel(), 'debito');
+    }
+
+    public function permiteParcelar(): bool
+    {
+        if ($this->ehCartaoDebito()) {
+            return false;
+        }
+
+        return $this->isPrazo() || $this->ehCartao();
+    }
+
+    private function nomeComparavel(): string
+    {
         $nome = mb_strtolower((string) $this->nome);
-        $nome = strtr($nome, [
+
+        return strtr($nome, [
             'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a',
             'é' => 'e', 'ê' => 'e',
             'í' => 'i',
@@ -55,15 +79,6 @@ class FormaPagamento extends Model
             'ú' => 'u',
             'ç' => 'c',
         ]);
-
-        return str_contains($nome, 'credito')
-            || str_contains($nome, 'debito')
-            || str_contains($nome, 'cartao');
-    }
-
-    public function permiteParcelar(): bool
-    {
-        return $this->isPrazo() || $this->ehCartao();
     }
 
     /**

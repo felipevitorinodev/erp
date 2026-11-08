@@ -42,6 +42,7 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
         if (!el) return;
 
         var rect = el.getBoundingClientRect();
+        var dentroDeModal = $input.closest('.modal-overlay, .modal').length > 0;
         // Use absolute positioning based on page offsets so the dropdown stays attached
         // to the input when the page is scrolled on mobile (fixed can behave inconsistently
         // with mobile keyboards/viewport changes).
@@ -50,7 +51,7 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
             top: (rect.bottom + window.pageYOffset + 2) + 'px',
             left: (rect.left + window.pageXOffset) + 'px',
             width: Math.max(rect.width, 240) + 'px',
-            zIndex: 20000
+            zIndex: dentroDeModal ? 40000 : 20000
         });
     }
 

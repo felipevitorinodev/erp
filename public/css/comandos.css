@@ -513,6 +513,88 @@ body.comandos-aberto .comandos-botao {
     .comandos-msg--confirmacao {
         width: 94%;
     }
+
+    body.comandos-aberto {
+        overflow: hidden;
+    }
+
+    /*
+     * Teclado aberto: a ilustração e o respiro somem para a saudação,
+     * a explicação e as tarefas caberem na faixa que resta acima do teclado.
+     */
+    .comandos.is-teclado .comandos-boas-vindas .ilustracao {
+        display: none;
+    }
+
+    .comandos.is-teclado .comandos-boas-vindas {
+        gap: 0.15rem;
+        padding: 0;
+    }
+
+    .comandos.is-teclado .comandos-boas-vindas__texto {
+        margin-bottom: 0.25rem;
+    }
+
+    .comandos.is-teclado .comandos__conversa {
+        padding: 0.55rem 0.75rem;
+    }
+
+    .comandos.is-teclado .comandos__topo {
+        padding-top: calc(0.45rem + env(safe-area-inset-top, 0px));
+        padding-bottom: 0.45rem;
+    }
+
+    .comandos.is-teclado {
+        transition: none;
+    }
+
+    /* Com o teclado aberto o indicador de início fica atrás dele. Mantê-lo aqui abre uma faixa acima das teclas. */
+    .comandos.is-teclado .comandos__envio {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .comandos.is-teclado .comandos-chip {
+        min-height: 32px;
+        padding: 0.2rem 0.65rem;
+    }
+}
+
+/*
+ * Safari no iPhone: a barra de atalhos (setas e OK) fica entre o campo e as teclas
+ * e mostra a página, não o painel fixo. A faixa e o fundo ficam da cor do assistente,
+ * para o campo continuar colado no teclado. O Chrome não recebe essa classe.
+ */
+.comandos-sangria {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 10064;
+    background: var(--color-surface);
+    pointer-events: none;
+}
+
+html.comandos-safari-teclado body.comandos-aberto,
+html.comandos-safari-teclado body.comandos-aberto .layout,
+html.comandos-safari-teclado body.comandos-aberto .main {
+    background: var(--color-surface);
+}
+
+html.comandos-safari-teclado body.comandos-aberto .main {
+    position: relative;
+}
+
+html.comandos-safari-teclado body.comandos-aberto .main::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    background: var(--color-surface);
+    pointer-events: none;
+}
+
+html.comandos-safari-teclado .comandos.is-teclado .comandos__envio {
+    padding-bottom: 0.35rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

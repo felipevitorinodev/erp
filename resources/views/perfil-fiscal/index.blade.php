@@ -48,6 +48,7 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php($catalogoCfop = \App\Models\Fiscal\Cfop::query()->pluck('descricao', 'codigo'))
                         @forelse ($perfis as $perfil)
                             <tr>
                                 <td data-label="Nome">{{ $perfil->nome }}</td>
@@ -56,7 +57,7 @@
                                     · {{ $perfil->uf_destino ?: 'qualquer UF' }}
                                 </td>
                                 <td data-label="NCM">{{ $perfil->ncm ?: '—' }}</td>
-                                <td data-label="CFOP">{{ $perfil->cfop }}</td>
+                                <td data-label="CFOP">{{ $perfil->cfop }}{{ isset($catalogoCfop[$perfil->cfop]) ? ' - '.$catalogoCfop[$perfil->cfop] : '' }}</td>
                                 <td data-label="CSOSN">{{ $perfil->csosn }}</td>
                                 <td data-label="PIS / COFINS">{{ $perfil->cst_pis }} / {{ $perfil->cst_cofins }}</td>
                                 <td data-label="Produtos">{{ $perfil->produtos_count }}</td>

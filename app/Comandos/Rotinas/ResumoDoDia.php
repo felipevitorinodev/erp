@@ -41,7 +41,7 @@ final class ResumoDoDia extends Rotina
 
     public function padrao(): string
     {
-        return '/^(?:vendas?\s+(?:de\s+|do\s+dia\s+(?:de\s+)?)?hoje|vendas\s+do\s+dia|resumo(?:\s+d[oe])?(?:\s+dia)?(?:\s+de\s+hoje)?'
+        return '/^(?:vendas?\s+(?:de\s+|do\s+dia\s+(?:de\s+)?)?hoje|vendas\s+do\s+dia(?!\s+\d)|resumo(?:\s+d[oe])?(?:\s+dia)?(?:\s+de\s+hoje)?'
             .'|quanto\s+(?:eu\s+|a\s+gente\s+|nos\s+)?(?:vendi|vendemos|faturei|faturamos|fiz|fizemos|entrou)(?:\s+hoje)?'
             .'|faturamento(?:\s+de)?(?:\s+hoje)?|total\s+(?:de\s+|das\s+)?vendas(?:\s+(?:de\s+)?hoje)?|movimento\s+(?:de\s+)?hoje'
             .'|como\s+(?:estao|tao|foram|esta|ta|foi)\s+(?:as\s+vendas|o\s+dia|o\s+movimento|o\s+caixa)(?:\s+(?:de\s+)?hoje)?)\b/u';

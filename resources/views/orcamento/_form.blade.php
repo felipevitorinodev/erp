@@ -2,7 +2,7 @@
 @php $orcamento = $orcamento ?? null; @endphp
 <div class="form-grid form-grid--col-3">
     <div class="form-group">
-        <label class="form-label">Cliente</label>
+        <label class="form-label">Cliente <button type="button" class="btn-add-inline" id="btn-add-cliente" title="Criar novo cliente">+</button></label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-cliente" class="form-control"
                 value="{{ old('cliente_nome', $orcamento && $orcamento->cliente ? $orcamento->cliente->nome : '') }}"
@@ -284,7 +284,9 @@
         atualizarEmpty();
         recalcularTotais();
         var produto = row.querySelector('.input-produto-nome');
-        if (produto) produto.focus();
+        var toque = window.matchMedia('(pointer: coarse)').matches
+            || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+        if (produto && !toque) produto.focus();
     });
 
     ['input-desconto', 'input-acrescimo'].forEach(function (id) {
