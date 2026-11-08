@@ -92,10 +92,15 @@
                             title="O número só é consumido na emissão; rascunhos não usam número.">
                         <small class="text-muted">O número só é usado na emissão, na sequência deste ambiente.</small>
                     </div>
+                    @php
+                        $fusoNota = (new \App\Services\Nfes\NfeDatas())->fusoDaUf($empresa->uf ?? null);
+                        $hojeNota = \Carbon\Carbon::now($fusoNota)->toDateString();
+                    @endphp
                     <div class="form-group">
                         <label class="form-label">Data de emissão</label>
-                        <input type="date" name="data_venda" class="form-control"
-                            value="{{ old('data_venda', $rascunho?->data_venda?->format('Y-m-d') ?? date('Y-m-d')) }}">
+                        <input type="date" name="data_venda" class="form-control" max="{{ $hojeNota }}"
+                            value="{{ old('data_venda', $rascunho?->data_venda?->format('Y-m-d') ?? $hojeNota) }}">
+                        <small class="text-muted">Não pode ser depois de hoje.</small>
                         @error('data_venda')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
                     <div class="form-group">
@@ -699,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var destinoCliente = null;
     var extraFiscal = { motivo: '', aliquota_icms: 0, aliquota_pis: 0, aliquota_cofins: 0 };
     var ufEmpresa = @json(strtoupper((string) ($empresa->uf ?? '')));
+    var hojeNota = @json($hojeNota);
 
     function contextoFiscal() {
         var natureza = (document.querySelector('[name="natureza_operacao"]').value || '').toLowerCase();
@@ -733,6 +739,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var lista = [];
         if (!document.querySelector('[name="natureza_operacao"]').value.trim()) {
             lista.push({ msg: 'Informe a natureza da operação.', passo: 1, campo: '#input-natureza' });
+        }
+        var emissao = document.querySelector('[name="data_venda"]').value;
+        var saida = document.getElementById('data-saida').value;
+        if (emissao && emissao > hojeNota) {
+            lista.push({ msg: 'A data de emissão não pode ser posterior a hoje.', passo: 1, campo: '[name="data_venda"]' });
+        }
+        if (emissao && saida && saida < emissao) {
+            lista.push({ msg: 'A data de saída não pode ser anterior à data de emissão.', passo: 1, campo: '#data-saida' });
         }
         if (!document.getElementById('hidden-forma-pagamento').value) {
             lista.push({ msg: 'Selecione a forma de pagamento.', passo: 4, campo: '#input-forma-pagamento' });

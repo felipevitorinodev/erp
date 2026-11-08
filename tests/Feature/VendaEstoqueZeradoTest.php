@@ -159,6 +159,34 @@ class VendaEstoqueZeradoTest extends TestCase
         $this->assertEquals(1.0, (float) $produto->fresh()->estoque_atual);
     }
 
+    public function test_editar_venda_nao_deixa_a_data_passar_da_saida(): void
+    {
+        $produto = $this->produto(5, false);
+        $venda = Venda::create([
+            'empresa_id' => $this->empresa->id,
+            'numero' => '000001',
+            'data_venda' => now()->toDateString(),
+            'data_saida' => now()->toDateString(),
+            'subtotal' => 10,
+            'total' => 10,
+            'situacao' => 'em_andamento',
+        ]);
+        VendaItem::create([
+            'venda_id' => $venda->id,
+            'produto_id' => $produto->id,
+            'produto_nome' => 'Parafuso',
+            'quantidade' => 1,
+            'preco_unitario' => 10,
+            'total' => 10,
+        ]);
+
+        $this->put(route('venda.update', $venda), $this->payload($produto, [
+            'data_venda' => now()->addDay()->toDateString(),
+        ]))->assertSessionHasErrors('data_venda');
+
+        $this->assertSame(now()->toDateString(), $venda->fresh()->data_venda->toDateString());
+    }
+
     public function test_desconto_do_item_maior_que_o_valor_e_recusado(): void
     {
         $produto = $this->produto(5, true);

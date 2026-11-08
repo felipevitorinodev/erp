@@ -114,6 +114,34 @@ class NfeEmissaoTest extends TestCase
         $this->assertSame(7, $empresa->fresh()->nfe_sequencia);
     }
 
+    public function test_data_futura_nao_reserva_numero(): void
+    {
+        $empresa = $this->empresa();
+        $venda = $this->vendaConfirmada($empresa);
+        $venda->update(['data_venda' => now()->addDays(2)->toDateString()]);
+
+        $this->actingAs($this->admin($empresa))
+            ->post(route('nfe.emitir', $venda))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, Nfe::count());
+        $this->assertSame(6, $empresa->fresh()->nfe_sequencia);
+    }
+
+    public function test_saida_anterior_a_emissao_nao_reserva_numero(): void
+    {
+        $empresa = $this->empresa();
+        $venda = $this->vendaConfirmada($empresa);
+        $venda->update(['data_saida' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($this->admin($empresa))
+            ->post(route('nfe.emitir', $venda))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, Nfe::count());
+        $this->assertSame(6, $empresa->fresh()->nfe_sequencia);
+    }
+
     public function test_nfe_pendente_bloqueia_nova_emissao(): void
     {
         $empresa = $this->empresa();

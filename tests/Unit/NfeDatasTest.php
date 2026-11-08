@@ -31,6 +31,25 @@ class NfeDatasTest extends TestCase
         $this->assertSame('2026-11-01T12:00:00-03:00', $emissao->format('Y-m-d\TH:i:sP'));
     }
 
+    public function test_emissao_futura_e_recusada(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-08 22:30:00', 'America/Rio_Branco'));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('posterior a hoje');
+
+        (new NfeDatas())->emissao(Carbon::parse('2026-11-09'), 'America/Rio_Branco');
+    }
+
+    public function test_meia_noite_em_sao_paulo_ainda_e_hoje_no_acre(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-09 00:30:00', 'America/Sao_Paulo'));
+        $emissao = (new NfeDatas())->emissao(Carbon::parse('2026-11-08'), 'America/Rio_Branco');
+
+        $this->assertSame('2026-11-08 22:30:00', $emissao->format('Y-m-d H:i:s'));
+        $this->assertSame('America/Rio_Branco', $emissao->timezoneName);
+    }
+
     public function test_saida_no_mesmo_dia_repete_a_emissao(): void
     {
         $dhEmi = Carbon::parse('2026-11-08 15:40:00', 'America/Sao_Paulo');

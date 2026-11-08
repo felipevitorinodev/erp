@@ -200,11 +200,25 @@ class NfeRascunhoTest extends TestCase
         ]))->assertSessionHasErrors('data_saida');
     }
 
+    public function test_data_de_emissao_futura_entra_nas_pendencias(): void
+    {
+        $this->post(route('nfe.store'), $this->payload([], [
+            'data_venda' => now()->addDays(2)->toDateString(),
+        ]))->assertSessionHasNoErrors();
+
+        $venda = Venda::firstOrFail();
+        $pendencias = app(NfePendenciasService::class)->verificar($venda, $this->empresa);
+
+        $this->assertStringContainsString('posterior a hoje', implode(' | ', $pendencias));
+        $this->assertTrue($venda->isRascunhoNfe());
+    }
+
     public function test_tela_mostra_data_de_saida_sem_focar_a_busca_e_o_regime(): void
     {
         $this->get(route('nfe.create'))
             ->assertOk()
             ->assertSee('Data de saída', false)
+            ->assertSee('max="'.\Carbon\Carbon::now('America/Sao_Paulo')->toDateString().'"', false)
             ->assertSee('id="lista-cfop"', false)
             ->assertSee('id="lista-ncm"', false)
             ->assertSee('Venda interna no Simples Nacional', false)

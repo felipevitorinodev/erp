@@ -322,6 +322,11 @@ class NfeService
                 return 'Apenas vendas confirmadas podem ter NF-e emitida.';
             }
 
+            $datas = $this->pendenciasService->pendenciasDeData($venda, $empresa);
+            if ($datas !== []) {
+                return $datas[0];
+            }
+
             $nfes = $this->repository->notasDaVenda((int) $venda->empresa_id, (int) $venda->id);
 
             if ($nfes->contains('situacao', 'autorizada')) {

@@ -552,6 +552,15 @@ class VendaService
                 ->with('error', 'Venda confirmada não pode ser editada. Cancele a venda se precisar desfazer a operação.');
         }
 
+        if ($venda->data_saida && $request->filled('data_venda')) {
+            $emissao = \Carbon\Carbon::parse($request->data_venda)->startOfDay();
+            if ($venda->data_saida->copy()->startOfDay()->lt($emissao)) {
+                return back()
+                    ->withErrors(['data_venda' => 'A data da venda não pode ficar depois da data de saída já informada na nota.'])
+                    ->withInput();
+            }
+        }
+
         $itens = $this->processarItens($request->itens ?? []);
 
         if (empty($itens)) {

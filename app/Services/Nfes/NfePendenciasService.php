@@ -24,9 +24,7 @@ class NfePendenciasService
             $pendencias[] = 'Informe a natureza da operação.';
         }
 
-        if ($venda->data_saida && $venda->data_venda && $venda->data_saida->copy()->startOfDay()->lt($venda->data_venda->copy()->startOfDay())) {
-            $pendencias[] = 'A data de saída não pode ser anterior à data de emissão.';
-        }
+        array_push($pendencias, ...$this->pendenciasDeData($venda, $empresa));
 
         if (blank($venda->forma_pagamento)) {
             $pendencias[] = 'Selecione a forma de pagamento.';
@@ -107,6 +105,27 @@ class NfePendenciasService
         }
 
         return array_values(array_unique($pendencias));
+    }
+
+    /**
+     * Datas que o XML recusaria. Vale antes de confirmar a venda e antes de reservar número.
+     *
+     * @return list<string>
+     */
+    public function pendenciasDeData(Venda $venda, Empresa $empresa): array
+    {
+        $pendencias = [];
+        $datas = new NfeDatas();
+
+        if ($datas->diaPosterior($venda->data_venda, $datas->fusoDaUf($empresa->uf))) {
+            $pendencias[] = 'A data de emissão não pode ser posterior a hoje.';
+        }
+
+        if ($venda->data_saida && $venda->data_venda && $venda->data_saida->copy()->startOfDay()->lt($venda->data_venda->copy()->startOfDay())) {
+            $pendencias[] = 'A data de saída não pode ser anterior à data de emissão.';
+        }
+
+        return $pendencias;
     }
 
     /**
