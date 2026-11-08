@@ -1,0 +1,479 @@
+/* =========================================================
+   ILUSTRAÇÕES, ESTADO VAZIO, CONTAGEM E TELAS DE ERRO
+   Cores sempre pelos tokens do app.css (--color-*).
+   SVGs em resources/views/partials/ilustracoes; comportamento em public/js/ilustracoes.js.
+   ========================================================= */
+
+/* ---------- Ilustração ---------- */
+.ilustracao {
+    --px: 0;
+    --py: 0;
+    display: inline-block;
+    flex: none;
+    line-height: 0;
+}
+
+.ilustracao__svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.ilustracao--xs { width: 84px; }
+.ilustracao--sm { width: 132px; }
+.ilustracao--md { width: 200px; }
+.ilustracao--lg { width: min(300px, 72vw); }
+
+.ilustracao[data-ilustracao-interativa] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Traço: primeiro a cor da linha, depois o preenchimento (a ordem importa). */
+.il-linha,
+.il-destaque {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.il-linha { stroke: var(--color-primary); }
+.il-destaque { stroke: var(--color-accent); }
+.il-linha--fina { stroke: var(--color-border-mid); stroke-width: 2; }
+.il-linha--grossa { stroke-width: 4; }
+.il-linha--faixa { stroke-width: 7; }
+.il-tracejada { stroke-dasharray: 4 6; }
+
+.il-lente {
+    fill: rgba(255, 255, 255, 0.85);
+    stroke: var(--color-accent);
+    stroke-width: 4;
+}
+
+/* Engrenagens: os dentes são um traço tracejado grosso em volta do círculo. */
+.il-dentes {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 9;
+    stroke-dasharray: 7 9.23;
+}
+.il-dentes--destaque {
+    stroke: var(--color-accent);
+    stroke-dasharray: 7 8.7;
+}
+
+.il-faixa {
+    stroke: #fff;
+    stroke-width: 6;
+}
+
+/* Traço branco sobre área preenchida (sinal de +, visto dentro de selo). */
+.il-branco {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Preenchimentos */
+.il-preenche { fill: var(--color-primary-soft); }
+.il-fundo-claro { fill: #fff; }
+.il-sem-preenchimento { fill: none; }
+.il-cheio { fill: var(--color-primary); }
+.il-destaque-preenche { fill: var(--color-accent-soft); }
+.il-destaque-cheio { fill: var(--color-accent); }
+.il-luz { fill: var(--color-accent); }
+.il-sombra { fill: rgba(22, 58, 95, 0.08); }
+
+/* Profundidade: cada camada se desloca conforme o ponteiro (--prof = quanto anda). */
+.il-camada {
+    transform: translate(calc(var(--px) * var(--prof, 4) * 1px), calc(var(--py) * var(--prof, 4) * 1px));
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Movimentos contínuos (discretos, para não tirar a atenção do texto). */
+.il-flutua { animation: il-flutua 3.2s ease-in-out infinite; }
+.il-varre { animation: il-varre 6s ease-in-out infinite; }
+.il-gira { animation: il-gira 6s linear infinite; }
+.il-gira-lento { animation: il-gira 40s linear infinite; }
+.il-engasga { animation: il-engasga 3.4s ease-in-out infinite; }
+.il-balanca { animation: il-balanca 2.8s ease-in-out infinite; }
+.il-pisca { animation: il-pisca 1.4s ease-in-out infinite; }
+.il-sobe { animation: il-sobe 2.6s ease-out infinite; }
+.il-agulha { animation: il-agulha 3.6s ease-in-out infinite; }
+.il-haste { animation: il-haste 3.2s ease-in-out infinite; }
+.il-aba { animation: il-aba 3.2s ease-in-out infinite; }
+.il-aba--direita { animation-name: il-aba-direita; }
+.il-cai { animation: il-cai 2.8s ease-in infinite; }
+.il-carimbo { animation: il-carimbo 3.6s ease-in-out infinite; }
+.il-escreve { animation: il-escreve 1.6s ease-in-out infinite; }
+.il-deriva { animation: il-deriva 9s ease-in-out infinite; }
+.il-cresce { transform-box: fill-box; transform-origin: bottom; animation: il-cresce 3.2s ease-out infinite; }
+.il-roda { animation: il-gira 1.6s linear infinite; }
+
+/* Atrasos para elementos repetidos não piscarem/subirem juntos. */
+.il-atraso-1 { animation-delay: 0.4s; }
+.il-atraso-2 { animation-delay: 0.8s; }
+.il-atraso-3 { animation-delay: 1.2s; }
+
+/* Reação ao clique/toque (classe colocada pelo ilustracoes.js). */
+.ilustracao.is-reagindo .il-reage { animation: il-sacode 0.5s ease; }
+
+@keyframes il-flutua {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+@keyframes il-varre {
+    0%, 100% { transform: translate(0, 0); }
+    30% { transform: translate(-30px, -14px); }
+    60% { transform: translate(-12px, -34px); }
+}
+@keyframes il-gira {
+    to { transform: rotate(360deg); }
+}
+@keyframes il-engasga {
+    0% { transform: rotate(0); }
+    30% { transform: rotate(-28deg); }
+    34% { transform: rotate(-22deg); }
+    38% { transform: rotate(-28deg); }
+    42% { transform: rotate(-24deg); }
+    70% { transform: rotate(-28deg); }
+    100% { transform: rotate(0); }
+}
+@keyframes il-balanca {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+}
+@keyframes il-pisca {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+@keyframes il-sobe {
+    0% { opacity: 0; transform: translateY(6px); }
+    30%, 70% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+@keyframes il-agulha {
+    0%, 100% { transform: rotate(-55deg); }
+    55% { transform: rotate(68deg); }
+    60% { transform: rotate(60deg); }
+    65% { transform: rotate(68deg); }
+    70% { transform: rotate(62deg); }
+    80% { transform: rotate(68deg); }
+}
+@keyframes il-haste {
+    0%, 60%, 80%, 92%, 100% { transform: translateY(0); }
+    70% { transform: translateY(-7px); }
+    86% { transform: translateY(-3px); }
+}
+@keyframes il-aba {
+    0%, 100% { transform: rotate(0); }
+    50% { transform: rotate(-7deg); }
+}
+@keyframes il-aba-direita {
+    0%, 100% { transform: rotate(0); }
+    50% { transform: rotate(7deg); }
+}
+@keyframes il-sacode {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+@keyframes il-desenhar {
+    to { stroke-dashoffset: 0; }
+}
+@keyframes il-cai {
+    0% { opacity: 0; transform: translateY(-16px); }
+    15% { opacity: 1; }
+    55% { opacity: 1; transform: translateY(0); }
+    75%, 100% { opacity: 0; transform: translateY(4px); }
+}
+@keyframes il-carimbo {
+    0%, 55%, 100% { transform: rotate(-8deg) scale(1); }
+    65% { transform: rotate(-8deg) scale(1.16); }
+    75% { transform: rotate(-8deg) scale(0.94); }
+    85% { transform: rotate(-8deg) scale(1); }
+}
+@keyframes il-escreve {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-5px, 2px); }
+    50% { transform: translate(-10px, 0); }
+    75% { transform: translate(-5px, -2px); }
+}
+@keyframes il-deriva {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(14px); }
+}
+@keyframes il-cresce {
+    0% { transform: scaleY(0.25); }
+    40%, 80% { transform: scaleY(1); }
+    100% { transform: scaleY(0.25); }
+}
+
+/* Confirmação: círculo e visto desenhados (circunferência 2π·23 ≈ 145). */
+.il-sucesso-aro {
+    fill: var(--color-success-bg);
+    stroke: var(--color-success);
+    stroke-width: 2.5;
+    stroke-dasharray: 145;
+    stroke-dashoffset: 145;
+    animation: il-desenhar 0.5s ease-out forwards;
+}
+.il-sucesso-visto {
+    fill: none;
+    stroke: var(--color-success);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 32;
+    stroke-dashoffset: 32;
+    animation: il-desenhar 0.35s 0.4s ease-out forwards;
+}
+
+/* Sobre fundo escuro (painel do login): traço claro e preenchimentos translúcidos. */
+.ilustracao--sobre-escuro .il-linha { stroke: rgba(255, 255, 255, 0.88); }
+.ilustracao--sobre-escuro .il-linha--fina { stroke: rgba(255, 255, 255, 0.45); }
+.ilustracao--sobre-escuro .il-preenche { fill: rgba(255, 255, 255, 0.10); }
+.ilustracao--sobre-escuro .il-fundo-claro { fill: rgba(255, 255, 255, 0.16); }
+.ilustracao--sobre-escuro .il-sombra { fill: rgba(0, 0, 0, 0.18); }
+.ilustracao--sobre-escuro .il-cheio { fill: rgba(255, 255, 255, 0.88); }
+.ilustracao--sobre-escuro .il-destaque-preenche { fill: rgba(227, 90, 18, 0.30); }
+
+/* ---------- Estado vazio ---------- */
+.estado-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+}
+
+.estado-vazio .ilustracao { margin-bottom: 0.4rem; }
+
+.estado-vazio__titulo {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.estado-vazio__texto {
+    max-width: 44ch;
+    margin: 0 0 0.4rem;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.estado-vazio .btn { margin-top: 0.15rem; }
+
+.estado-vazio--xs { padding: 0.5rem; }
+.estado-vazio--xs .estado-vazio__titulo {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+/* A regra antiga de .empty-state (ícone 48px apagado) não vale para as ilustrações. */
+.venda-itens-empty .ilustracao svg,
+.empty-state .ilustracao svg {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    opacity: 1;
+}
+.empty-state .estado-vazio p { margin-bottom: 0; }
+.empty-state .estado-vazio .estado-vazio__texto { margin-bottom: 0.4rem; }
+
+@media (max-width: 768px) {
+    .table--cards td.empty-state { display: block; }
+    .table--cards td.empty-state::before { content: none; }
+}
+
+/* Painel do login: a loja entre a marca e o rodapé (some no celular, onde o painel vira faixa). */
+.auth-aside__arte {
+    display: block;
+    width: min(260px, 100%);
+    margin-top: 2.25rem;
+}
+
+@media (max-width: 900px) {
+    .auth-aside__arte { display: none; }
+}
+
+@media (max-height: 760px) and (min-width: 901px) {
+    .auth-aside__arte { width: 190px; margin-top: 1.5rem; }
+}
+
+/* Falha ao buscar (autocomplete, PDV, venda): nuvem cortada acima da mensagem. */
+.carga-falha::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 0.4rem;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath fill='%23E8EEF5' stroke='%23163A5F' d='M14 37h20a8 8 0 0 0 1.5-15.9A11 11 0 0 0 14.6 19 9 9 0 0 0 14 37z'/%3E%3Cpath stroke='%23E35A12' d='M9 9l30 30'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Contagem regressiva ---------- */
+.contagem {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 1rem 0.4rem 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+}
+
+.contagem__anel {
+    position: relative;
+    flex: none;
+    width: 40px;
+    height: 40px;
+}
+
+.contagem__anel svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.contagem__trilho,
+.contagem__progresso {
+    fill: none;
+    stroke-width: 3;
+}
+.contagem__trilho { stroke: var(--color-border); }
+.contagem__progresso {
+    stroke: var(--color-accent);
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear, stroke 0.2s ease;
+}
+
+.contagem__numero {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.contagem__texto {
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+.contagem.is-concluida .contagem__progresso { stroke: var(--color-success); }
+
+/* ---------- Telas de erro ---------- */
+html:has(.erro-body),
+.erro-body {
+    height: auto;
+    overflow: auto;
+}
+
+.erro-body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background: var(--color-bg);
+}
+
+.erro {
+    width: min(560px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.erro__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.erro__arte { margin-bottom: 0.75rem; }
+
+.erro__codigo {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-accent);
+}
+
+.erro__titulo {
+    margin: 0;
+    font-size: clamp(22px, 4vw, 28px);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-primary);
+}
+
+.erro__texto {
+    max-width: 46ch;
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-text-mid);
+}
+
+.erro__contagem { margin-top: 0.75rem; }
+
+.erro__horario {
+    margin: 0.25rem 0 0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+}
+
+.erro__acoes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.erro__acoes .btn { min-width: 160px; }
+
+@media (max-width: 480px) {
+    .erro__acoes {
+        flex-direction: column;
+        width: 100%;
+    }
+    .erro__acoes .btn { width: 100%; }
+}
+
+/* ---------- Movimento reduzido: tudo parado, desenhos já completos ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .ilustracao *,
+    .contagem__progresso {
+        animation: none !important;
+        transition: none !important;
+    }
+    .il-sucesso-aro,
+    .il-sucesso-visto {
+        stroke-dashoffset: 0;
+    }
+}

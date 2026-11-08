@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Conta a Pagar')
-@section('page_title', 'Editar Conta a Pagar')
+@section('title', 'Editar conta a pagar')
+@section('page_title', 'Editar conta a pagar')
 
 @section('breadcrumb')
-    <a href="{{ route('conta-pagar.index') }}">Contas a Pagar</a> /
+    <a href="{{ route('conta-pagar.index') }}">Contas a pagar</a> /
     <a href="{{ route('conta-pagar.show', $conta) }}">#{{ $conta->id }}</a> /
     Editar
 @endsection
@@ -13,7 +13,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Conta</span>
+            <span class="card__title">Dados da conta</span>
         </div>
 
         <form method="POST" action="{{ route('conta-pagar.update', $conta) }}">

@@ -37,6 +37,7 @@ class GrupoRepository
     public function store(array $request)
     {
         $request['empresa_id'] = auth()->user()->empresa_id;
+
         return $this->grupo->create($request);
     }
 

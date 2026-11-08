@@ -18,7 +18,7 @@ class FormaPagamentoService
 
         return view('formaPagamento.index', [
             'formasPagamento' => $formasPagamento,
-            'filtros'         => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 

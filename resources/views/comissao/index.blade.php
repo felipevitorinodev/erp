@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Comissões')
-@section('page_title', 'Comissões de Vendedores e Técnicos')
+@section('page_title', 'Comissões de vendedores e técnicos')
 
 @section('content')
 
@@ -45,7 +45,7 @@
         />
     </x-relatorio-kpis>
 
-    <x-tabela-card titulo="Listagem" :paginator="$comissoes">
+    <x-tabela-card titulo="Resultados" :paginator="$comissoes">
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -105,7 +105,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <x-tabela-vazia :colspan="10">Nenhuma comissão encontrada.</x-tabela-vazia>
+                            <x-tabela-vazia ilustracao="cofrinho" :colspan="10" titulo="Nenhuma comissão encontrada" texto="As comissões aparecem a partir das vendas e ordens de serviço com vendedor ou técnico." filtravel />
                         @endforelse
                     </tbody>
     </x-tabela-card>

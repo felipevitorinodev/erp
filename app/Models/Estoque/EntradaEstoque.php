@@ -35,12 +35,12 @@ class EntradaEstoque extends Model
     ];
 
     protected $casts = [
-        'data_entrada'     => 'date',
+        'data_entrada' => 'date',
         'data_emissao_nfe' => 'date',
-        'subtotal'         => 'decimal:2',
-        'desconto'         => 'decimal:2',
-        'total'            => 'decimal:2',
-        'valor_nota'       => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'desconto' => 'decimal:2',
+        'total' => 'decimal:2',
+        'valor_nota' => 'decimal:2',
     ];
 
     public function empresa()

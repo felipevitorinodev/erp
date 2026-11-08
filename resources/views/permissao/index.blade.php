@@ -4,7 +4,7 @@
 @section('page_title', 'Permissões')
 
 @section('page_actions')
-    <a href="{{ route('permissao.create') }}" class="btn btn--primary btn--sm">+ Novo Perfil</a>
+    <a href="{{ route('permissao.create') }}" class="btn btn--primary btn--sm">+ Novo perfil</a>
 @endsection
 
 @section('content')
@@ -44,7 +44,7 @@
                                     @if($perfil->ativo)
                                         <span class="badge badge--success">Ativo</span>
                                     @else
-                                        <span class="badge badge--error">Inativo</span>
+                                        <span class="badge badge--neutral">Inativo</span>
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
@@ -74,9 +74,13 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted empty-state">Nenhum perfil cadastrado.</td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="escudo"
+                                :colspan="4"
+                                titulo="Nenhum perfil cadastrado"
+                                texto="Perfis definem o que cada usuário pode acessar."
+                                :acao="route('permissao.create')"
+                                acao-texto="+ Novo perfil"
+                            />
                         @endforelse
                     </tbody>
                 </table>

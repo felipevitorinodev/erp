@@ -17,34 +17,50 @@ return new class extends Migration
         $this->arredondar('ordem_servico_itens', ['preco_unitario']);
         $this->arredondar('entrada_estoque_itens', ['preco_unitario']);
 
-        DB::statement("ALTER TABLE produtos MODIFY preco_custo DECIMAL(12,2) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE produtos MODIFY preco_venda DECIMAL(12,2) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE produtos MODIFY preco_minimo DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT 'Preço mínimo para venda'");
-        DB::statement("ALTER TABLE venda_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE orcamento_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE ordem_servico_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE entrada_estoque_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL");
+        if ($this->semAlterModify()) {
+            return;
+        }
 
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY quantidade DECIMAL(12,3) NOT NULL");
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY estoque_antes DECIMAL(12,3) NOT NULL");
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY estoque_depois DECIMAL(12,3) NOT NULL");
-        DB::statement("ALTER TABLE entrada_estoque_itens MODIFY quantidade DECIMAL(12,3) NOT NULL");
+        DB::statement('ALTER TABLE produtos MODIFY preco_custo DECIMAL(12,2) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE produtos MODIFY preco_venda DECIMAL(12,2) NOT NULL DEFAULT 0');
+        DB::statement("ALTER TABLE produtos MODIFY preco_minimo DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT 'Preço mínimo para venda'");
+        DB::statement('ALTER TABLE venda_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE orcamento_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE ordem_servico_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE entrada_estoque_itens MODIFY preco_unitario DECIMAL(12,2) NOT NULL');
+
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY quantidade DECIMAL(12,3) NOT NULL');
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY estoque_antes DECIMAL(12,3) NOT NULL');
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY estoque_depois DECIMAL(12,3) NOT NULL');
+        DB::statement('ALTER TABLE entrada_estoque_itens MODIFY quantidade DECIMAL(12,3) NOT NULL');
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE produtos MODIFY preco_custo DECIMAL(12,4) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE produtos MODIFY preco_venda DECIMAL(12,4) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE produtos MODIFY preco_minimo DECIMAL(12,4) NOT NULL DEFAULT 0 COMMENT 'Preço mínimo para venda'");
-        DB::statement("ALTER TABLE venda_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE orcamento_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE ordem_servico_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0");
-        DB::statement("ALTER TABLE entrada_estoque_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL");
+        if ($this->semAlterModify()) {
+            return;
+        }
 
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY quantidade DECIMAL(10,3) NOT NULL");
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY estoque_antes DECIMAL(10,3) NOT NULL");
-        DB::statement("ALTER TABLE movimentacoes_estoque MODIFY estoque_depois DECIMAL(10,3) NOT NULL");
-        DB::statement("ALTER TABLE entrada_estoque_itens MODIFY quantidade DECIMAL(10,3) NOT NULL");
+        DB::statement('ALTER TABLE produtos MODIFY preco_custo DECIMAL(12,4) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE produtos MODIFY preco_venda DECIMAL(12,4) NOT NULL DEFAULT 0');
+        DB::statement("ALTER TABLE produtos MODIFY preco_minimo DECIMAL(12,4) NOT NULL DEFAULT 0 COMMENT 'Preço mínimo para venda'");
+        DB::statement('ALTER TABLE venda_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE orcamento_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE ordem_servico_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL DEFAULT 0');
+        DB::statement('ALTER TABLE entrada_estoque_itens MODIFY preco_unitario DECIMAL(12,4) NOT NULL');
+
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY quantidade DECIMAL(10,3) NOT NULL');
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY estoque_antes DECIMAL(10,3) NOT NULL');
+        DB::statement('ALTER TABLE movimentacoes_estoque MODIFY estoque_depois DECIMAL(10,3) NOT NULL');
+        DB::statement('ALTER TABLE entrada_estoque_itens MODIFY quantidade DECIMAL(10,3) NOT NULL');
+    }
+
+    /**
+     * O SQLite da suíte de testes não tem ALTER TABLE ... MODIFY e não guarda a precisão do DECIMAL.
+     */
+    private function semAlterModify(): bool
+    {
+        return DB::connection()->getDriverName() === 'sqlite';
     }
 
     private function arredondar(string $tabela, array $colunas): void

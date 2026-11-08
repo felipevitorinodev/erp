@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Contas a Receber')
-@section('page_title', 'Contas a Receber')
+@section('title', 'Contas a receber')
+@section('page_title', 'Contas a receber')
 
 @section('page_actions')
-    <a href="{{ route('conta-receber.create') }}" class="btn btn--primary btn--sm">+ Nova Conta</a>
+    <a href="{{ route('conta-receber.create') }}" class="btn btn--primary btn--sm">+ Nova conta</a>
 @endsection
 
 @section('content')
@@ -32,7 +32,7 @@
         />
     </x-filtros>
 
-    <x-tabela-card titulo="Listagem" :paginator="$contas">
+    <x-tabela-card titulo="Resultados" :paginator="$contas">
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -57,6 +57,10 @@
                                 <td data-label="Cliente">{{ $conta->cliente->nome ?? '—' }}</td>
                                 <td data-label="Vencimento" class="{{ $vencido ? 'text--danger' : '' }}">
                                     {{ $conta->data_vencimento->format('d/m/Y') }}
+                                    @if($vencido)
+                                        @php($diasAtraso = (int) $conta->data_vencimento->diffInDays(now()->startOfDay()))
+                                        <span class="aviso-linha">vencida há {{ $diasAtraso }} {{ $diasAtraso === 1 ? 'dia' : 'dias' }}</span>
+                                    @endif
                                 </td>
                                 <td data-label="Valor" class="col-num"><x-moeda :valor="$conta->valor" /></td>
                                 <td data-label="Pago" class="col-num"><x-moeda :valor="$conta->valor_pago" /></td>
@@ -92,7 +96,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <x-tabela-vazia :colspan="8">Nenhuma conta a receber cadastrada.</x-tabela-vazia>
+                            <x-tabela-vazia ilustracao="carteira" :colspan="8" titulo="Nenhuma conta a receber lançada" texto="Vendas em formas a prazo geram as contas sozinhas; você também pode lançar à parte." :acao="route('conta-receber.create')" acao-texto="+ Nova conta" filtravel />
                         @endforelse
                     </tbody>
     </x-tabela-card>

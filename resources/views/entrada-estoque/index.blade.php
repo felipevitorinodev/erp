@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Entradas de Estoque')
-@section('page_title', 'Entradas de Estoque')
+@section('title', 'Entradas de estoque')
+@section('page_title', 'Entradas de estoque')
 
 @section('page_actions')
-    <a href="{{ route('entrada-estoque.create') }}" class="btn btn--primary btn--sm">+ Nova Entrada</a>
+    <a href="{{ route('entrada-estoque.create') }}" class="btn btn--primary btn--sm">+ Nova entrada</a>
     <button type="button" class="btn btn--ghost btn--sm" id="btn-abrir-modal-xml">Importar XML</button>
 @endsection
 
@@ -51,7 +51,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -110,11 +110,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    Nenhuma entrada de estoque cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="estoque"
+                                :colspan="6"
+                                titulo="Nenhuma entrada de estoque lançada"
+                                texto="Lance as compras para dar entrada dos produtos no estoque."
+                                :acao="route('entrada-estoque.create')"
+                                acao-texto="+ Nova entrada"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>
@@ -135,16 +138,8 @@
             <form method="POST" action="{{ route('entrada-estoque.importar-xml') }}" enctype="multipart/form-data" id="form-importar-xml">
                 @csrf
                 <div class="modal-box__body">
-                    <div class="upload-area" id="upload-area-xml">
-                        <div class="upload-area__icon">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="12" y1="18" x2="12" y2="12"></line>
-                                <line x1="9" y1="15" x2="12" y2="12"></line>
-                                <line x1="15" y1="15" x2="12" y2="12"></line>
-                            </svg>
-                        </div>
+                    <div class="upload-area" id="upload-area-xml" data-ilustracao-area>
+                        <x-ilustracao nome="xml" tamanho="sm" interativa class="upload-area__icon" />
                         <div class="upload-area__text">
                             <span class="upload-area__title">Arraste o arquivo XML aqui</span>
                             <span class="upload-area__subtitle">ou clique para selecionar</span>
@@ -227,6 +222,9 @@
     border-radius: 6px;
     font-size: 0.85rem;
 }
+.upload-area__selected[hidden] {
+    display: none;
+}
 .upload-area__filename {
     color: var(--color-success, #059669);
     font-weight: 500;
@@ -252,9 +250,8 @@
     .upload-area {
         padding: 1.5rem 1rem;
     }
-    .upload-area__icon svg {
-        width: 40px;
-        height: 40px;
+    .upload-area__icon {
+        width: 104px;
     }
     .upload-area__title {
         font-size: 0.9rem;

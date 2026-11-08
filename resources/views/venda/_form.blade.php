@@ -26,7 +26,7 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label form-label--required">Data da Venda</label>
+        <label class="form-label form-label--required">Data da venda</label>
         <input type="date" name="data_venda"
             class="form-control @error('data_venda') is-invalid @enderror"
             value="{{ old('data_venda', $venda ? $venda->data_venda?->format('Y-m-d') : date('Y-m-d')) }}">
@@ -53,7 +53,7 @@
 
 <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
     <div class="form-group form-group--span-2">
-        <label class="form-label">Forma de Pagamento</label>
+        <label class="form-label">Forma de pagamento</label>
         @php $formaAtual = old('forma_pagamento', $venda->forma_pagamento ?? ''); @endphp
         <button type="button" class="btn btn--ghost" id="btn-escolher-pagamento">Selecionar pagamento</button>
         <p class="pg-escolha__detalhe" id="pagamento-resumo">{{ $formaAtual !== '' ? $formaAtual : 'Nenhuma forma selecionada' }}</p>
@@ -68,7 +68,7 @@
 <div class="itens-panel">
     <div class="section-toolbar">
         <span class="section-toolbar__title">Itens da Venda</span>
-        <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar Item</button>
+        <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar item</button>
     </div>
 
     @error('itens')<span class="form-error">{{ $message }}</span>@enderror
@@ -105,7 +105,7 @@
                         ])
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Preço Unit.</label>
+                        <label class="form-label">Preço unit.</label>
                         <input type="tel" name="itens[{{ $i }}][preco_unitario]"
                             class="form-control text-right input-preco input-numeric"
                             inputmode="numeric"
@@ -271,7 +271,7 @@
                     '<input type="tel" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd input-quantity input-numeric" inputmode="numeric" data-decimals=\"2\" value=\"1,00\">' +
                 '</div>' +
                 '<div class="form-group">' +
-                    '<label class="form-label">Preço Unit.</label>' +
+                    '<label class="form-label">Preço unit.</label>' +
                     '<input type="tel" name="itens[' + idx + '][preco_unitario]" class="form-control text-right input-preco input-numeric" inputmode="numeric" data-decimals=\"2\" value="0,00">' +
                 '</div>' +
                 '<div class="form-group">' +

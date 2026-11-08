@@ -533,7 +533,40 @@
         }
     });
 
+    // Esqueletos para conteúdo buscado por AJAX (tabelas e listas de sugestão).
+    // Devolvem HTML fixo, sem dados do usuário.
+    var LARGURAS = [72, 46, 58, 38, 64, 52, 30, 44, 60];
+
+    function linhasEsqueleto(colunas, linhas) {
+        colunas = Math.max(1, colunas || 4);
+        linhas = Math.max(1, linhas || 6);
+        var html = '';
+        for (var l = 0; l < linhas; l++) {
+            html += '<tr class="sk-linha" aria-hidden="true">';
+            for (var c = 0; c < colunas; c++) {
+                html += '<td><span class="sk-bloco" style="width:' + LARGURAS[(c + l) % LARGURAS.length] + '%"></span></td>';
+            }
+            html += '</tr>';
+        }
+        return html;
+    }
+
+    function itensEsqueleto(quantidade, tag) {
+        quantidade = Math.max(1, quantidade || 4);
+        tag = tag === 'li' ? 'li' : 'div';
+        var html = '';
+        for (var i = 0; i < quantidade; i++) {
+            html += '<' + tag + ' class="sk-item" aria-hidden="true">' +
+                '<span class="sk-bloco" style="width:' + LARGURAS[i % LARGURAS.length] + '%"></span>' +
+                '<span class="sk-bloco sk-bloco--meta" style="width:' + LARGURAS[(i + 3) % LARGURAS.length] + '%"></span>' +
+                '</' + tag + '>';
+        }
+        return html;
+    }
+
     window.ErpCarregamento = {
+        linhasEsqueleto: linhasEsqueleto,
+        itensEsqueleto: itensEsqueleto,
         tipoTela: tipoTela,
         anotarEnvio: anotarEnvio,
         preencher: preencher,

@@ -17,10 +17,10 @@ class PerfilVendedorEBaixasTest extends TestCase
     private function criarEmpresa(): Empresa
     {
         return Empresa::create([
-            'razao_social'  => 'Empresa Teste',
+            'razao_social' => 'Empresa Teste',
             'nome_fantasia' => 'Teste',
-            'cnpj'          => '11222333000181',
-            'ativo'         => true,
+            'cnpj' => '11222333000181',
+            'ativo' => true,
         ]);
     }
 
@@ -28,8 +28,8 @@ class PerfilVendedorEBaixasTest extends TestCase
     {
         return User::factory()->create([
             'empresa_id' => $empresa->id,
-            'perfil'     => $perfil,
-            'ativo'      => true,
+            'perfil' => $perfil,
+            'ativo' => true,
         ]);
     }
 
@@ -37,11 +37,11 @@ class PerfilVendedorEBaixasTest extends TestCase
     {
         return Venda::create([
             'empresa_id' => $empresa->id,
-            'numero'     => $numero,
+            'numero' => $numero,
             'data_venda' => now()->toDateString(),
-            'situacao'   => $situacao,
-            'subtotal'   => 10,
-            'total'      => 10,
+            'situacao' => $situacao,
+            'subtotal' => 10,
+            'total' => 10,
         ]);
     }
 
@@ -59,8 +59,8 @@ class PerfilVendedorEBaixasTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('PDV')
-            ->assertSee('Nova Venda')
-            ->assertDontSee('Entrada de Mercadoria')
+            ->assertSee('Nova venda')
+            ->assertDontSee('Entrada de mercadoria')
             ->assertDontSee('Orçamentos')
             ->assertDontSee('Comissões');
 
@@ -130,26 +130,26 @@ class PerfilVendedorEBaixasTest extends TestCase
         $user = $this->criarUsuario($empresa, 'financeiro');
 
         $conta = ContaReceber::create([
-            'empresa_id'      => $empresa->id,
-            'descricao'       => 'Parcela do cliente',
-            'valor'           => 100,
-            'valor_pago'      => 0,
+            'empresa_id' => $empresa->id,
+            'descricao' => 'Parcela do cliente',
+            'valor' => 100,
+            'valor_pago' => 0,
             'data_vencimento' => '2026-10-20',
-            'situacao'        => 'aberta',
+            'situacao' => 'aberta',
         ]);
 
         $this->actingAs($user)
             ->post(route('conta-receber.receber', $conta), [
-                'valor_pago'      => '50,00',
-                'data_pagamento'  => '2026-10-01',
+                'valor_pago' => '50,00',
+                'data_pagamento' => '2026-10-01',
                 'forma_pagamento' => 'Dinheiro',
             ])
             ->assertRedirect(route('conta-receber.show', $conta));
 
         $this->actingAs($user)
             ->post(route('conta-receber.receber', $conta), [
-                'valor_pago'      => '50,00',
-                'data_pagamento'  => '2026-10-02',
+                'valor_pago' => '50,00',
+                'data_pagamento' => '2026-10-02',
                 'forma_pagamento' => 'Pix',
             ])
             ->assertRedirect(route('conta-receber.show', $conta));
@@ -160,7 +160,7 @@ class PerfilVendedorEBaixasTest extends TestCase
         $this->actingAs($user)
             ->get(route('fluxo-de-caixa.index', [
                 'data_inicio' => '2026-10-01',
-                'data_fim'    => '2026-10-02',
+                'data_fim' => '2026-10-02',
             ]))
             ->assertOk()
             ->assertSeeInOrder([
@@ -184,17 +184,17 @@ class PerfilVendedorEBaixasTest extends TestCase
         $user = $this->criarUsuario($empresa, 'financeiro');
 
         $conta = ContaReceber::create([
-            'empresa_id'      => $empresa->id,
-            'descricao'       => 'Conta parcial',
-            'valor'           => 100,
-            'valor_pago'      => 0,
+            'empresa_id' => $empresa->id,
+            'descricao' => 'Conta parcial',
+            'valor' => 100,
+            'valor_pago' => 0,
             'data_vencimento' => '2026-10-20',
-            'situacao'        => 'aberta',
+            'situacao' => 'aberta',
         ]);
 
         $this->actingAs($user)
             ->post(route('conta-receber.receber', $conta), [
-                'valor_pago'     => '40,00',
+                'valor_pago' => '40,00',
                 'data_pagamento' => '2026-10-01',
             ])
             ->assertRedirect();
@@ -202,7 +202,7 @@ class PerfilVendedorEBaixasTest extends TestCase
         $this->actingAs($user)
             ->get(route('conta-receber.show', $conta))
             ->assertOk()
-            ->assertSee('Registrar Recebimento')
+            ->assertSee('Registrar recebimento')
             ->assertDontSee('Cancelar conta');
 
         $this->actingAs($user)
@@ -214,8 +214,8 @@ class PerfilVendedorEBaixasTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('conta-receber.update', $conta), [
-                'descricao'       => 'Conta parcial',
-                'valor'           => '10,00',
+                'descricao' => 'Conta parcial',
+                'valor' => '10,00',
                 'data_vencimento' => '2026-10-20',
             ])
             ->assertSessionHasErrors('valor');
@@ -224,8 +224,8 @@ class PerfilVendedorEBaixasTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('conta-receber.update', $conta), [
-                'descricao'       => 'Conta parcial',
-                'valor'           => '40,00',
+                'descricao' => 'Conta parcial',
+                'valor' => '40,00',
                 'data_vencimento' => '2026-10-20',
             ])
             ->assertRedirect(route('conta-receber.show', $conta));

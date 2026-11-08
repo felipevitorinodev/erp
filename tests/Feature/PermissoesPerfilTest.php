@@ -189,7 +189,7 @@ class PermissoesPerfilTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee(route('formaPagamento.index'), false)
-            ->assertSee('Formas de Pagamento')
+            ->assertSee('Formas de pagamento')
             ->assertDontSee(route('conta-receber.index'), false);
 
         $this->actingAs($formas)
@@ -203,7 +203,7 @@ class PermissoesPerfilTest extends TestCase
             ->assertSee('Faturado hoje')
             ->assertSee('Faturamento de')
             ->assertDontSee('Posição de estoque')
-            ->assertDontSee('Posição Atual')
+            ->assertDontSee('Posição atual')
             ->assertDontSee(route('entrada-estoque.index'), false);
 
         $this->actingAs($relatorios)
@@ -225,7 +225,7 @@ class PermissoesPerfilTest extends TestCase
             ->assertDontSee(route('relatorio.estoque'), false)
             ->assertDontSee('href="'.route('relatorios.index').'"', false)
             ->assertDontSee('Posição de estoque')
-            ->assertDontSee('Formas de Pagamento')
+            ->assertDontSee('Formas de pagamento')
             ->assertDontSee('Faturado hoje')
             ->assertDontSee('Vendas hoje')
             ->assertDontSee('Faturamento de');

@@ -38,11 +38,11 @@ class Orcamento extends Model
 
     protected $casts = [
         'data_orcamento' => 'date',
-        'data_entrega'   => 'date',
-        'subtotal'       => 'decimal:2',
-        'desconto'       => 'decimal:2',
-        'acrescimo'      => 'decimal:2',
-        'total'          => 'decimal:2',
+        'data_entrega' => 'date',
+        'subtotal' => 'decimal:2',
+        'desconto' => 'decimal:2',
+        'acrescimo' => 'decimal:2',
+        'total' => 'decimal:2',
     ];
 
     public function empresa()

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Perfil')
+@section('title', 'Editar perfil')
 @section('page_title', 'Editar ' . $perfil->nome)
 
 @section('breadcrumb')

@@ -10,6 +10,7 @@
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/ilustracoes.css') }}?v={{ filemtime(public_path('css/ilustracoes.css')) }}">
 
     @stack('styles')
 </head>
@@ -146,7 +147,7 @@
                         @if ($podeOrdensServico)
                             <a href="{{ route('ordem-servico.index') }}"
                                 class="sidebar__link {{ request()->routeIs('ordem-servico.*') ? 'sidebar__link--active' : '' }}">
-                                Ordens de Serviço
+                                Ordens de serviço
                             </a>
                         @endif
                         @if ($podeComissoes)
@@ -171,7 +172,7 @@
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        <span class="sidebar__group-label">Nota Fiscal</span>
+                        <span class="sidebar__group-label">Nota fiscal</span>
                         <span class="sidebar__group-arrow">›</span>
                     </div>
                     <div class="sidebar__group-links" data-links>
@@ -210,12 +211,12 @@
                         </a>
                         <a href="{{ route('estoque.ajuste.create') }}"
                             class="sidebar__link {{ request()->routeIs('estoque.ajuste.*') ? 'sidebar__link--active' : '' }}">
-                            Ajuste Manual
+                            Ajuste manual
                         </a>
                         @if ($podeRelatorios)
                         <a href="{{ route('relatorio.estoque') }}"
                             class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
-                            Posição Atual
+                            Posição atual
                         </a>
                         @endif
                     </div>
@@ -270,15 +271,15 @@
                             @if ($podeFinanceiro)
                             <a href="{{ route('conta-receber.index') }}"
                                 class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
-                                A Receber
+                                A receber
                             </a>
                             <a href="{{ route('conta-pagar.index') }}"
                                 class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
-                                A Pagar
+                                A pagar
                             </a>
                             <a href="{{ route('fluxo-de-caixa.index') }}"
                                 class="sidebar__link {{ request()->routeIs('fluxo-de-caixa.*') ? 'sidebar__link--active' : '' }}">
-                                Fluxo de Caixa
+                                Fluxo de caixa
                             </a>
                             <a href="{{ route('categoria-financeira.index') }}"
                                 class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
@@ -288,7 +289,7 @@
                             @if ($podeFormas)
                                 <a href="{{ route('formaPagamento.index') }}"
                                     class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
-                                    Formas de Pagamento
+                                    Formas de pagamento
                                 </a>
                             @endif
                         </div>
@@ -491,6 +492,7 @@
     </div>
 
     <script src="{{ asset('js/carregamento.js') }}?v={{ filemtime(public_path('js/carregamento.js')) }}"></script>
+    <script src="{{ asset('js/ilustracoes.js') }}?v={{ filemtime(public_path('js/ilustracoes.js')) }}"></script>
     <script src="{{ asset('js/jquery.min.js') }}?v={{ filemtime(public_path('js/jquery.min.js')) }}"></script>
     <script src="{{ asset('js/autocomplete.js') }}?v={{ filemtime(public_path('js/autocomplete.js')) }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>

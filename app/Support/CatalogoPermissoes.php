@@ -14,6 +14,7 @@ class CatalogoPermissoes
                 'vendas' => 'PDV e vendas',
                 'vendas.ver_canceladas' => 'Ver vendas canceladas',
                 'vendas.cancelar' => 'Cancelar ou excluir venda confirmada',
+                'vendas.alterar_preco' => 'Vender abaixo do preço mínimo',
                 'orcamentos' => 'Orçamentos',
                 'ordens_servico' => 'Ordens de serviço',
                 'comissoes' => 'Comissões',
@@ -36,6 +37,7 @@ class CatalogoPermissoes
             ],
             'Configurações' => [
                 'configuracoes' => 'Usuários, empresa e permissões',
+                'comandos' => 'Assistente (cada pedido segue as permissões acima)',
             ],
         ];
     }
@@ -66,6 +68,7 @@ class CatalogoPermissoes
                 'vendas',
                 'vendas.ver_canceladas',
                 'vendas.cancelar',
+                'vendas.alterar_preco',
                 'orcamentos',
                 'ordens_servico',
                 'nfe',

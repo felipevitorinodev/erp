@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 
 class EmpresaController extends Controller
 {
-
     public function __construct(
         protected EmpresaService $empresaService
     ) {}
@@ -20,15 +19,18 @@ class EmpresaController extends Controller
         return $this->empresaService->index($request);
     }
 
-    public function create(){
+    public function create()
+    {
         return $this->empresaService->create();
-    } 
+    }
 
-    public function store(EmpresaRequest $request){
+    public function store(EmpresaRequest $request)
+    {
         return $this->empresaService->store($request);
     }
 
-    public function show(){
+    public function show()
+    {
         return false;
     }
 
@@ -42,7 +44,8 @@ class EmpresaController extends Controller
         return $this->empresaService->update($request, $empresa);
     }
 
-    public function destroy(Empresa $empresa){
+    public function destroy(Empresa $empresa)
+    {
         return $this->empresaService->destroy($empresa->id);
     }
 }

@@ -8,10 +8,8 @@ use App\Models\Clientes\Cliente;
 use App\Services\Clientes\ClienteService;
 use Illuminate\Http\Request;
 
-
 class ClienteController extends Controller
 {
-
     public function __construct(
         protected ClienteService $service
     ) {}
@@ -21,15 +19,18 @@ class ClienteController extends Controller
         return $this->service->index($request);
     }
 
-    public function create(){
+    public function create()
+    {
         return $this->service->create();
-    } 
+    }
 
-    public function store(ClienteRequest $request){
+    public function store(ClienteRequest $request)
+    {
         return $this->service->store($request);
     }
 
-    public function show(){
+    public function show()
+    {
         return false;
     }
 
@@ -43,7 +44,8 @@ class ClienteController extends Controller
         return $this->service->update($request, $cliente);
     }
 
-    public function destroy(Cliente $cliente){
+    public function destroy(Cliente $cliente)
+    {
         return $this->service->destroy($cliente->id);
     }
 }

@@ -22,7 +22,15 @@ class ProdutoRequest extends FormRequest
             'fornecedor_id' => ['nullable', $this->existeNaEmpresa('fornecedores')],
             'perfil_fiscal_id' => ['nullable', $this->existeNaEmpresa('perfis_fiscais')],
 
-            'codigo' => 'nullable|string|max:50',
+            // Os excluídos contam: o índice único (empresa_id, codigo) também os considera.
+            'codigo' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('produtos', 'codigo')
+                    ->where('empresa_id', auth()->user()->empresa_id)
+                    ->ignore($this->route('produto')),
+            ],
             'codigo_barras' => 'nullable|string|max:50',
             'referencia' => 'nullable|string|max:50',
             'nome' => 'required|string|max:255',
@@ -31,7 +39,12 @@ class ProdutoRequest extends FormRequest
 
             'preco_custo' => 'nullable|numeric|min:0',
             'preco_venda' => 'nullable|numeric|min:0',
-            'preco_minimo' => 'nullable|numeric|min:0',
+            'preco_minimo' => ['nullable', 'numeric', 'min:0', function (string $attribute, mixed $value, \Closure $fail) {
+                $precoVenda = $this->input('preco_venda');
+                if (is_numeric($value) && is_numeric($precoVenda) && $precoVenda > 0 && $value > $precoVenda) {
+                    $fail('O preço mínimo não pode ser maior que o preço de venda.');
+                }
+            }],
             'margem_lucro' => 'nullable|numeric',
 
             'estoque_minimo' => 'nullable|numeric|min:0',
@@ -67,6 +80,7 @@ class ProdutoRequest extends FormRequest
             'numeric' => 'O campo :attribute deve ser numérico.',
             'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
+            'codigo.unique' => 'Já existe um produto com este código, ativo ou excluído.',
         ];
     }
 

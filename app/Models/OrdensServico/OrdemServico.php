@@ -61,13 +61,13 @@ class OrdemServico extends Model
     ];
 
     protected $casts = [
-        'data_abertura'  => 'date',
-        'data_previsao'  => 'date',
+        'data_abertura' => 'date',
+        'data_previsao' => 'date',
         'data_conclusao' => 'date',
-        'subtotal'       => 'decimal:2',
-        'desconto'       => 'decimal:2',
-        'acrescimo'      => 'decimal:2',
-        'total'          => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'desconto' => 'decimal:2',
+        'acrescimo' => 'decimal:2',
+        'total' => 'decimal:2',
     ];
 
     public function estaAberta(): bool

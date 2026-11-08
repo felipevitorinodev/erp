@@ -10,15 +10,22 @@ use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
+use App\Models\Nfes\Nfe;
+use App\Models\Orcamentos\Orcamento;
+use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Repositories\Vendas\VendaRepository;
 use App\Services\Nfces\NfceService;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
+use App\Support\PrecoMinimo;
 use App\Traits\ConversorMoeda;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -50,6 +57,34 @@ class VendaService
 
     public function store(VendaRequest $request)
     {
+        $chave = $this->chaveIdempotencia($request);
+        $trava = $chave !== null ? $this->travarEnvio($chave) : null;
+
+        if ($chave === null || $trava === null) {
+            return $this->registrarVenda($request);
+        }
+
+        if ($trava === false) {
+            return response()->json([
+                'message' => 'Esta venda ainda está sendo registrada. Aguarde alguns segundos e confira a lista de vendas antes de tentar de novo.',
+            ], 409);
+        }
+
+        // PDV: o mesmo envio repetido (rede caiu, tempo esgotado) devolve a venda já gravada em vez de lançar outra.
+        try {
+            $anterior = $this->vendaJaRegistrada($chave, $request);
+            if ($anterior !== null) {
+                return response()->json($this->respostaVendaRepetida($anterior));
+            }
+
+            return $this->registrarVenda($request, $chave);
+        } finally {
+            $trava->release();
+        }
+    }
+
+    private function registrarVenda(VendaRequest $request, ?string $chave = null)
+    {
         try {
             $resultado = $this->persistirVenda($request, $request->situacao ?? 'em_andamento');
         } catch (ValidationException $e) {
@@ -64,6 +99,10 @@ class VendaService
         $situacao = $resultado['situacao'];
         $avisoEstoque = $resultado['aviso_estoque'];
         $empresaId = (int) auth()->user()->empresa_id;
+
+        if ($chave !== null) {
+            $this->lembrarEnvio($chave, $request, $venda);
+        }
 
         if ($request->expectsJson()) {
             $payload = [
@@ -181,6 +220,19 @@ class VendaService
     /**
      * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
      */
+    /**
+     * Grava a venda sem montar resposta HTTP (comandos). Mesmas regras da tela: estoque, preço mínimo,
+     * conta a receber e comissão. Não emite NFC-e.
+     *
+     * @return array{venda: Venda, situacao: string, aviso_estoque: ?string}
+     *
+     * @throws ValidationException
+     */
+    public function gravar(VendaRequest $request): array
+    {
+        return $this->persistirVenda($request, $request->situacao ?? 'em_andamento');
+    }
+
     protected function persistirVenda(VendaRequest $request, string $situacaoDesejada): array
     {
         // Criação e confirmação precisam ser atômicas: se a confirmação falhar, a venda não pode ficar gravada
@@ -204,6 +256,7 @@ class VendaService
         $empresaId = (int) auth()->user()->empresa_id;
         $situacao = $situacaoDesejada;
         $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
 
         $parcelas = $this->parcelasInformadas($request, (float) $totais['total'], $empresaId);
 
@@ -269,7 +322,7 @@ class VendaService
     private function emitirNfceDoPdv(VendaRequest $request, Venda $venda): array
     {
         try {
-            return app(NfceService::class)->emitir(
+            $resultado = app(NfceService::class)->emitir(
                 $venda,
                 $this->documentoNfceInformado($request),
                 (float) $request->input('valor_recebido', 0),
@@ -277,7 +330,7 @@ class VendaService
         } catch (Throwable $e) {
             report($e);
 
-            return [
+            $resultado = [
                 'ok' => false,
                 'situacao' => null,
                 'mensagem' => 'A venda foi registrada, mas a NFC-e não foi emitida.',
@@ -286,6 +339,14 @@ class VendaService
                 'danfe_url' => null,
             ];
         }
+
+        // A venda já está gravada: a NFC-e que não saiu é emitida depois, na tela da venda.
+        // (A pendente já diz na mensagem para usar "Consultar SEFAZ" na tela da venda.)
+        if (! $resultado['ok'] && ($resultado['situacao'] ?? null) !== 'pendente') {
+            $resultado['dica'] = 'A venda está salva. Para emitir a NFC-e depois, abra "Ver venda".';
+        }
+
+        return $resultado;
     }
 
     private function documentoNfceInformado(VendaRequest $request): ?string
@@ -316,14 +377,114 @@ class VendaService
         return strlen($cpf) === 11 ? $cpf : null;
     }
 
+    /**
+     * Chave do envio do PDV. Só vale para resposta JSON; o formulário comum segue como antes.
+     */
+    private function chaveIdempotencia(VendaRequest $request): ?string
+    {
+        $token = trim((string) $request->input('chave_idempotencia', ''));
+
+        if ($token === '' || ! $request->expectsJson()) {
+            return null;
+        }
+
+        return 'venda-pdv:'.auth()->user()->empresa_id.':'.auth()->id().':'.$token;
+    }
+
+    /**
+     * @return Lock|false|null false: outro envio com a mesma chave em andamento; null: cache indisponível, segue sem a proteção
+     */
+    private function travarEnvio(string $chave): Lock|false|null
+    {
+        try {
+            // 120 s cobre o tempo máximo da requisição no PHP-FPM, inclusive a emissão da NFC-e.
+            $trava = Cache::lock($chave.':trava', 120);
+
+            return $trava->get() ? $trava : false;
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    private function vendaJaRegistrada(string $chave, VendaRequest $request): ?Venda
+    {
+        $registro = Cache::get($chave);
+
+        if (! is_array($registro) || ($registro['assinatura'] ?? null) !== $this->assinaturaEnvio($request)) {
+            return null;
+        }
+
+        return Venda::query()
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->find($registro['venda_id'] ?? 0);
+    }
+
+    private function lembrarEnvio(string $chave, VendaRequest $request, Venda $venda): void
+    {
+        try {
+            Cache::put($chave, [
+                'venda_id' => $venda->id,
+                'assinatura' => $this->assinaturaEnvio($request),
+            ], now()->addDay());
+        } catch (Throwable $e) {
+            // A venda já está gravada; a falha aqui só tira a proteção contra reenvio.
+            report($e);
+        }
+    }
+
+    /**
+     * Mesmo carrinho e mesmo pagamento. Se o operador mudou algo antes de reenviar, é outra venda.
+     */
+    private function assinaturaEnvio(VendaRequest $request): string
+    {
+        return sha1((string) json_encode(
+            $request->only(['cliente_id', 'forma_pagamento', 'desconto', 'acrescimo', 'itens', 'parcelas']),
+            JSON_INVALID_UTF8_SUBSTITUTE
+        ));
+    }
+
+    private function respostaVendaRepetida(Venda $venda): array
+    {
+        $payload = [
+            'id' => $venda->id,
+            'numero' => $venda->numero,
+            'situacao' => $venda->situacao,
+            'repetida' => true,
+        ];
+
+        $empresa = Empresa::query()->find($venda->empresa_id);
+        if ($venda->situacao === 'confirmada' && $empresa?->nfce_emitir_pdv) {
+            $payload['nfce'] = [
+                'ok' => false,
+                'situacao' => null,
+                'mensagem' => 'Esta venda já tinha sido registrada. Confira a NFC-e na tela da venda.',
+                'numero' => null,
+                'chave' => null,
+                'danfe_url' => null,
+            ];
+        }
+
+        return $payload;
+    }
+
     public function show(Venda $venda)
     {
         $this->autorizarVenda($venda);
         $this->ocultarCanceladaDoVendedor($venda);
 
-        $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario', 'nfe']);
+        $venda->load(['cliente', 'funcionario', 'itens.produto', 'usuario', 'nfes' => fn ($q) => $q->orderByDesc('id')]);
+        $empresa = Empresa::query()->findOrFail($venda->empresa_id);
 
-        return view('venda.show', ['venda' => $venda]);
+        // NFC-e e NF-e em quadros próprios: cada uma tem as rotas e a permissão dela.
+        return view('venda.show', [
+            'venda' => $venda,
+            'empresa' => $empresa,
+            'nfce' => $venda->nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFCE),
+            'nfeDaVenda' => $venda->nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFE),
+            'nfceDisponivel' => app(NfceService::class)->configurada($empresa),
+        ]);
     }
 
     public function pdf(Venda $venda)
@@ -394,6 +555,7 @@ class VendaService
         $situacao = $request->situacao ?? $venda->situacao;
         $pagamentoIntegral = FormaPagamento::pagamentoIntegral($request->forma_pagamento, $empresaId);
         $totais = $this->calcularTotais($itens, $request->desconto, $request->acrescimo);
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
         $parcelas = $this->parcelasInformadas($request, (float) $totais['total'], $empresaId);
 
         // Venda já confirmada: não permite rebaixar situação pelo formulário
@@ -494,6 +656,9 @@ class VendaService
                 ->with('error', 'Venda já está cancelada.');
         }
 
+        $situacaoAnterior = $venda->situacao;
+        $origens = $this->origensDaVenda($venda);
+
         try {
             $this->repository->cancelar($venda->load('itens'));
         } catch (\Exception $ex) {
@@ -501,8 +666,14 @@ class VendaService
                 ->with('error', MensagemPublica::de($ex));
         }
 
+        Auditoria::registrar('venda.cancelada', 'venda', $venda->id, [
+            'numero' => $venda->numero,
+            'situacao_anterior' => $situacaoAnterior,
+            'total' => (float) $venda->total,
+        ]);
+
         return redirect()->route('venda.show', $venda)
-            ->with('success', 'Venda #'.$venda->numero.' cancelada.');
+            ->with('success', 'Venda #'.$venda->numero.' cancelada.'.$this->avisoOrigensReabertas($origens, $venda));
     }
 
     public function destroy(Venda $venda)
@@ -515,6 +686,7 @@ class VendaService
 
         $numero = $venda->numero;
         $venda->load('itens');
+        $origens = $this->origensDaVenda($venda);
 
         try {
             $this->repository->destroy($venda->id);
@@ -523,8 +695,57 @@ class VendaService
                 ->with('error', MensagemPublica::de($ex));
         }
 
+        Auditoria::registrar('venda.excluida', 'venda', $venda->id, [
+            'numero' => $numero,
+            'situacao' => $venda->situacao,
+            'total' => (float) $venda->total,
+        ]);
+
         return redirect()->route('venda.index')
-            ->with('success', 'Venda #'.$numero.' excluída com sucesso.');
+            ->with('success', 'Venda #'.$numero.' excluída com sucesso.'.$this->avisoOrigensReabertas($origens, $venda));
+    }
+
+    /**
+     * Só para a mensagem e a auditoria: quem reabre a OS, travada, é o repositório.
+     */
+    /**
+     * @return array{os: ?OrdemServico, orcamento: ?Orcamento}
+     */
+    private function origensDaVenda(Venda $venda): array
+    {
+        return [
+            'os' => OrdemServico::where('empresa_id', $venda->empresa_id)
+                ->where('venda_id', $venda->id)
+                ->where('situacao', 'faturada')
+                ->first(['id', 'numero']),
+            'orcamento' => Orcamento::where('empresa_id', $venda->empresa_id)
+                ->where('venda_id', $venda->id)
+                ->where('situacao', 'aprovado')
+                ->first(['id', 'numero']),
+        ];
+    }
+
+    /**
+     * @param  array{os: ?OrdemServico, orcamento: ?Orcamento}  $origens
+     */
+    private function avisoOrigensReabertas(array $origens, Venda $venda): string
+    {
+        $aviso = '';
+        $dadosVenda = ['venda_id' => $venda->id, 'venda_numero' => $venda->numero];
+
+        $os = $origens['os'];
+        if ($os && OrdemServico::whereKey($os->id)->value('situacao') === 'concluida') {
+            Auditoria::registrar('ordem_servico.reaberta', 'ordem_servico', $os->id, ['numero' => $os->numero] + $dadosVenda);
+            $aviso .= ' A OS #'.$os->numero.' voltou para "Concluída" e pode ser faturada de novo.';
+        }
+
+        $orcamento = $origens['orcamento'];
+        if ($orcamento && Orcamento::whereKey($orcamento->id)->value('situacao') === 'pendente') {
+            Auditoria::registrar('orcamento.reaberto', 'orcamento', $orcamento->id, ['numero' => $orcamento->numero] + $dadosVenda);
+            $aviso .= ' O orçamento #'.$orcamento->numero.' voltou para "Pendente" e pode ser aprovado de novo.';
+        }
+
+        return $aviso;
     }
 
     /**
@@ -533,11 +754,12 @@ class VendaService
     protected function montarAvisoEstoque(array $itens): ?string
     {
         $consumos = [];
+        $produtos = Produto::query()->whereIn('id', array_column($itens, 'produto_id'))->get()->keyBy('id');
         foreach ($itens as $item) {
             if (empty($item['produto_id'])) {
                 continue;
             }
-            $produto = Produto::find($item['produto_id']);
+            $produto = $produtos->get($item['produto_id']);
             if (! $produto || ! $produto->controla_estoque) {
                 continue;
             }
@@ -569,13 +791,18 @@ class VendaService
     protected function processarItens(array $itens): array
     {
         $resultado = [];
+        $ids = array_filter(array_map(
+            static fn ($item) => is_array($item) && is_numeric($item['produto_id'] ?? null) ? (int) $item['produto_id'] : null,
+            $itens,
+        ));
+        $produtos = Produto::with('unidadeMedida')->whereIn('id', $ids)->get()->keyBy('id');
 
         foreach ($itens as $item) {
             if (empty($item['produto_id'])) {
                 continue;
             }
 
-            $produto = Produto::with('unidadeMedida')->find($item['produto_id']);
+            $produto = is_numeric($item['produto_id']) ? $produtos->get((int) $item['produto_id']) : null;
 
             if (! $produto) {
                 continue;
@@ -732,6 +959,22 @@ class VendaService
             throw ValidationException::withMessages([
                 'parcelas' => 'A soma das parcelas precisa fechar o total da venda.',
             ]);
+        }
+
+        // A tolerância cobre o arredondamento da tela; a diferença vai para a última parcela,
+        // senão as contas a receber somariam alguns centavos a mais ou a menos que a venda.
+        $diferenca = round(round($total, 2) - round($soma, 2), 2);
+        if ($diferenca != 0.0) {
+            $ultima = array_key_last($lista);
+            $ajustada = round($lista[$ultima]['valor'] + $diferenca, 2);
+
+            if ($ajustada <= 0) {
+                throw ValidationException::withMessages([
+                    'parcelas' => 'A soma das parcelas precisa fechar o total da venda.',
+                ]);
+            }
+
+            $lista[$ultima]['valor'] = $ajustada;
         }
 
         return $lista;

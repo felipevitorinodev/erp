@@ -14,14 +14,15 @@ class NfeXmlParser
     /**
      * Parse NF-e XML content and extract all relevant data.
      *
-     * @param string $xmlContent Raw XML content
+     * @param  string  $xmlContent  Raw XML content
      * @return array Parsed data with keys: nota, emitente, destinatario, totais, itens
+     *
      * @throws RuntimeException
      */
     public function parse(string $xmlContent): array
     {
         // Step A — Validate that the content is XML
-        if (!Validator::isXML($xmlContent)) {
+        if (! Validator::isXML($xmlContent)) {
             throw new RuntimeException('Arquivo inválido: o conteúdo não é um XML válido.');
         }
 
@@ -47,25 +48,25 @@ class NfeXmlParser
 
         return [
             'nota' => [
-                'chave_acesso'       => $chaveAcesso,
-                'numero'             => $this->limparString((string) $ide->nNF),
-                'serie'              => $this->limparString((string) $ide->serie),
-                'data_emissao'       => $this->parseDataEmissao((string) $ide->dhEmi),
-                'natureza_operacao'  => $this->limparString((string) $ide->natOp),
+                'chave_acesso' => $chaveAcesso,
+                'numero' => $this->limparString((string) $ide->nNF),
+                'serie' => $this->limparString((string) $ide->serie),
+                'data_emissao' => $this->parseDataEmissao((string) $ide->dhEmi),
+                'natureza_operacao' => $this->limparString((string) $ide->natOp),
             ],
             'emitente' => [
-                'cnpj'         => $this->extrairDigitos((string) $emit->CNPJ),
+                'cnpj' => $this->extrairDigitos((string) $emit->CNPJ),
                 'razao_social' => $this->limparString((string) $emit->xNome),
-                'ie'           => $this->limparString((string) $emit->IE),
+                'ie' => $this->limparString((string) $emit->IE),
             ],
             'destinatario' => [
-                'cnpj'         => $this->extrairDigitos((string) $dest->CNPJ),
+                'cnpj' => $this->extrairDigitos((string) $dest->CNPJ),
                 'razao_social' => $this->limparString((string) $dest->xNome),
             ],
             'totais' => [
                 'subtotal' => $this->toFloat($total->ICMSTot->vProd),
                 'desconto' => $this->toFloat($total->ICMSTot->vDesc, 0.0),
-                'total'    => $this->toFloat($total->ICMSTot->vNF),
+                'total' => $this->toFloat($total->ICMSTot->vNF),
             ],
             'itens' => $this->extrairItens($infNFe),
         ];
@@ -93,7 +94,7 @@ class NfeXmlParser
 
             // Try nfeProc/NFe/infNFe
             $result = $xml->xpath('//nfe:infNFe');
-            if (!empty($result)) {
+            if (! empty($result)) {
                 return $result[0];
             }
         }
@@ -120,7 +121,7 @@ class NfeXmlParser
         // Remove "NFe" prefix if present
         $chave = preg_replace('/^NFe/', '', $id);
 
-        if (empty($chave) || !Keys::isValid($chave)) {
+        if (empty($chave) || ! Keys::isValid($chave)) {
             throw new RuntimeException('XML inválido: chave de acesso ausente ou incorreta.');
         }
 
@@ -160,17 +161,17 @@ class NfeXmlParser
             }
 
             $itens[] = [
-                'numero_item'                => (int) $det['nItem'],
-                'codigo_produto_fornecedor'  => $this->limparString((string) $prod->cProd),
-                'descricao'                  => $this->limparString((string) $prod->xProd),
-                'ean'                        => $ean,
-                'ncm'                        => $this->limparString((string) $prod->NCM),
-                'cfop'                       => $this->limparString((string) $prod->CFOP),
-                'unidade'                    => $this->limparString((string) $prod->uCom),
-                'quantidade'                 => $this->toFloat($prod->qCom),
-                'preco_unitario'             => $this->toFloat($prod->vUnCom),
-                'desconto_item'              => $this->toFloat($prod->vDesc, 0.0),
-                'total_item'                 => $this->toFloat($prod->vProd),
+                'numero_item' => (int) $det['nItem'],
+                'codigo_produto_fornecedor' => $this->limparString((string) $prod->cProd),
+                'descricao' => $this->limparString((string) $prod->xProd),
+                'ean' => $ean,
+                'ncm' => $this->limparString((string) $prod->NCM),
+                'cfop' => $this->limparString((string) $prod->CFOP),
+                'unidade' => $this->limparString((string) $prod->uCom),
+                'quantidade' => $this->toFloat($prod->qCom),
+                'preco_unitario' => $this->toFloat($prod->vUnCom),
+                'desconto_item' => $this->toFloat($prod->vDesc, 0.0),
+                'total_item' => $this->toFloat($prod->vProd),
             ];
         }
 

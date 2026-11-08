@@ -63,7 +63,11 @@
             <label for="remember">
                 <input id="remember" type="checkbox" name="remember" @checked(old('remember'))> Lembrar neste dispositivo
             </label>
-            <a href="{{ route('password.request') }}">Esqueci a senha</a>
+            @if(\App\Support\RecuperacaoSenha::disponivel())
+                <a href="{{ route('password.request') }}">Esqueci a senha</a>
+            @else
+                <span class="text-muted">Esqueceu a senha? Fale com o administrador.</span>
+            @endif
         </div>
 
         <button type="submit" class="btn btn--primary auth-submit" data-espera="Entrando...">Entrar</button>

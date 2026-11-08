@@ -13,22 +13,22 @@ return new class extends Migration
     {
         Schema::create('grupos', function (Blueprint $table) {
             $table->id();
- 
-             $table->foreignId('empresa_id')
+
+            $table->foreignId('empresa_id')
                 ->constrained('empresa')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
- 
+
             $table->foreignId('parent_id')
                 ->nullable()
                 ->constrained('grupos')
                 ->nullOnDelete()
                 ->cascadeOnUpdate();
- 
+
             $table->string('nome');
             $table->text('descricao')->nullable();
             $table->boolean('ativo')->default(true);
- 
+
             $table->timestamps();
             $table->softDeletes();
         });

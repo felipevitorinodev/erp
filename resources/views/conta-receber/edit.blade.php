@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Conta a Receber')
-@section('page_title', 'Editar Conta a Receber')
+@section('title', 'Editar conta a receber')
+@section('page_title', 'Editar conta a receber')
 
 @section('breadcrumb')
-    <a href="{{ route('conta-receber.index') }}">Contas a Receber</a> /
+    <a href="{{ route('conta-receber.index') }}">Contas a receber</a> /
     <a href="{{ route('conta-receber.show', $conta) }}">#{{ $conta->id }}</a> /
     Editar
 @endsection
@@ -13,7 +13,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Conta</span>
+            <span class="card__title">Dados da conta</span>
         </div>
 
         <form method="POST" action="{{ route('conta-receber.update', $conta) }}">

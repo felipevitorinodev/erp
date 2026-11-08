@@ -2,27 +2,28 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriasFinanceiras\CategoriaFinanceiraController;
-use App\Http\Controllers\Estoque\AjusteEstoqueController;
 use App\Http\Controllers\Clientes\ClienteController;
+use App\Http\Controllers\Comandos\ComandoController;
 use App\Http\Controllers\Comissoes\ComissaoController;
 use App\Http\Controllers\ContasPagar\ContaPagarController;
 use App\Http\Controllers\ContasReceber\ContaReceberController;
 use App\Http\Controllers\Empresas\EmpresaController;
+use App\Http\Controllers\Estoque\AjusteEstoqueController;
 use App\Http\Controllers\Estoque\EntradaEstoqueController;
 use App\Http\Controllers\FluxoCaixa\FluxoCaixaController;
-use App\Http\Controllers\Fornecedores\FornecedorController;
 use App\Http\Controllers\FormasPagamento\FormaPagamentoController;
+use App\Http\Controllers\Fornecedores\FornecedorController;
 use App\Http\Controllers\Funcionarios\FuncionarioController;
 use App\Http\Controllers\Grupos\GrupoController;
+use App\Http\Controllers\Nfces\NfceController;
+use App\Http\Controllers\Nfes\NfeController;
 use App\Http\Controllers\Orcamentos\OrcamentoController;
 use App\Http\Controllers\OrdensServico\OrdemServicoController;
+use App\Http\Controllers\PerfisFiscais\PerfilFiscalController;
 use App\Http\Controllers\Produtos\ProdutoController;
 use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
 use App\Http\Controllers\Usuarios\PerfilController;
 use App\Http\Controllers\Usuarios\UsuarioController;
-use App\Http\Controllers\Nfces\NfceController;
-use App\Http\Controllers\Nfes\NfeController;
-use App\Http\Controllers\PerfisFiscais\PerfilFiscalController;
 use App\Http\Controllers\Vendas\VendaController;
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
@@ -188,14 +189,14 @@ Route::middleware('auth')->group(function () {
         }
 
         return view('welcome', [
-            'vendasHoje'            => $vendasHoje,
-            'faturamentoHoje'       => $faturamentoHoje,
+            'vendasHoje' => $vendasHoje,
+            'faturamentoHoje' => $faturamentoHoje,
             'contasReceberVencidas' => $contasReceberVencidas,
-            'contasPagarVencidas'   => $contasPagarVencidas,
-            'aReceber7Dias'         => $aReceber7Dias,
-            'estoqueCritico'        => $estoqueCritico,
-            'faturamentoMes'        => $faturamentoMes,
-            'contasMes'             => $contasMes,
+            'contasPagarVencidas' => $contasPagarVencidas,
+            'aReceber7Dias' => $aReceber7Dias,
+            'estoqueCritico' => $estoqueCritico,
+            'faturamentoMes' => $faturamentoMes,
+            'contasMes' => $contasMes,
         ]);
     });
 
@@ -206,6 +207,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{empresa}/editar', [EmpresaController::class, 'edit'])->name('empresa.edit');
         Route::put('{empresa}/editar/salvar', [EmpresaController::class, 'update'])->name('empresa.update');
         Route::delete('{empresa}/excluir', [EmpresaController::class, 'destroy'])->name('empresa.destroy');
+        Route::post('{empresa}/nfce/verificar', [NfceController::class, 'verificar'])->middleware('throttle:10,1')->name('empresa.nfce.verificar');
     });
 
     Route::prefix('usuario')->middleware('permissao:configuracoes')->group(function () {
@@ -303,12 +305,20 @@ Route::middleware('auth')->group(function () {
         Route::get('{venda}/pdf', [VendaController::class, 'pdf'])->name('venda.pdf');
         Route::get('{venda}/recibo', [VendaController::class, 'recibo'])->name('venda.recibo');
         Route::get('{venda}/nfce', [NfceController::class, 'danfe'])->name('venda.nfce.danfe');
+        Route::post('{venda}/nfce/emitir', [NfceController::class, 'emitir'])->middleware('throttle:30,1')->name('venda.nfce.emitir');
         Route::get('{venda}/ver', [VendaController::class, 'show'])->name('venda.show');
         Route::get('{venda}/editar', [VendaController::class, 'edit'])->name('venda.edit');
         Route::put('{venda}/editar/salvar', [VendaController::class, 'update'])->name('venda.update');
         Route::post('{venda}/confirmar', [VendaController::class, 'confirmar'])->name('venda.confirmar');
         Route::post('{venda}/cancelar', [VendaController::class, 'cancelar'])->name('venda.cancelar');
         Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
+    });
+
+    // NFC-e da venda: consultar a pendente, cancelar e baixar o XML. A NF-e tem as rotas dela, com a permissão "nfe".
+    Route::prefix('nfce')->middleware(['permissao:vendas', 'throttle:30,1'])->group(function () {
+        Route::post('{nfe}/consultar', [NfceController::class, 'consultar'])->name('nfce.consultar');
+        Route::post('{nfe}/cancelar', [NfceController::class, 'cancelar'])->name('nfce.cancelar');
+        Route::get('{nfe}/xml', [NfceController::class, 'xml'])->name('nfce.xml');
     });
 
     Route::prefix('perfil-fiscal')->middleware('permissao:nfe')->group(function () {
@@ -431,5 +441,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/fluxo-de-caixa/csv', [FluxoCaixaController::class, 'csv'])
         ->middleware('permissao:financeiro')
         ->name('fluxo-de-caixa.csv');
+
+    // Chat de comandos: cada rotina confere a própria permissão antes de preparar e de gravar.
+    Route::prefix('comandos')->middleware(['permissao:comandos', 'throttle:60,1'])->group(function () {
+        Route::get('ajuda', [ComandoController::class, 'ajuda'])->name('comandos.ajuda');
+        Route::post('interpretar', [ComandoController::class, 'interpretar'])->name('comandos.interpretar');
+        Route::post('confirmar', [ComandoController::class, 'confirmar'])->name('comandos.confirmar');
+    });
 
 });

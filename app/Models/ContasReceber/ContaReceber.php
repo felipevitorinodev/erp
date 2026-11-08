@@ -33,10 +33,10 @@ class ContaReceber extends Model
     ];
 
     protected $casts = [
-        'valor'           => 'decimal:2',
-        'valor_pago'      => 'decimal:2',
+        'valor' => 'decimal:2',
+        'valor_pago' => 'decimal:2',
         'data_vencimento' => 'date',
-        'data_pagamento'  => 'date',
+        'data_pagamento' => 'date',
     ];
 
     public function empresa()

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Requests\Clientes\ClienteRapidoRequest;
+use App\Http\Requests\Fornecedores\FornecedorRapidoRequest;
 use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
@@ -10,10 +12,11 @@ use App\Models\Produtos\Produto;
 use App\Models\UnidadesMedida\UnidadeMedida;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
+use App\Repositories\Clientes\ClienteRepository;
+use App\Repositories\Fornecedores\FornecedorRepository;
 use App\Services\Nfes\NfeVinculoFiscal;
 use App\Support\NaturezasOperacao;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Validation\Rule;
 
 Route::middleware('auth')->group(function () {
 
@@ -25,7 +28,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true);
 
         if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
+            $query->where('nome', 'like', '%'.$q.'%');
         }
 
         return $query->orderBy('nome')
@@ -63,7 +66,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true);
 
         if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
+            $query->where('nome', 'like', '%'.$q.'%');
         }
 
         return $query->orderBy('nome')
@@ -80,7 +83,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true);
 
         if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
+            $query->where('nome', 'like', '%'.$q.'%');
         }
 
         return $query->orderBy('nome')
@@ -108,8 +111,8 @@ Route::middleware('auth')->group(function () {
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
-                $builder->where('nome', 'like', '%' . $q . '%')
-                    ->orWhere('codigo', 'like', '%' . $q . '%')
+                $builder->where('nome', 'like', '%'.$q.'%')
+                    ->orWhere('codigo', 'like', '%'.$q.'%')
                     ->orWhere('codigo_barras', $q);
             });
         }
@@ -147,6 +150,9 @@ Route::middleware('auth')->group(function () {
                 });
         }
 
+        // Custo só para quem cuida de produtos ou estoque; a chave continua na resposta para não mudar o formato.
+        $veCusto = auth()->user()->pode('produtos') || auth()->user()->pode('estoque');
+
         $empresaBusca = Empresa::query()->find(auth()->user()->empresa_id);
         $vinculo = $empresaBusca
             ? NfeVinculoFiscal::daEmpresa($empresaBusca)->usarContexto([
@@ -183,7 +189,7 @@ Route::middleware('auth')->group(function () {
             )
             ->limit($limit)
             ->get()
-            ->map(function (Produto $produto) use ($vinculo) {
+            ->map(function (Produto $produto) use ($vinculo, $veCusto) {
                 $semExcecao = (object) [
                     'cfop' => null,
                     'csosn' => null,
@@ -201,7 +207,7 @@ Route::middleware('auth')->group(function () {
                     'nome' => $produto->nome,
                     'codigo' => $produto->codigo,
                     'preco_venda' => $produto->preco_venda,
-                    'preco_custo' => $produto->preco_custo,
+                    'preco_custo' => $veCusto ? $produto->preco_custo : null,
                     'estoque_atual' => $produto->estoque_atual,
                     'ncm' => $produto->ncm,
                     'cest' => $produto->cest,
@@ -255,14 +261,14 @@ Route::middleware('auth')->group(function () {
         return response()->json([
             'encontrado' => true,
             'produto' => [
-                'id'               => $produto->id,
-                'nome'             => $produto->nome,
-                'codigo'           => $produto->codigo,
-                'codigo_barras'    => $produto->codigo_barras,
-                'preco_venda'      => (float) $produto->preco_venda,
-                'estoque_atual'    => $produto->estoque_atual,
+                'id' => $produto->id,
+                'nome' => $produto->nome,
+                'codigo' => $produto->codigo,
+                'codigo_barras' => $produto->codigo_barras,
+                'preco_venda' => (float) $produto->preco_venda,
+                'estoque_atual' => $produto->estoque_atual,
                 'controla_estoque' => $produto->controla_estoque,
-                'unidade'          => $produto->unidadeMedida?->sigla,
+                'unidade' => $produto->unidadeMedida?->sigla,
             ],
         ]);
     })->name('api.produtos.busca-codigo');
@@ -276,7 +282,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true);
 
         if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
+            $query->where('nome', 'like', '%'.$q.'%');
         }
 
         if (request()->boolean('apenas_principais')) {
@@ -302,8 +308,8 @@ Route::middleware('auth')->group(function () {
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
-                $builder->where('nome', 'like', '%' . $q . '%')
-                    ->orWhere('sigla', 'like', '%' . $q . '%');
+                $builder->where('nome', 'like', '%'.$q.'%')
+                    ->orWhere('sigla', 'like', '%'.$q.'%');
             });
         }
 
@@ -314,7 +320,7 @@ Route::middleware('auth')->group(function () {
     })->name('api.unidades-medida.busca');
 
     Route::get('/api/empresas/busca', function () {
-        if (!auth()->user()->pode('configuracoes')) {
+        if (! auth()->user()->pode('configuracoes')) {
             abort(403);
         }
 
@@ -325,9 +331,9 @@ Route::middleware('auth')->group(function () {
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
-                $builder->where('razao_social', 'like', '%' . $q . '%')
-                    ->orWhere('nome_fantasia', 'like', '%' . $q . '%')
-                    ->orWhere('cnpj', 'like', '%' . $q . '%');
+                $builder->where('razao_social', 'like', '%'.$q.'%')
+                    ->orWhere('nome_fantasia', 'like', '%'.$q.'%')
+                    ->orWhere('cnpj', 'like', '%'.$q.'%');
             });
         }
 
@@ -347,7 +353,7 @@ Route::middleware('auth')->group(function () {
         }
 
         return response()->json([
-            'id'     => $venda->id,
+            'id' => $venda->id,
             'numero' => $venda->numero,
         ]);
     })->name('api.vendas.ultima');
@@ -362,15 +368,20 @@ Route::middleware('auth')->group(function () {
 
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
-                $builder->where('numero', 'like', '%' . $q . '%')
+                $builder->where('numero', 'like', '%'.$q.'%')
                     ->orWhereHas('cliente', function ($c) use ($q) {
-                        $c->where('nome', 'like', '%' . $q . '%');
+                        $c->where('nome', 'like', '%'.$q.'%');
                     });
             });
         }
 
         if (request()->filled('cliente_id')) {
             $query->where('cliente_id', request('cliente_id'));
+        }
+
+        // Mesma regra da listagem de vendas: canceladas só para quem tem a permissão.
+        if (! auth()->user()->pode('vendas.ver_canceladas')) {
+            $query->whereIn('situacao', ['confirmada', 'em_andamento']);
         }
 
         return $query->orderBy('numero')
@@ -391,7 +402,7 @@ Route::middleware('auth')->group(function () {
             ->where('ativo', true);
 
         if ($q !== '') {
-            $query->where('nome', 'like', '%' . $q . '%');
+            $query->where('nome', 'like', '%'.$q.'%');
         }
 
         return $query->orderBy('nome')
@@ -461,23 +472,8 @@ Route::middleware('auth')->group(function () {
         ]);
     })->middleware('permissao:produtos')->name('api.unidades-medida.store');
 
-    Route::post('/api/fornecedores/store', function () {
-        $data = request()->validate([
-            'nome' => 'required|string|max:200',
-            'cnpj' => 'nullable|string|max:18|cnpj',
-            'telefone' => 'nullable|string|max:20',
-        ], [
-            'nome.required' => 'O nome do fornecedor é obrigatório.',
-            'cnpj.cnpj' => 'CNPJ inválido.',
-        ]);
-
-        $fornecedor = Fornecedor::create([
-            'empresa_id' => auth()->user()->empresa_id,
-            'nome' => trim($data['nome']),
-            'cnpj' => $data['cnpj'] ?? null,
-            'telefone' => $data['telefone'] ?? null,
-            'ativo' => true,
-        ]);
+    Route::post('/api/fornecedores/store', function (FornecedorRapidoRequest $request, FornecedorRepository $fornecedores) {
+        $fornecedor = $fornecedores->cadastrarRapido($request->validated());
 
         return response()->json([
             'success' => true,
@@ -487,36 +483,8 @@ Route::middleware('auth')->group(function () {
         ]);
     })->middleware('permissao:fornecedores')->name('api.fornecedores.store');
 
-    Route::post('/api/clientes/store', function () {
-        $data = request()->validate([
-            'nome' => 'required|string|max:200',
-            'cpf' => [
-                'nullable', 'string', 'max:14', 'cpf',
-                Rule::unique('clientes', 'cpf')->where('empresa_id', auth()->user()->empresa_id)->whereNull('deleted_at'),
-            ],
-            'cnpj' => [
-                'nullable', 'string', 'max:18', 'cnpj',
-                Rule::unique('clientes', 'cnpj')->where('empresa_id', auth()->user()->empresa_id)->whereNull('deleted_at'),
-            ],
-            'telefone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100',
-        ], [
-            'nome.required' => 'O nome do cliente é obrigatório.',
-            'cpf.cpf' => 'CPF inválido.',
-            'cnpj.cnpj' => 'CNPJ inválido.',
-            'cpf.unique' => 'Já existe um cliente com este CPF.',
-            'cnpj.unique' => 'Já existe um cliente com este CNPJ.',
-        ]);
-
-        $cliente = Cliente::create([
-            'empresa_id' => auth()->user()->empresa_id,
-            'nome' => trim($data['nome']),
-            'cpf' => $data['cpf'] ?? null,
-            'cnpj' => $data['cnpj'] ?? null,
-            'telefone' => $data['telefone'] ?? null,
-            'email' => $data['email'] ?? null,
-            'ativo' => true,
-        ]);
+    Route::post('/api/clientes/store', function (ClienteRapidoRequest $request, ClienteRepository $clientes) {
+        $cliente = $clientes->cadastrarRapido($request->validated());
 
         return response()->json([
             'success' => true,

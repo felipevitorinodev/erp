@@ -3,6 +3,7 @@
 namespace App\Repositories\Estoque;
 
 use App\Models\ContasPagar\ContaPagar;
+use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
 use App\Models\Estoque\EntradaEstoqueItem;
 use App\Models\Estoque\MovimentacaoEstoque;
@@ -82,10 +83,16 @@ class EntradaEstoqueRepository
 
             $entrada->load(['itens.produto', 'fornecedor']);
 
+            // Item sem produto vira cadastro novo. A trava na empresa vem antes de travar qualquer produto
+            // (mesma ordem da venda) e serializa o código automático.
+            if ($entrada->itens->contains(fn ($item) => ! $item->produto_id)) {
+                Empresa::whereKey($entrada->empresa_id)->lockForUpdate()->first(['id']);
+            }
+
             foreach ($entrada->itens as $item) {
                 $produto = $this->garantirProdutoDoItem($entrada, $item);
 
-                if (!$produto) {
+                if (! $produto) {
                     continue;
                 }
 
@@ -94,13 +101,13 @@ class EntradaEstoqueRepository
                     ->lockForUpdate()
                     ->first();
 
-                if (!$produto) {
+                if (! $produto) {
                     continue;
                 }
 
                 $produto->update(['preco_custo' => $item->preco_unitario]);
 
-                if (!$produto->controla_estoque) {
+                if (! $produto->controla_estoque) {
                     continue;
                 }
 
@@ -110,16 +117,16 @@ class EntradaEstoqueRepository
                 $produto->increment('estoque_atual', $item->quantidade);
 
                 MovimentacaoEstoque::create([
-                    'empresa_id'     => $entrada->empresa_id,
-                    'produto_id'     => $produto->id,
-                    'user_id'        => auth()->id(),
-                    'tipo'           => 'entrada',
-                    'quantidade'     => $item->quantidade,
-                    'estoque_antes'  => $antes,
+                    'empresa_id' => $entrada->empresa_id,
+                    'produto_id' => $produto->id,
+                    'user_id' => auth()->id(),
+                    'tipo' => 'entrada',
+                    'quantidade' => $item->quantidade,
+                    'estoque_antes' => $antes,
                     'estoque_depois' => $depois,
-                    'motivo'         => 'Entrada #' . $entrada->numero,
-                    'origem'         => 'entrada_estoque',
-                    'origem_id'      => $entrada->id,
+                    'motivo' => 'Entrada #'.$entrada->numero,
+                    'origem' => 'entrada_estoque',
+                    'origem_id' => $entrada->id,
                 ]);
             }
 
@@ -127,21 +134,21 @@ class EntradaEstoqueRepository
                 ->whereNotIn('situacao', ['cancelada'])
                 ->exists();
 
-            if (!$jaTemConta) {
+            if (! $jaTemConta) {
                 ContaPagar::create([
-                    'empresa_id'         => $entrada->empresa_id,
-                    'fornecedor_id'      => $entrada->fornecedor_id,
+                    'empresa_id' => $entrada->empresa_id,
+                    'fornecedor_id' => $entrada->fornecedor_id,
                     'entrada_estoque_id' => $entrada->id,
-                    'descricao'          => 'Entrada #' . $entrada->numero . ' — ' . ($entrada->fornecedor->nome ?? 'Fornecedor não informado'),
-                    'valor'              => $entrada->valor_nota !== null && (float) $entrada->valor_nota > 0
+                    'descricao' => 'Entrada #'.$entrada->numero.' — '.($entrada->fornecedor->nome ?? 'Fornecedor não informado'),
+                    'valor' => $entrada->valor_nota !== null && (float) $entrada->valor_nota > 0
                         ? $entrada->valor_nota
                         : $entrada->total,
-                    'valor_pago'         => 0,
-                    'data_vencimento'    => $entrada->data_entrada
+                    'valor_pago' => 0,
+                    'data_vencimento' => $entrada->data_entrada
                         ? $entrada->data_entrada->copy()->addDays(30)
                         : now()->addDays(30),
-                    'categoria_id'       => app(CategoriaPadraoService::class)->idDespesaCompras((int) $entrada->empresa_id),
-                    'situacao'           => 'aberta',
+                    'categoria_id' => app(CategoriaPadraoService::class)->idDespesaCompras((int) $entrada->empresa_id),
+                    'situacao' => 'aberta',
                 ]);
             }
 
@@ -172,7 +179,7 @@ class EntradaEstoqueRepository
             $entrada->load('itens.produto');
 
             foreach ($entrada->itens as $item) {
-                if (!$item->produto_id) {
+                if (! $item->produto_id) {
                     continue;
                 }
 
@@ -182,7 +189,7 @@ class EntradaEstoqueRepository
                     ->lockForUpdate()
                     ->first();
 
-                if (!$produto) {
+                if (! $produto) {
                     continue;
                 }
 
@@ -191,9 +198,9 @@ class EntradaEstoqueRepository
                 if ($antes < (float) $item->quantidade) {
                     throw new \Exception(
                         'Não é possível cancelar: estoque insuficiente para estornar o produto "'
-                        . ($produto->nome ?? $item->produto_nome)
-                        . '". Disponível: ' . number_format($antes, 2, ',', '.')
-                        . ', necessário: ' . number_format((float) $item->quantidade, 2, ',', '.') . '.'
+                        .($produto->nome ?? $item->produto_nome)
+                        .'". Disponível: '.number_format($antes, 3, ',', '.')
+                        .', necessário: '.number_format((float) $item->quantidade, 3, ',', '.').'.'
                     );
                 }
 
@@ -202,16 +209,16 @@ class EntradaEstoqueRepository
                 $produto->decrement('estoque_atual', $item->quantidade);
 
                 MovimentacaoEstoque::create([
-                    'empresa_id'     => $entrada->empresa_id,
-                    'produto_id'     => $produto->id,
-                    'user_id'        => auth()->id(),
-                    'tipo'           => 'saida',
-                    'quantidade'     => $item->quantidade,
-                    'estoque_antes'  => $antes,
+                    'empresa_id' => $entrada->empresa_id,
+                    'produto_id' => $produto->id,
+                    'user_id' => auth()->id(),
+                    'tipo' => 'saida',
+                    'quantidade' => $item->quantidade,
+                    'estoque_antes' => $antes,
                     'estoque_depois' => $depois,
-                    'motivo'         => 'Estorno entrada #' . $entrada->numero,
-                    'origem'         => 'entrada_estoque',
-                    'origem_id'      => $entrada->id,
+                    'motivo' => 'Estorno entrada #'.$entrada->numero,
+                    'origem' => 'entrada_estoque',
+                    'origem_id' => $entrada->id,
                 ]);
             }
 
@@ -237,14 +244,14 @@ class EntradaEstoqueRepository
                 $entrada->refresh();
             }
 
-            if (!in_array($entrada->situacao, ['rascunho', 'cancelada'], true)) {
+            if (! in_array($entrada->situacao, ['rascunho', 'cancelada'], true)) {
                 throw new \Exception('Não é possível excluir esta entrada no status atual.');
             }
 
-            // Libera a chave da NF-e para permitir reimportar o mesmo XML
+            // Libera a chave da NF-e para permitir reimportar o mesmo XML. O XML do fornecedor fica
+            // guardado na entrada excluída: é documento fiscal e precisa ser mantido.
             $entrada->update([
-                'chave_acesso'  => null,
-                'xml_importado' => null,
+                'chave_acesso' => null,
             ]);
 
             return (bool) $entrada->delete();
@@ -270,12 +277,22 @@ class EntradaEstoqueRepository
 
             if ($existente) {
                 $item->update([
-                    'produto_id'     => $existente->id,
-                    'produto_nome'   => $existente->nome,
+                    'produto_id' => $existente->id,
+                    'produto_nome' => $existente->nome,
                     'produto_codigo' => $existente->codigo,
                 ]);
 
                 return $existente;
+            }
+
+            // Código de um produto excluído: o índice único não deixa repetir, então o novo recebe código automático.
+            $doExcluido = Produto::onlyTrashed()
+                ->where('empresa_id', $entrada->empresa_id)
+                ->where('codigo', $codigo)
+                ->exists();
+
+            if ($doExcluido) {
+                $codigo = $this->proximoCodigoAutomatico((int) $entrada->empresa_id);
             }
         } else {
             $codigo = $this->proximoCodigoAutomatico((int) $entrada->empresa_id);
@@ -284,21 +301,21 @@ class EntradaEstoqueRepository
         $nome = trim((string) $item->produto_nome);
 
         $produto = Produto::create([
-            'empresa_id'       => $entrada->empresa_id,
-            'codigo'           => $codigo,
-            'nome'             => $nome !== '' ? $nome : 'Produto sem nome',
-            'preco_custo'      => $item->preco_unitario,
-            'preco_venda'      => 0,
-            'estoque_atual'    => 0,
-            'estoque_minimo'   => 0,
+            'empresa_id' => $entrada->empresa_id,
+            'codigo' => $codigo,
+            'nome' => $nome !== '' ? $nome : 'Produto sem nome',
+            'preco_custo' => $item->preco_unitario,
+            'preco_venda' => 0,
+            'estoque_atual' => 0,
+            'estoque_minimo' => 0,
             'controla_estoque' => true,
-            'tipo'             => 1,
-            'ativo'            => true,
+            'tipo' => 1,
+            'ativo' => true,
         ]);
 
         $item->update([
-            'produto_id'     => $produto->id,
-            'produto_nome'   => $produto->nome,
+            'produto_id' => $produto->id,
+            'produto_nome' => $produto->nome,
             'produto_codigo' => $produto->codigo,
         ]);
 
@@ -307,7 +324,7 @@ class EntradaEstoqueRepository
 
     private function proximoCodigoAutomatico(int $empresaId): string
     {
-        $ultimoCodigo = Produto::query()
+        $ultimoCodigo = Produto::withTrashed()
             ->where('empresa_id', $empresaId)
             ->where('codigo', 'like', 'AUTO%')
             ->orderByRaw('CAST(SUBSTRING(codigo, 5) AS UNSIGNED) DESC')

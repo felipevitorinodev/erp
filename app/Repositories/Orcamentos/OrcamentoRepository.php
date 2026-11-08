@@ -109,8 +109,8 @@ class OrcamentoRepository
     {
         $atual = Orcamento::whereKey($orcamento->id)->lockForUpdate()->firstOrFail();
 
-        if (!in_array($atual->situacao, $situacoes, true)) {
-            throw new \RuntimeException('Este orçamento já foi processado (situação atual: ' . $atual->situacao . ').');
+        if (! in_array($atual->situacao, $situacoes, true)) {
+            throw new \RuntimeException('Este orçamento já foi processado (situação atual: '.$atual->situacao.').');
         }
 
         return $atual;

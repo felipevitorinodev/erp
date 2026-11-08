@@ -6,6 +6,7 @@ use App\Models\Grupos\Grupo;
 use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Produtos\Produto;
 use App\Repositories\Produtos\ProdutoRepository;
+use App\Support\Auditoria;
 use Illuminate\Http\Request;
 
 class ProdutoService
@@ -23,8 +24,8 @@ class ProdutoService
 
         return view('produto.index', [
             'produtos' => $produtos,
-            'grupos'   => $grupos,
-            'filtros'  => $request->only(['busca', 'tipo', 'grupo_id']),
+            'grupos' => $grupos,
+            'filtros' => $request->only(['busca', 'tipo', 'grupo_id']),
         ]);
     }
 
@@ -64,7 +65,18 @@ class ProdutoService
             abort(404);
         }
 
+        $precos = ['preco_custo', 'preco_venda', 'preco_minimo'];
+        $antes = array_map('floatval', $produto->only($precos));
+
         $this->repository->update($produto, $request->validated());
+
+        $depois = array_map('floatval', $produto->fresh()?->only($precos) ?? []);
+        if ($depois !== [] && $depois != $antes) {
+            Auditoria::registrar('produto.preco_alterado', 'produto', $produto->id, [
+                'antes' => $antes,
+                'depois' => $depois,
+            ]);
+        }
 
         return redirect()
             ->route('produto.index')
@@ -82,7 +94,12 @@ class ProdutoService
 
     public function destroy($id)
     {
-        $this->repository->destroy($id);
+        $produto = $this->repository->destroy($id);
+
+        Auditoria::registrar('produto.excluido', 'produto', $produto->id, [
+            'codigo' => $produto->codigo,
+            'estoque_atual' => (float) $produto->estoque_atual,
+        ]);
 
         return redirect()->route('produto.index')
             ->with('success', 'Produto apagado com sucesso.');

@@ -18,6 +18,7 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
     use SoftDeletes;
 
     /** @var list<string>|null */
@@ -38,8 +39,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'ativo'             => 'boolean',
+            'password' => 'hashed',
+            'ativo' => 'boolean',
         ];
     }
 

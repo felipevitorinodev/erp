@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Categorias Financeiras')
-@section('page_title', 'Categorias Financeiras')
+@section('title', 'Categorias financeiras')
+@section('page_title', 'Categorias financeiras')
 
 @section('page_actions')
-    <a href="{{ route('categoria-financeira.create') }}" class="btn btn--primary btn--sm">+ Nova Categoria</a>
+    <a href="{{ route('categoria-financeira.create') }}" class="btn btn--primary btn--sm">+ Nova categoria</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Categorias Financeiras</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -82,11 +82,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    Nenhuma categoria financeira cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="etiquetas"
+                                :colspan="4"
+                                titulo="Nenhuma categoria financeira cadastrada"
+                                texto="Categorias agrupam as contas a pagar e a receber nos relatórios."
+                                :acao="route('categoria-financeira.create')"
+                                acao-texto="+ Nova categoria"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

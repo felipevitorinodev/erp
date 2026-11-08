@@ -4,7 +4,7 @@
 @section('page_title', 'Funcionários')
 
 @section('page_actions')
-    <a href="{{ route('funcionario.create') }}" class="btn btn--primary btn--sm">+ Novo Funcionário</a>
+    <a href="{{ route('funcionario.create') }}" class="btn btn--primary btn--sm">+ Novo funcionário</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Funcionários</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -82,11 +82,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="empty-state">
-                                    Nenhum funcionário cadastrado.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="cracha"
+                                :colspan="7"
+                                titulo="Nenhum funcionário cadastrado"
+                                texto="Cadastre vendedores e técnicos para acompanhar vendas, ordens de serviço e comissões."
+                                :acao="route('funcionario.create')"
+                                acao-texto="+ Novo funcionário"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

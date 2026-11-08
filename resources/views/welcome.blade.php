@@ -36,6 +36,20 @@
         $empresaHomeNome = trim((string) ($empresaHome->nome_fantasia ?? ''))
             ?: trim((string) ($empresaHome->razao_social ?? ''));
 
+        $hora = (int) now()->format('G');
+        // Madrugada (0h às 4h59) ainda é "boa noite".
+        [$periodo, $saudacao] = match (true) {
+            $hora >= 5 && $hora < 12 => ['manha', 'Bom dia'],
+            $hora >= 12 && $hora < 18 => ['tarde', 'Boa tarde'],
+            default => ['noite', 'Boa noite'],
+        };
+        $primeiroNome = \Illuminate\Support\Str::of(Auth::user()->name)->before(' ');
+        $podeComandos = auth()->user()->pode('comandos');
+        // Exemplo da barra do assistente: o que mais mostra o assistente em ação, entre as tarefas que o perfil pode fazer.
+        $exemploComando = $podeComandos ? app(\App\Comandos\RegistroComandos::class)->exemploPrincipal(auth()->user()) : null;
+        $primeirosPassos = \App\Support\PrimeirosPassos::para(auth()->user());
+        $passosFeitos = count(array_filter($primeirosPassos, fn ($p) => $p['feito']));
+
         $mostraFaturamento = $podeRelatorios;
         $temAtencao = $podeRelatorios && ($contasReceberVencidasVal > 0 || $contasPagarVencidasVal > 0 || $estoqueCriticoVal > 0);
         $temAcoes = $podeVendas || $podeEstoque || $podeFinanceiro;
@@ -58,10 +72,26 @@
     @endphp
 
     <div class="home">
-        <section class="home-resumo">
-            <div class="home-resumo__ola">
-                <p class="home-resumo__hello">Olá, <strong>{{ Auth::user()->name }}</strong></p>
-                <p class="home-resumo__meta">{{ $empresaHomeNome !== '' ? $empresaHomeNome.' · ' : '' }}{{ $dataHoje }}</p>
+        <section class="home-resumo" data-ilustracao-area>
+            <div class="home-resumo__topo">
+                <div class="home-resumo__ola">
+                    <p class="home-resumo__hello">{{ $saudacao }}, <strong>{{ $primeiroNome }}</strong></p>
+                    <p class="home-resumo__meta">{{ $empresaHomeNome !== '' ? $empresaHomeNome.' · ' : '' }}{{ $dataHoje }}</p>
+                    @if ($podeComandos && $exemploComando)
+                        <button type="button" class="home-comando" data-comandos-abrir aria-controls="comandos-painel" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/>
+                                <path d="M8.5 12h.01M12 12h.01M15.5 12h.01" stroke-width="2.6"/>
+                            </svg>
+                            <span class="home-comando__texto">
+                                <span class="home-comando__titulo">Peça ao assistente</span>
+                                <span class="home-comando__exemplo">Ex.: “{{ $exemploComando }}”</span>
+                            </span>
+                            <kbd class="home-comando__atalho">Ctrl K</kbd>
+                        </button>
+                    @endif
+                </div>
+                <x-ilustracao :nome="$periodo" tamanho="md" interativa class="home-resumo__arte" />
             </div>
 
             @if ($mostraFaturamento || $podeFinanceiro)
@@ -90,9 +120,52 @@
             @endif
         </section>
 
+        @if ($primeirosPassos !== [])
+            <section class="home-painel home-passos" aria-labelledby="home-passos-titulo">
+                <div class="home-passos__topo">
+                    <x-ilustracao nome="prancheta" tamanho="xs" />
+                    <div>
+                        <h2 class="home-section-label" id="home-passos-titulo">Primeiros passos</h2>
+                        <p class="home-passos__resumo">{{ $passosFeitos }} de {{ count($primeirosPassos) }} concluídos</p>
+                    </div>
+                    <span class="home-passos__barra" aria-hidden="true"><span style="width: {{ round($passosFeitos / count($primeirosPassos) * 100) }}%"></span></span>
+                </div>
+                <ol class="home-passos__lista">
+                    @foreach ($primeirosPassos as $passo)
+                        <li class="home-passo {{ $passo['feito'] ? 'is-feito' : '' }}">
+                            <span class="home-passo__marca" aria-hidden="true">
+                                @if ($passo['feito'])
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>
+                                @else
+                                    {{ $loop->iteration }}
+                                @endif
+                            </span>
+                            <span class="home-passo__texto">
+                                <span class="home-passo__titulo">{{ $passo['titulo'] }}</span>
+                                <span class="home-passo__desc">{{ $passo['feito'] ? 'Feito.' : $passo['texto'] }}</span>
+                            </span>
+                            @unless ($passo['feito'])
+                                <a href="{{ $passo['url'] }}" class="btn btn--outline btn--sm">{{ $passo['acao'] }}</a>
+                            @endunless
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endif
+
+        @if ($podeRelatorios && ! $temAtencao)
+            <section class="home-painel home-tudo-em-dia" data-ilustracao-area>
+                <x-ilustracao nome="tudo-em-dia" tamanho="xs" interativa />
+                <div>
+                    <h2 class="home-section-label">Tudo em dia</h2>
+                    <p class="home-tudo-em-dia__texto">Nenhuma conta vencida e nenhum produto com estoque baixo.</p>
+                </div>
+            </section>
+        @endif
+
         @if ($temAtencao)
             <section class="home-painel">
-                <h2 class="home-section-label">Atenção</h2>
+                <h2 class="home-section-label">Pendências</h2>
                 <div class="home-pendencias">
                     @if ($contasReceberVencidasVal > 0)
                         <a href="{{ route('relatorio.contas-receber', ['vencimento' => 'vencidos', 'data_inicio' => '2000-01-01', 'data_fim' => date('Y-m-d')]) }}" class="home-pendencia home-pendencia--aviso">
@@ -118,7 +191,7 @@
 
         @if ($temAcoes)
                     <section class="home-painel">
-                        <h2 class="home-section-label">O que você quer fazer?</h2>
+                        <h2 class="home-section-label">Atalhos</h2>
                         <div class="home-acoes">
                             @if ($podeVendas)
                                 <a href="{{ route('pdv.index') }}" class="home-acao">
@@ -135,7 +208,7 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.64 16H19a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                                     </span>
                                     <span class="home-acao__texto">
-                                        <span class="home-acao__titulo">Nova Venda</span>
+                                        <span class="home-acao__titulo">Nova venda</span>
                                         <span class="home-acao__desc">Registrar uma venda</span>
                                     </span>
                                 </a>
@@ -147,7 +220,7 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                                     </span>
                                     <span class="home-acao__texto">
-                                        <span class="home-acao__titulo">Entrada de Mercadoria</span>
+                                        <span class="home-acao__titulo">Entrada de mercadoria</span>
                                         <span class="home-acao__desc">Registrar compra / NF-e</span>
                                     </span>
                                 </a>
@@ -234,7 +307,9 @@
                         </div>
                         <p class="home-grafico__nota">Vencimento neste mês, sem contas canceladas.</p>
                         @if ($tetoContas <= 0)
-                            <p class="home-grafico__vazio">Nenhuma conta com vencimento em {{ $nomeMes }}.</p>
+                            <x-estado-vazio ilustracao="calendario" tamanho="xs"
+                                titulo="Nenhuma conta com vencimento em {{ $nomeMes }}"
+                                texto="Os lançamentos do mês aparecem aqui assim que forem feitos." />
                         @else
                             <div class="home-contas">
                                 @foreach ([
@@ -299,15 +374,15 @@
                     @if ($podeFinanceiro)
                         <a href="{{ route('conta-receber.index') }}" class="home-consulta">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            A Receber
+                            A receber
                         </a>
                         <a href="{{ route('conta-pagar.index') }}" class="home-consulta">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                            A Pagar
+                            A pagar
                         </a>
                         <a href="{{ route('fluxo-de-caixa.index') }}" class="home-consulta">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline></svg>
-                            Fluxo de Caixa
+                            Fluxo de caixa
                         </a>
                     @endif
                     @if ($mostraRelatorios)
@@ -321,6 +396,8 @@
         @endif
     </div>
 
+    <x-comandos />
+
 @endsection
 
 @push('styles')
@@ -332,10 +409,9 @@
 }
 
 .home-resumo {
-    display: grid;
-    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
-    gap: 1rem 1.5rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -343,8 +419,204 @@
     padding: 1rem 1.15rem;
 }
 
+.home-resumo__topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.home-resumo__ola {
+    min-width: 0;
+}
+
+.home-resumo__arte {
+    width: 210px;
+    margin: -0.75rem 0.25rem -1.25rem 0;
+}
+
+.home-comando {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(520px, 100%);
+    margin-top: 0.9rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--color-border-mid);
+    border-radius: var(--radius-md);
+    background: #fff;
+    color: var(--color-text);
+    font-family: var(--font-main);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-comando svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    color: var(--color-accent);
+}
+
+.home-comando:hover,
+.home-comando:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+    outline: none;
+}
+
+.home-comando__texto {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.home-comando__titulo {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.home-comando__exemplo {
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.home-comando__atalho {
+    flex: none;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--color-text-mid);
+}
+
+.home-tudo-em-dia {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.home-painel.home-tudo-em-dia .home-section-label {
+    margin-bottom: 0.15rem;
+}
+
+.home-tudo-em-dia__texto {
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+.home-passos__topo {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.home-passos__topo .ilustracao {
+    width: 64px;
+}
+
+.home-painel .home-passos__topo .home-section-label {
+    margin-bottom: 0.1rem;
+}
+
+.home-passos__resumo {
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+.home-passos__barra {
+    flex: 1;
+    max-width: 240px;
+    height: 8px;
+    margin-left: auto;
+    border-radius: 999px;
+    background: var(--color-bg);
+    overflow: hidden;
+}
+
+.home-passos__barra span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-success);
+}
+
+.home-passos__lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.home-passo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: #fff;
+}
+
+.home-passo__marca {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.home-passo__marca svg {
+    width: 16px;
+    height: 16px;
+}
+
+.home-passo.is-feito .home-passo__marca {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.home-passo__texto {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.home-passo__titulo {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.home-passo.is-feito .home-passo__titulo {
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+}
+
+.home-passo__desc {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
 .home-resumo__hello {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     line-height: 1.25;
     color: var(--color-text);
 }
@@ -357,7 +629,7 @@
 
 .home-numeros {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.65rem;
 }
 
@@ -380,10 +652,8 @@
 }
 
 .home-numero__rotulo {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--color-text-muted);
 }
 
@@ -886,11 +1156,21 @@
 }
 
 @media (max-width: 820px) {
-    .home-resumo,
     .home-numeros,
     .home-acoes,
-    .home-pendencias {
+    .home-pendencias,
+    .home-passos__lista {
         grid-template-columns: 1fr;
+    }
+
+    .home-resumo__arte {
+        width: 120px;
+        margin: -0.5rem -0.25rem -0.75rem 0;
+    }
+
+    .home-comando__atalho,
+    .home-passos__barra {
+        display: none;
     }
 
     .home-contas__linha {
@@ -901,5 +1181,16 @@
         grid-column: 2;
     }
 }
+
+@media (max-width: 420px) {
+    .home-resumo__topo {
+        align-items: flex-start;
+    }
+
+    .home-resumo__arte {
+        width: 96px;
+    }
+}
+
 </style>
 @endpush

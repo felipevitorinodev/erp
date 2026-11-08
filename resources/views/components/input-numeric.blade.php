@@ -13,6 +13,6 @@
     data-decimals="{{ $decimals }}"
     placeholder="{{ $placeholder ?? '' }}"
     {{ isset($required) && $required ? 'required' : '' }}
-    @foreach($attrs as $k => $v) {!! $k.'=\"'.$v.'\"' !!} @endforeach
+    @foreach($attrs as $k => $v) {{ $k }}="{{ $v }}" @endforeach
 />
 

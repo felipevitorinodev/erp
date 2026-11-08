@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Grupo')
-@section('page_title', 'Editar Grupo')
+@section('title', 'Editar grupo')
+@section('page_title', 'Editar grupo')
 
 @section('breadcrumb')
-    <a href="{{ route('grupo.index') }}">Grupos</a> / Editar Grupo
+    <a href="{{ route('grupo.index') }}">Grupos</a> / Editar grupo
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Grupo</span>
+            <span class="card__title">Dados do grupo</span>
         </div>
 
         <form method="POST" action="{{ route('grupo.update', $grupo) }}">
@@ -29,7 +29,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Grupo Pai</label>
+                        <label class="form-label">Grupo pai</label>
                         <div class="autocomplete-wrap">
                             <input type="text" id="input-grupo-pai" class="form-control"
                                 value="{{ old('parent_nome', $grupo->parent->nome ?? '') }}"

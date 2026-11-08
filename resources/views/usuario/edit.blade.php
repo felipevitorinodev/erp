@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Usuário')
-@section('page_title', 'Editar Usuário')
+@section('title', 'Editar usuário')
+@section('page_title', 'Editar usuário')
 
 @section('breadcrumb')
     <a href="{{ route('usuario.index') }}">Usuários</a> / Editar
@@ -11,7 +11,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados do Usuário</span>
+            <span class="card__title">Dados do usuário</span>
         </div>
 
         <form method="POST" action="{{ route('usuario.update', $usuario) }}">

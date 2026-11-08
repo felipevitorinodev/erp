@@ -30,11 +30,11 @@ class VendaItem extends Model
     ];
 
     protected $casts = [
-        'quantidade'     => 'decimal:3',
+        'quantidade' => 'decimal:3',
         'preco_unitario' => 'decimal:2',
-        'desconto'       => 'decimal:2',
-        'total'          => 'decimal:2',
-        'origem'         => 'integer',
+        'desconto' => 'decimal:2',
+        'total' => 'decimal:2',
+        'origem' => 'integer',
     ];
 
     public function venda()

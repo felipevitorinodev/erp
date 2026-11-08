@@ -45,8 +45,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsureUserIsActive::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // AJAX que pede JSON (PDV, relatórios) também recebe erro em JSON: sem isso a validação
+        // virava redirecionamento 302 e o PDV mostrava "sessão expirada" no lugar do erro real.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
         $exceptions->dontFlash(Empresa::segredosForaDaSessao());
 

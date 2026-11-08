@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova grupo')
-@section('page_title', 'Nova grupo')
+@section('title', 'Novo grupo')
+@section('page_title', 'Novo grupo')
 
 @section('breadcrumb')
-    <a href="{{ route('grupo.index') }}">grupos</a> / Nova grupo
+    <a href="{{ route('grupo.index') }}">Grupos</a> / Novo grupo
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da grupo</span>
+            <span class="card__title">Dados do grupo</span>
         </div>
 
         <form method="POST" action="{{ route('grupo.store') }}">
@@ -28,7 +28,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Grupo Pai</label>
+                        <label class="form-label">Grupo pai</label>
                         <div class="autocomplete-wrap">
                             <input type="text" id="input-grupo-pai" class="form-control"
                                 value="{{ old('parent_nome') }}"

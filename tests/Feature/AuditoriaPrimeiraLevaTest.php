@@ -24,10 +24,10 @@ class AuditoriaPrimeiraLevaTest extends TestCase
     private function criarEmpresa(string $nome, string $cnpj): Empresa
     {
         return Empresa::create([
-            'razao_social'  => $nome,
+            'razao_social' => $nome,
             'nome_fantasia' => $nome,
-            'cnpj'          => $cnpj,
-            'ativo'         => true,
+            'cnpj' => $cnpj,
+            'ativo' => true,
         ]);
     }
 
@@ -35,8 +35,8 @@ class AuditoriaPrimeiraLevaTest extends TestCase
     {
         return User::factory()->create([
             'empresa_id' => $empresa->id,
-            'perfil'     => $perfil,
-            'ativo'      => true,
+            'perfil' => $perfil,
+            'ativo' => true,
         ]);
     }
 
@@ -48,16 +48,16 @@ class AuditoriaPrimeiraLevaTest extends TestCase
 
         $cliente = Cliente::create([
             'empresa_id' => $empresaA->id,
-            'nome'       => 'Cliente Original',
-            'ativo'      => true,
+            'nome' => 'Cliente Original',
+            'ativo' => true,
         ]);
 
         $this->actingAs($user)
             ->put(route('cliente.update', $cliente), [
-                'empresa_id'  => $empresaB->id,
-                'nome'        => 'Cliente Editado',
+                'empresa_id' => $empresaB->id,
+                'nome' => 'Cliente Editado',
                 'tipo_pessoa' => 'PF',
-                'ativo'       => 1,
+                'ativo' => 1,
             ])
             ->assertRedirect(route('cliente.index'));
 
@@ -75,18 +75,18 @@ class AuditoriaPrimeiraLevaTest extends TestCase
         $this->actingAs($user)
             ->post(route('formaPagamento.store'), [
                 'empresa_id' => $empresaB->id,
-                'nome'       => 'Dinheiro',
-                'tipo'       => 'avista',
-                'ativo'      => 1,
+                'nome' => 'Dinheiro',
+                'tipo' => 'avista',
+                'ativo' => 1,
             ])
             ->assertRedirect(route('formaPagamento.index'));
 
         $this->assertDatabaseHas('formas_pagamento', [
-            'nome'       => 'Dinheiro',
+            'nome' => 'Dinheiro',
             'empresa_id' => $empresaA->id,
         ]);
         $this->assertDatabaseMissing('formas_pagamento', [
-            'nome'       => 'Dinheiro',
+            'nome' => 'Dinheiro',
             'empresa_id' => $empresaB->id,
         ]);
     }
@@ -102,7 +102,7 @@ class AuditoriaPrimeiraLevaTest extends TestCase
             ->assertOk()
             ->assertSee('Empresa Vinculada')
             ->assertDontSee('Empresa Alheia')
-            ->assertDontSee('Nova Empresa');
+            ->assertDontSee('Nova empresa');
 
         $this->actingAs($user)
             ->get(route('empresa.edit', $empresaB))
@@ -115,12 +115,12 @@ class AuditoriaPrimeiraLevaTest extends TestCase
         $user = $this->criarUsuario($empresa);
 
         ContaReceber::create([
-            'empresa_id'      => $empresa->id,
-            'descricao'       => 'Parcial da semana',
-            'valor'           => 100,
-            'valor_pago'      => 40,
+            'empresa_id' => $empresa->id,
+            'descricao' => 'Parcial da semana',
+            'valor' => 100,
+            'valor_pago' => 40,
             'data_vencimento' => now()->addDays(3)->toDateString(),
-            'situacao'        => 'parcial',
+            'situacao' => 'parcial',
         ]);
 
         $this->actingAs($user)
@@ -136,37 +136,37 @@ class AuditoriaPrimeiraLevaTest extends TestCase
         $user = $this->criarUsuario($empresa);
 
         FormaPagamento::create([
-            'empresa_id'         => $empresa->id,
-            'nome'               => 'Dinheiro',
-            'tipo'               => 'avista',
+            'empresa_id' => $empresa->id,
+            'nome' => 'Dinheiro',
+            'tipo' => 'avista',
             'gera_conta_receber' => false,
-            'ativo'              => true,
+            'ativo' => true,
         ]);
         FormaPagamento::create([
-            'empresa_id'         => $empresa->id,
-            'nome'               => 'Boleto',
-            'tipo'               => 'prazo',
+            'empresa_id' => $empresa->id,
+            'nome' => 'Boleto',
+            'tipo' => 'prazo',
             'gera_conta_receber' => true,
-            'dias_vencimento'    => 30,
-            'ativo'              => true,
+            'dias_vencimento' => 30,
+            'ativo' => true,
         ]);
 
         Venda::create([
-            'empresa_id'      => $empresa->id,
-            'numero'          => '1',
-            'data_venda'      => now()->toDateString(),
-            'situacao'        => 'confirmada',
-            'subtotal'        => 150,
-            'total'           => 150,
+            'empresa_id' => $empresa->id,
+            'numero' => '1',
+            'data_venda' => now()->toDateString(),
+            'situacao' => 'confirmada',
+            'subtotal' => 150,
+            'total' => 150,
             'forma_pagamento' => 'Dinheiro',
         ]);
         Venda::create([
-            'empresa_id'      => $empresa->id,
-            'numero'          => '2',
-            'data_venda'      => now()->toDateString(),
-            'situacao'        => 'confirmada',
-            'subtotal'        => 999,
-            'total'           => 999,
+            'empresa_id' => $empresa->id,
+            'numero' => '2',
+            'data_venda' => now()->toDateString(),
+            'situacao' => 'confirmada',
+            'subtotal' => 999,
+            'total' => 999,
             'forma_pagamento' => 'Boleto',
         ]);
 
@@ -184,11 +184,11 @@ class AuditoriaPrimeiraLevaTest extends TestCase
 
         $venda = Venda::create([
             'empresa_id' => $empresa->id,
-            'numero'     => '10',
+            'numero' => '10',
             'data_venda' => now()->toDateString(),
-            'situacao'   => 'confirmada',
-            'subtotal'   => 100,
-            'total'      => 100,
+            'situacao' => 'confirmada',
+            'subtotal' => 100,
+            'total' => 100,
         ]);
 
         $this->actingAs($user)
@@ -218,20 +218,20 @@ class AuditoriaPrimeiraLevaTest extends TestCase
 
         $venda = Venda::create([
             'empresa_id' => $empresa->id,
-            'numero'     => '20',
+            'numero' => '20',
             'data_venda' => now()->toDateString(),
-            'situacao'   => 'confirmada',
-            'subtotal'   => 50,
-            'total'      => 50,
+            'situacao' => 'confirmada',
+            'subtotal' => 50,
+            'total' => 50,
         ]);
 
         Nfe::create([
             'empresa_id' => $empresa->id,
-            'venda_id'   => $venda->id,
-            'numero'     => '000000001',
-            'serie'      => '001',
-            'situacao'   => 'cancelada',
-            'ambiente'   => 2,
+            'venda_id' => $venda->id,
+            'numero' => '000000001',
+            'serie' => '001',
+            'situacao' => 'cancelada',
+            'ambiente' => 2,
         ]);
 
         $this->actingAs($user)
@@ -253,37 +253,37 @@ class AuditoriaPrimeiraLevaTest extends TestCase
 
         $fornecedor = Fornecedor::create([
             'empresa_id' => $empresa->id,
-            'nome'       => 'Fornecedor Teste',
-            'ativo'      => true,
+            'nome' => 'Fornecedor Teste',
+            'ativo' => true,
         ]);
 
         $existente = Produto::create([
-            'empresa_id'       => $empresa->id,
-            'nome'             => 'Produto Existente',
-            'codigo'           => 'EXIST01',
-            'preco_custo'      => 5,
-            'preco_venda'      => 20,
-            'estoque_atual'    => 3,
+            'empresa_id' => $empresa->id,
+            'nome' => 'Produto Existente',
+            'codigo' => 'EXIST01',
+            'preco_custo' => 5,
+            'preco_venda' => 20,
+            'estoque_atual' => 3,
             'controla_estoque' => true,
-            'tipo'             => 1,
-            'ativo'            => true,
+            'tipo' => 1,
+            'ativo' => true,
         ]);
 
         $this->actingAs($user)
             ->post(route('entrada-estoque.store'), [
                 'fornecedor_id' => $fornecedor->id,
-                'numero'        => 'NF-1',
-                'data_entrada'  => now()->toDateString(),
-                'itens'         => [
+                'numero' => 'NF-1',
+                'data_entrada' => now()->toDateString(),
+                'itens' => [
                     [
-                        'produto_id'     => $existente->id,
-                        'quantidade'     => '2',
+                        'produto_id' => $existente->id,
+                        'quantidade' => '2',
                         'preco_unitario' => '10',
                     ],
                     [
-                        'produto_nome'   => 'Produto da Nota',
+                        'produto_nome' => 'Produto da Nota',
                         'produto_codigo' => 'XML01',
-                        'quantidade'     => '1',
+                        'quantidade' => '1',
                         'preco_unitario' => '8',
                     ],
                 ],

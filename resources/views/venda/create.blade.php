@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Venda')
-@section('page_title', 'Nova Venda')
+@section('title', 'Nova venda')
+@section('page_title', 'Nova venda')
 
 @section('breadcrumb')
-    <a href="{{ route('venda.index') }}">Vendas</a> / Nova Venda
+    <a href="{{ route('venda.index') }}">Vendas</a> / Nova venda
 @endsection
 
 @push('styles')
@@ -26,7 +26,7 @@
             </div>
         </div>
         <div class="venda-topbar__total">
-            <span class="venda-topbar__total-label">TOTAL</span>
+            <span class="venda-topbar__total-label">Total</span>
             <span class="venda-topbar__total-valor" id="display-total">R$ 0,00</span>
         </div>
     </div>
@@ -45,7 +45,7 @@
                    autocomplete="off">
         </div>
         <div class="venda-busca-rapida__hints">
-            <kbd>F2</kbd> Buscar &nbsp;|&nbsp; <kbd>F4</kbd> Finalizar &nbsp;|&nbsp; <kbd>F8</kbd> Cliente
+            <kbd>F2</kbd> Buscar &nbsp;|&nbsp; <kbd>F4</kbd> Finalizar &nbsp;|&nbsp; <kbd>F3</kbd> Cliente
         </div>
     </div>
 
@@ -60,12 +60,8 @@
             {{-- Itens serão adicionados dinamicamente --}}
         </div>
 
-        <div class="venda-itens-empty" id="itens-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-8 0"></path>
-            </svg>
+        <div class="venda-itens-empty" id="itens-empty" data-ilustracao-area>
+            <x-ilustracao nome="carrinho" tamanho="sm" interativa />
             <p>Nenhum item adicionado</p>
             <span>Use a busca acima para adicionar produtos</span>
         </div>
@@ -74,7 +70,7 @@
     {{-- Painel lateral / inferior com resumo --}}
     <div class="venda-resumo">
         <div class="venda-resumo__section venda-resumo__section--dados">
-            <h4>Dados da Venda</h4>
+            <h4>Dados da venda</h4>
             <div class="venda-resumo__field">
                 <label>Cliente</label>
                 <div class="autocomplete-wrap">
@@ -130,7 +126,7 @@
                 </div>
             </div>
             <div class="venda-resumo__row venda-resumo__row--total">
-                <span>TOTAL</span>
+                <span>Total</span>
                 <span id="label-total">R$ 0,00</span>
                 <input type="hidden" name="total" id="input-total" value="0">
             </div>
@@ -162,7 +158,7 @@
 <div class="modal-overlay" id="modal-qtd" hidden>
     <div class="modal-box modal-box--compact">
         <div class="modal-box__header">
-            <span class="card__title" id="modal-qtd-titulo">Adicionar Produto</span>
+            <span class="card__title" id="modal-qtd-titulo">Adicionar produto</span>
             <button type="button" class="btn btn--ghost btn--sm" data-modal-close>&times;</button>
         </div>
         <div class="modal-box__body">
@@ -177,7 +173,7 @@
                         data-decimals="2" inputmode="numeric" value="1,00" style="font-size:1.5rem;font-weight:600;">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Preço Unitário</label>
+                    <label class="form-label">Preço unitário</label>
                     <input type="tel" id="modal-qtd-preco-input" class="form-control text-right input-numeric"
                         data-decimals="2" inputmode="numeric" value="0,00" style="font-size:1.5rem;font-weight:600;">
                 </div>
@@ -441,44 +437,72 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    var pedidoBusca = 0;
+
+    // Esqueleto na lista quando a busca passa de 200 ms; falha com opção de tentar de novo.
+    function mostrarCarregandoBusca() {
+        criarDropdownBusca();
+        resultadosBusca = [];
+        indiceSelecionado = -1;
+        dropdownBusca.innerHTML = window.ErpCarregamento
+            ? window.ErpCarregamento.itensEsqueleto(4)
+            : '<div class="autocomplete-empty">Carregando...</div>';
+    }
+
+    function mostrarFalhaBusca() {
+        criarDropdownBusca();
+        resultadosBusca = [];
+        indiceSelecionado = -1;
+        dropdownBusca.innerHTML = '<div class="carga-falha">Não foi possível buscar os produtos.' +
+            '<button type="button" data-repetir-busca>Tentar novamente</button></div>';
+        dropdownBusca.querySelector('[data-repetir-busca]').addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            buscarProdutos(buscaInput.value.trim());
+        });
+    }
+
     function buscarProdutos(q) {
         clearTimeout(timeoutBusca);
         var url = urlProdutos + '?q=' + encodeURIComponent(q || '');
-        console.log('Buscando produtos:', url);
-        
+
         timeoutBusca = setTimeout(function() {
-            fetch(url)
-                .then(function(r) { 
-                    console.log('Resposta recebida:', r.status);
-                    return r.json(); 
+            var id = ++pedidoBusca;
+            var esqueleto = setTimeout(function() {
+                if (id === pedidoBusca && document.activeElement === buscaInput) mostrarCarregandoBusca();
+            }, 200);
+            fetch(url, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('falha na busca');
+                    return r.json();
                 })
                 .then(function(data) {
-                    console.log('Dados recebidos:', data);
-                    renderizarResultados(data);
+                    if (id !== pedidoBusca) return;
+                    renderizarResultados(Array.isArray(data) ? data : []);
                 })
-                .catch(function(err) { 
-                    console.error('Erro na busca:', err);
-                    fecharDropdownBusca(); 
+                .catch(function() {
+                    if (id !== pedidoBusca) return;
+                    if (document.activeElement === buscaInput) mostrarFalhaBusca();
+                    else fecharDropdownBusca();
+                })
+                .finally(function() {
+                    clearTimeout(esqueleto);
                 });
         }, q ? 150 : 0);
     }
 
-    // Verificar se o input existe
-    console.log('Input de busca encontrado:', buscaInput);
-
     if (buscaInput) {
         buscaInput.addEventListener('focus', function() {
-            console.log('Focus no input');
             buscarProdutos(this.value.trim());
         });
 
         buscaInput.addEventListener('click', function() {
-            console.log('Click no input');
             buscarProdutos(this.value.trim());
         });
 
         buscaInput.addEventListener('input', function() {
-            console.log('Input alterado:', this.value);
             buscarProdutos(this.value.trim());
         });
     }
@@ -533,7 +557,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (e.key === 'F4') {
             e.preventDefault();
             document.getElementById('btn-finalizar').click();
-        } else if (e.key === 'F8') {
+        } else if (e.key === 'F3' || e.key === 'F8') {
+            // F3 é o atalho de cliente em todas as telas de venda (igual ao PDV); F8 continua valendo.
             e.preventDefault();
             document.getElementById('input-cliente').focus();
         } else if (e.key === 'Escape' && !modalQtd.hidden) {

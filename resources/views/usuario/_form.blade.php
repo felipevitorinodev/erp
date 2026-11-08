@@ -1,7 +1,7 @@
 @php $usuario = $usuario ?? null; @endphp
 
 <div class="form-section">
-    <div class="form-section__title">Dados do usuário</div>
+    <div class="form-section__title">Identificação</div>
     <div class="form-grid form-grid--col-2">
         <div class="form-group">
             <label class="form-label form-label--required">Nome</label>

@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Empresa')
-@section('page_title', 'Nova Empresa')
+@section('title', 'Nova empresa')
+@section('page_title', 'Nova empresa')
 
 @section('breadcrumb')
-    <a href="{{ route('empresa.index') }}">Empresas</a> / Nova Empresa
+    <a href="{{ route('empresa.index') }}">Empresas</a> / Nova empresa
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Empresa</span>
+            <span class="card__title">Dados da empresa</span>
         </div>
 
         <form method="POST" action="{{ route('empresa.store') }}">
@@ -23,7 +23,7 @@
                     <div class="form-section__title">Identificação</div>
                     <div class="form-grid form-grid--col-2">
                         <div class="form-group">
-                            <label class="form-label form-label--required">Razão Social</label>
+                            <label class="form-label form-label--required">Razão social</label>
                             <input type="text" name="razao_social"
                                 class="form-control @error('razao_social') is-invalid @enderror"
                                 value="{{ old('razao_social') }}" maxlength="150">
@@ -33,7 +33,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Nome Fantasia</label>
+                            <label class="form-label">Nome fantasia</label>
                             <input type="text" name="nome_fantasia"
                                 class="form-control @error('nome_fantasia') is-invalid @enderror"
                                 value="{{ old('nome_fantasia') }}" maxlength="150">
@@ -45,7 +45,7 @@
 
                     <div class="form-grid form-grid--col-2" style="margin-top: 1rem;">
                         <div class="form-group">
-                            <label class="form-label">Inscrição Estadual</label>
+                            <label class="form-label">Inscrição estadual</label>
                             <input type="text" name="ie" class="form-control @error('ie') is-invalid @enderror"
                                 value="{{ old('ie') }}" maxlength="20">
                             @error('ie')
@@ -54,7 +54,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Inscrição Municipal</label>
+                            <label class="form-label">Inscrição municipal</label>
                             <input type="text" name="im" class="form-control @error('im') is-invalid @enderror"
                                 value="{{ old('im') }}" maxlength="20">
                             @error('im')

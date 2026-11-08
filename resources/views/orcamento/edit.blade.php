@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Orçamento')
-@section('page_title', 'Editar Orçamento')
+@section('title', 'Editar orçamento')
+@section('page_title', 'Editar orçamento')
 
 @section('breadcrumb')
     <a href="{{ route('orcamento.index') }}">Orçamentos</a> /
@@ -13,7 +13,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados do Orçamento</span>
+            <span class="card__title">Dados do orçamento</span>
         </div>
 
         <form method="POST" action="{{ route('orcamento.update', $orcamento) }}">

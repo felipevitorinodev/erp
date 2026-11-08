@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'PDV')
-@section('page_title', 'PDV — Ponto de Venda')
+@section('page_title', 'PDV — Ponto de venda')
 
 @section('page_actions')
     <a href="{{ route('venda.index') }}" class="pdv-back">
@@ -120,14 +120,8 @@
 
                 <div id="pdv-itens" class="pdv-itens"></div>
 
-                <div id="pdv-empty" class="pdv-empty">
-                    <div class="pdv-empty__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="9" cy="20" r="1.4"></circle>
-                            <circle cx="18" cy="20" r="1.4"></circle>
-                            <path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"></path>
-                        </svg>
-                    </div>
+                <div id="pdv-empty" class="pdv-empty" data-ilustracao-area>
+                    <x-ilustracao nome="carrinho" tamanho="md" interativa class="pdv-empty__ilustracao" />
                     <p class="pdv-empty__titulo">Caixa livre</p>
                     <p class="pdv-empty__texto">Bipe o código, busque pelo nome ou abra a tabela de preços.</p>
                 </div>
@@ -178,8 +172,8 @@
                         <button type="button" class="pdv-btn-finalizar" id="pdv-btn-finalizar"
                                 data-tip="Abre a conferência: forma, desconto, acréscimo e troco. Enter confirma a venda.">
                             <span class="pdv-btn-finalizar__textos">
-                                <span class="pdv-btn-finalizar__label">Pagamento</span>
-                                <span class="pdv-btn-finalizar__forma">revisar e finalizar</span>
+                                <span class="pdv-btn-finalizar__label">Finalizar venda</span>
+                                <span class="pdv-btn-finalizar__forma">pagamento e troco</span>
                             </span>
                             <span class="pdv-btn-finalizar__lado">
                                 <span class="pdv-btn-finalizar__valor" id="pdv-btn-finalizar-valor">R$ 0,00</span>
@@ -272,7 +266,7 @@
                                             <label for="pdv-nfce-documento">CPF ou CNPJ na NFC-e</label>
                                         </div>
                                         <input type="tel" id="pdv-nfce-documento" class="pdv-input-soft" inputmode="numeric"
-                                               autocomplete="off" maxlength="18" placeholder="Opcional abaixo de R$ 500,00">
+                                               autocomplete="off" maxlength="18" placeholder="{{ ($nfceDocumentoAcima500 ?? false) ? 'Opcional abaixo de R$ 500,00' : 'Opcional' }}">
                                     </div>
                                 @endif
                             </div>
@@ -440,26 +434,26 @@
                     </svg>
                 </div>
                 <p class="pdv-sucesso__badge" id="pdv-sucesso-pagamento">Pagamento registrado</p>
-                <h2 class="pdv-sucesso__titulo">Venda Confirmada!</h2>
+                <h2 class="pdv-sucesso__titulo">Venda confirmada</h2>
                 <p class="pdv-sucesso__valor" id="pdv-sucesso-total">R$ 0,00</p>
                 <p class="pdv-sucesso__numero" id="pdv-sucesso-numero">Nº —</p>
                 <p class="pdv-sucesso__troco" id="pdv-sucesso-troco" hidden></p>
                 <p class="pdv-sucesso__nfce" id="pdv-sucesso-nfce" hidden></p>
+                <p class="pdv-sucesso__nfce-dica" id="pdv-sucesso-nfce-dica" hidden></p>
                 <div class="pdv-sucesso__acoes">
                     <a href="#" class="pdv-sucesso__nfce-link" id="pdv-link-nfce" hidden target="_blank" rel="noopener">Imprimir NFC-e</a>
                     <a href="#" class="pdv-sucesso__ver" id="pdv-link-a4" hidden target="_blank" rel="noopener">A4</a>
                     <a href="#" class="pdv-sucesso__ver" id="pdv-link-recibo" hidden target="_blank" rel="noopener">80 mm</a>
                     <button type="button" class="pdv-btn-finalizar pdv-sucesso__nova" id="pdv-btn-nova-venda">
-                        <span class="pdv-btn-finalizar__label">Nova Venda</span>
+                        <span class="pdv-btn-finalizar__label">Nova venda</span>
                         <kbd class="pdv-kbd pdv-kbd--lg pdv-kbd--on-dark">N</kbd>
                     </button>
-                    <a href="#" class="pdv-sucesso__ver" id="pdv-link-ver-venda">Ver Venda</a>
+                    <a href="#" class="pdv-sucesso__ver" id="pdv-link-ver-venda">Ver venda</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="pdv-toast" id="pdv-toast" hidden aria-live="polite"></div>
 
 @endsection
 

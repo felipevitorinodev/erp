@@ -1,10 +1,10 @@
 @extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
 @section('title', 'OS #' . $os->numero)
-@section('page_title', 'Ordem de Serviço #' . $os->numero)
+@section('page_title', 'Ordem de serviço #' . $os->numero)
 
 @section('breadcrumb')
-    <a href="{{ route('ordem-servico.index') }}">Ordens de Serviço</a> / #{{ $os->numero }}
+    <a href="{{ route('ordem-servico.index') }}">Ordens de serviço</a> / #{{ $os->numero }}
 @endsection
 
 @section('page_actions')
@@ -156,7 +156,7 @@
                         <tr>
                             <th>Item</th>
                             <th class="col-num">Qtd.</th>
-                            <th class="col-num">Preço Unit.</th>
+                            <th class="col-num">Preço unit.</th>
                             <th class="col-num">Desconto</th>
                             <th class="col-num">Total</th>
                         </tr>
@@ -174,7 +174,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Qtd." class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
-                                <td data-label="Preço Unit." class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                                <td data-label="Preço unit." class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
                                 <td data-label="Desconto" class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
                                 <td data-label="Total" class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
                             </tr>

@@ -16,8 +16,8 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 
-            $table->string('nome'); 
-            $table->string('sigla', 10);  
+            $table->string('nome');
+            $table->string('sigla', 10);
             $table->boolean('ativo')->default(true);
 
             $table->timestamps();

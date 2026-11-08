@@ -156,7 +156,7 @@ class CupomDocumento
             $quantidade += (float) $item->quantidade;
             $detalhe = self::quantidade($item->quantidade).' un × R$ '.self::dinheiro($item->preco_unitario);
             if ((float) $item->desconto > 0) {
-            $detalhe .= ' - '.self::dinheiro($item->desconto);
+                $detalhe .= ' - '.self::dinheiro($item->desconto);
             }
             $linhasItens[] = [
                 'nome' => $item->produto_nome,

@@ -1,7 +1,7 @@
 @php $conta = $conta ?? null; @endphp
 
 <div class="form-section">
-    <div class="form-section__title">Dados da conta</div>
+    <div class="form-section__title">Lançamento</div>
     <div class="form-grid form-grid--col-2">
         <div class="form-group">
             <label class="form-label form-label--required">Descrição</label>
@@ -63,7 +63,7 @@
 
     <div class="form-grid form-grid--col-2" style="margin-top:1rem;">
         <div class="form-group">
-            <label class="form-label">Forma de Pagamento</label>
+            <label class="form-label">Forma de pagamento</label>
             <div class="autocomplete-wrap">
                 <input type="text" id="input-forma-pagamento" class="form-control"
                     value="{{ old('forma_pagamento', $conta->forma_pagamento ?? '') }}"
@@ -94,8 +94,7 @@
     <div class="form-section__title">Observações</div>
     <div class="form-grid form-grid--col-1">
         <div class="form-group">
-            <label class="form-label">Observações</label>
-            <textarea name="observacoes" class="form-control @error('observacoes') is-invalid @enderror"
+            <textarea aria-label="Observações" name="observacoes" class="form-control @error('observacoes') is-invalid @enderror"
                 rows="3" style="resize:none;">{{ old('observacoes', $conta->observacoes ?? '') }}</textarea>
             @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror
         </div>

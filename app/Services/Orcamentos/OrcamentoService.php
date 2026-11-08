@@ -11,6 +11,7 @@ use App\Repositories\Orcamentos\OrcamentoRepository;
 use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Vendas\VendaRepository;
 use App\Support\MensagemPublica;
+use App\Support\PrecoMinimo;
 use App\Traits\ConversorMoeda;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -58,6 +59,8 @@ class OrcamentoService
                 ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
                 ->withInput();
         }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
 
         $orcamento = $this->repository->store([
             'empresa_id' => auth()->user()->empresa_id,
@@ -139,6 +142,8 @@ class OrcamentoService
                 ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
                 ->withInput();
         }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
 
         try {
             $this->repository->update($orcamento, [

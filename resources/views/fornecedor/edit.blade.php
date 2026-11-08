@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Fornecedor')
-@section('page_title', 'Editar Fornecedor')
+@section('title', 'Editar fornecedor')
+@section('page_title', 'Editar fornecedor')
 
 @section('breadcrumb')
-    <a href="{{ route('fornecedor.index') }}">Fornecedores</a> / Editar Fornecedor
+    <a href="{{ route('fornecedor.index') }}">Fornecedores</a> / Editar fornecedor
 @endsection
 
 @section('content')
 
 <div class="card">
     <div class="card__header">
-        <span class="card__title">Dados do Fornecedor</span>
+        <span class="card__title">Dados do fornecedor</span>
     </div>
 
     <form method="POST" action="{{ route('fornecedor.update', $fornecedor) }}">
@@ -24,7 +24,7 @@
                 <div class="form-section__title">Identificação</div>
                 <div class="form-grid form-grid--col-2">
                     <div class="form-group">
-                        <label class="form-label form-label--required">Nome / Razão Social</label>
+                        <label class="form-label form-label--required">Nome / razão social</label>
                         <input type="text" name="nome"
                             class="form-control @error('nome') is-invalid @enderror"
                             value="{{ old('nome', $fornecedor->nome) }}" maxlength="255">
@@ -32,7 +32,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Nome Fantasia</label>
+                        <label class="form-label">Nome fantasia</label>
                         <input type="text" name="nome_fantasia"
                             class="form-control @error('nome_fantasia') is-invalid @enderror"
                             value="{{ old('nome_fantasia', $fornecedor->nome_fantasia) }}" maxlength="255">
@@ -69,7 +69,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Inscrição Estadual</label>
+                        <label class="form-label">Inscrição estadual</label>
                         <input type="text" name="inscricao_estadual"
                             class="form-control @error('inscricao_estadual') is-invalid @enderror"
                             value="{{ old('inscricao_estadual', $fornecedor->inscricao_estadual) }}" maxlength="255">
@@ -77,7 +77,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Inscrição Municipal</label>
+                        <label class="form-label">Inscrição municipal</label>
                         <input type="text" name="inscricao_municipal"
                             class="form-control @error('inscricao_municipal') is-invalid @enderror"
                             value="{{ old('inscricao_municipal', $fornecedor->inscricao_municipal) }}" maxlength="255">
@@ -187,8 +187,7 @@
                 <div class="form-section__title">Observações</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label class="form-label">Observações</label>
-                        <textarea style="resize:none;" name="observacoes"
+                        <textarea aria-label="Observações" style="resize:none;" name="observacoes"
                             class="form-control @error('observacoes') is-invalid @enderror"
                             rows="3" maxlength="1000">{{ old('observacoes', $fornecedor->observacoes) }}</textarea>
                         @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror

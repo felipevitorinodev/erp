@@ -12,7 +12,7 @@ class FormaPagamentoSeeder extends Seeder
     {
         $empresa = Empresa::first();
 
-        if (!$empresa) {
+        if (! $empresa) {
             return;
         }
 
@@ -37,13 +37,13 @@ class FormaPagamentoSeeder extends Seeder
             FormaPagamento::firstOrCreate(
                 [
                     'empresa_id' => $empresa->id,
-                    'nome'       => $forma['nome'],
+                    'nome' => $forma['nome'],
                 ],
                 [
-                    'tipo'               => $forma['tipo'],
+                    'tipo' => $forma['tipo'],
                     'gera_conta_receber' => $forma['gera_conta_receber'],
-                    'dias_vencimento'    => $forma['dias_vencimento'],
-                    'ativo'              => true,
+                    'dias_vencimento' => $forma['dias_vencimento'],
+                    'ativo' => true,
                 ]
             );
         }

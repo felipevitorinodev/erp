@@ -24,9 +24,9 @@ class FormaPagamento extends Model
     ];
 
     protected $casts = [
-        'ativo'              => 'boolean',
+        'ativo' => 'boolean',
         'gera_conta_receber' => 'boolean',
-        'dias_vencimento'    => 'integer',
+        'dias_vencimento' => 'integer',
     ];
 
     public function empresa()
@@ -41,7 +41,7 @@ class FormaPagamento extends Model
 
     public function isAvista(): bool
     {
-        return !$this->isPrazo();
+        return ! $this->isPrazo();
     }
 
     public function ehCartao(): bool

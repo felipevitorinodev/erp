@@ -19,10 +19,10 @@ class PerfilEFluxosCriticosTest extends TestCase
     private function criarEmpresa(): Empresa
     {
         return Empresa::create([
-            'razao_social'  => 'Empresa Teste',
+            'razao_social' => 'Empresa Teste',
             'nome_fantasia' => 'Teste',
-            'cnpj'          => '11222333000181',
-            'ativo'         => true,
+            'cnpj' => '11222333000181',
+            'ativo' => true,
         ]);
     }
 
@@ -30,8 +30,8 @@ class PerfilEFluxosCriticosTest extends TestCase
     {
         return User::factory()->create([
             'empresa_id' => $empresa->id,
-            'perfil'     => $perfil,
-            'ativo'      => true,
+            'perfil' => $perfil,
+            'ativo' => true,
         ]);
     }
 
@@ -88,31 +88,31 @@ class PerfilEFluxosCriticosTest extends TestCase
         $this->actingAs($user);
 
         $funcionario = Funcionario::create([
-            'empresa_id'          => $empresa->id,
-            'nome'                => 'Vendedor Teste',
+            'empresa_id' => $empresa->id,
+            'nome' => 'Vendedor Teste',
             'percentual_comissao' => 5,
-            'ativo'               => true,
+            'ativo' => true,
         ]);
 
         $venda = Venda::create([
-            'empresa_id'     => $empresa->id,
+            'empresa_id' => $empresa->id,
             'funcionario_id' => $funcionario->id,
-            'numero'         => 'V-001',
-            'data_venda'     => now()->toDateString(),
-            'situacao'       => 'confirmada',
-            'subtotal'       => 100,
-            'desconto'       => 0,
-            'acrescimo'      => 0,
-            'total'          => 100,
+            'numero' => 'V-001',
+            'data_venda' => now()->toDateString(),
+            'situacao' => 'confirmada',
+            'subtotal' => 100,
+            'desconto' => 0,
+            'acrescimo' => 0,
+            'total' => 100,
         ]);
 
         Comissao::create([
-            'empresa_id'     => $empresa->id,
-            'venda_id'       => $venda->id,
+            'empresa_id' => $empresa->id,
+            'venda_id' => $venda->id,
             'funcionario_id' => $funcionario->id,
-            'percentual'     => 5,
-            'valor'          => 5,
-            'situacao'       => 'paga',
+            'percentual' => 5,
+            'valor' => 5,
+            'situacao' => 'paga',
         ]);
 
         $this->expectException(\Exception::class);

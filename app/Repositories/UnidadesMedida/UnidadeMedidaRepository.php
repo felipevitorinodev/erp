@@ -26,6 +26,7 @@ class UnidadeMedidaRepository
     public function store(array $data)
     {
         $data['empresa_id'] = auth()->user()->empresa_id;
+
         return UnidadeMedida::create($data);
     }
 

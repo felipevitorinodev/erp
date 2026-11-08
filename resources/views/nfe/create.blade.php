@@ -9,7 +9,7 @@
 @section('page_title', $titulo)
 
 @section('breadcrumb')
-    <a href="{{ route('nfe.index') }}">NF-e Emitidas</a> / {{ $editando ? 'Rascunho' : 'Nova NF-e' }}
+    <a href="{{ route('nfe.index') }}">NF-e emitidas</a> / {{ $editando ? 'Rascunho' : 'Nova NF-e' }}
 @endsection
 
 @section('content')
@@ -473,7 +473,7 @@
 
 @include('components.modal-cadastro-rapido', [
     'id' => 'modal-novo-cliente-nfe',
-    'titulo' => 'Novo Cliente',
+    'titulo' => 'Novo cliente',
     'rota' => route('api.clientes.store'),
     'btnLabel' => 'Salvar cliente',
     'campos' => [
@@ -1143,8 +1143,20 @@ document.addEventListener('DOMContentLoaded', function () {
             if (q) params.set('q', q);
             params.set('operacao', ctx.operacao);
             if (ctx.uf_destino) params.set('uf_destino', ctx.uf_destino);
+            // Passados 200 ms sem resposta, a lista mostra o esqueleto.
+            var esqueleto = setTimeout(function () {
+                if (id !== ultimaBusca || buscaWrap.hidden || document.activeElement !== buscaItem || !window.ErpCarregamento) return;
+                resultados = [];
+                ativo = -1;
+                dropItem.innerHTML = window.ErpCarregamento.itensEsqueleto(4);
+                dropItem.hidden = false;
+                buscaItem.setAttribute('aria-expanded', 'true');
+            }, 200);
             fetch(urls.produtos + '?' + params.toString(), { headers: { 'Accept': 'application/json' } })
-                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('falha na busca');
+                    return r.json();
+                })
                 .then(function (data) {
                     if (id !== ultimaBusca || buscaWrap.hidden) return;
                     resultados = Array.isArray(data) ? data : [];
@@ -1156,8 +1168,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderResultados(q);
                 })
                 .catch(function () {
+                    if (id !== ultimaBusca || buscaWrap.hidden) return;
                     resultados = [];
-                    renderResultados(q);
+                    ativo = -1;
+                    dropItem.hidden = false;
+                    dropItem.innerHTML = '<div class="carga-falha">Não foi possível buscar os produtos.' +
+                        '<button type="button" data-repetir-busca>Tentar novamente</button></div>';
+                    dropItem.querySelector('[data-repetir-busca]').addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        buscarProdutosModal(buscaItem.value.trim());
+                    });
+                })
+                .finally(function () {
+                    clearTimeout(esqueleto);
                 });
         }, 180);
     }

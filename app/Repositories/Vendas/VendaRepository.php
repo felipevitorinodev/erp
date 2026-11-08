@@ -9,6 +9,7 @@ use App\Models\Estoque\MovimentacaoEstoque;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfes\Nfe;
+use App\Models\Orcamentos\Orcamento;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
@@ -157,16 +158,19 @@ class VendaRepository
                 throw new \Exception('Venda já está cancelada.');
             }
 
-            $nfeAtiva = Nfe::where('venda_id', $venda->id)
+            // Trava OS e orçamento de origem antes do estoque, na mesma ordem do faturamento e da aprovação.
+            $origens = $this->origensDaVenda($venda);
+
+            $notaAtiva = Nfe::where('venda_id', $venda->id)
                 ->whereIn('situacao', ['autorizada', 'pendente'])
-                ->value('situacao');
+                ->first(['situacao', 'modelo']);
 
-            if ($nfeAtiva === 'autorizada') {
-                throw new \Exception('Não é possível cancelar: a venda possui NF-e autorizada. Cancele a NF-e primeiro.');
-            }
+            if ($notaAtiva !== null) {
+                $tipo = (int) $notaAtiva->modelo === Nfe::MODELO_NFCE ? 'NFC-e' : 'NF-e';
 
-            if ($nfeAtiva === 'pendente') {
-                throw new \Exception('Não é possível cancelar: a venda possui NF-e pendente. Use "Consultar SEFAZ" na NF-e antes.');
+                throw new \Exception($notaAtiva->situacao === 'autorizada'
+                    ? 'Não é possível cancelar: a venda tem '.$tipo.' autorizada. Cancele a '.$tipo.' primeiro, no quadro Nota fiscal da venda.'
+                    : 'Não é possível cancelar: a '.$tipo.' desta venda está pendente. Use "Consultar SEFAZ" no quadro Nota fiscal da venda antes.');
             }
 
             $venda->load('itens');
@@ -202,6 +206,7 @@ class VendaRepository
                 ->delete();
 
             $venda->update(['situacao' => $situacao]);
+            $this->reabrirOrigens($origens);
 
             return $venda;
         });
@@ -216,8 +221,45 @@ class VendaRepository
                 throw new \Exception('Venda confirmada não pode ser excluída. Cancele-a primeiro.');
             }
 
-            return (bool) $venda->delete();
+            $origens = $this->origensDaVenda($venda);
+            $excluida = (bool) $venda->delete();
+            $this->reabrirOrigens($origens);
+
+            return $excluida;
         });
+    }
+
+    /**
+     * OS faturada e orçamento aprovado que geraram esta venda, travados. Deve ser chamado dentro de uma transação.
+     *
+     * @return array{os: ?OrdemServico, orcamento: ?Orcamento}
+     */
+    private function origensDaVenda(Venda $venda): array
+    {
+        return [
+            'os' => OrdemServico::where('empresa_id', $venda->empresa_id)
+                ->where('venda_id', $venda->id)
+                ->where('situacao', 'faturada')
+                ->lockForUpdate()
+                ->first(),
+            'orcamento' => Orcamento::where('empresa_id', $venda->empresa_id)
+                ->where('venda_id', $venda->id)
+                ->where('situacao', 'aprovado')
+                ->lockForUpdate()
+                ->first(),
+        ];
+    }
+
+    /**
+     * Venda cancelada ou excluída: a OS volta para "concluída" e o orçamento para "pendente", ambos sem a venda,
+     * e podem gerar outra venda. O vínculo fica na trilha de auditoria (e, na OS, também na observação da venda).
+     *
+     * @param  array{os: ?OrdemServico, orcamento: ?Orcamento}  $origens
+     */
+    private function reabrirOrigens(array $origens): void
+    {
+        $origens['os']?->update(['situacao' => 'concluida', 'venda_id' => null]);
+        $origens['orcamento']?->update(['situacao' => 'pendente', 'venda_id' => null]);
     }
 
     private function gerarComissaoDaVenda(Venda $venda): void

@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Entrada de Estoque')
-@section('page_title', 'Nova Entrada de Estoque')
+@section('title', 'Nova entrada de estoque')
+@section('page_title', 'Nova entrada de estoque')
 
 @section('breadcrumb')
-    <a href="{{ route('entrada-estoque.index') }}">Entradas de Estoque</a> / Nova
+    <a href="{{ route('entrada-estoque.index') }}">Entradas de estoque</a> / Nova
 @endsection
 
 @section('content')
@@ -65,7 +65,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Entrada</span>
+            <span class="card__title">Dados da entrada</span>
         </div>
 
         <form method="POST" action="{{ route('entrada-estoque.store') }}">

@@ -2,8 +2,8 @@
 
 namespace App\Models\Empresas;
 
-use App\Models\Clientes\Cliente;
 use App\Enums\TipoPessoa;
+use App\Models\Clientes\Cliente;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Crypt;
@@ -61,7 +61,7 @@ class Empresa extends Model
 
     protected $casts = [
         'tipo_pessoa' => TipoPessoa::class,
-        'ativo'       => 'boolean',
+        'ativo' => 'boolean',
         'nfe_ambiente' => 'integer',
         'nfe_sequencia' => 'integer',
         'crt' => 'integer',

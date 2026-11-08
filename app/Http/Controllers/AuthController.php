@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Usuarios\User;
+use App\Support\RecuperacaoSenha;
 use App\Support\SessaoLogin;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
@@ -85,11 +86,19 @@ class AuthController extends Controller
 
     public function showForgotPassword()
     {
+        if (! RecuperacaoSenha::disponivel()) {
+            return redirect()->route('login')->with('warning', RecuperacaoSenha::MENSAGEM_INDISPONIVEL);
+        }
+
         return view('auth.forgot-password');
     }
 
     public function sendResetLink(Request $request)
     {
+        if (! RecuperacaoSenha::disponivel()) {
+            return redirect()->route('login')->with('warning', RecuperacaoSenha::MENSAGEM_INDISPONIVEL);
+        }
+
         $request->validate(['email' => 'required|email']);
 
         $user = User::where('email', $request->email)->first();

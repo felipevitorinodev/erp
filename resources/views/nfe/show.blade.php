@@ -4,7 +4,7 @@
 @section('page_title', 'NF-e #' . $nfe->numero)
 
 @section('breadcrumb')
-    <a href="{{ route('nfe.index') }}">NF-e Emitidas</a>
+    <a href="{{ route('nfe.index') }}">NF-e emitidas</a>
     @if ($nfe->venda_id)
         / <a href="{{ route('venda.show', $nfe->venda_id) }}">Venda #{{ $nfe->venda->numero ?? $nfe->venda_id }}</a>
     @endif
@@ -126,7 +126,7 @@
             <div class="modal-box">
                 <div class="modal-box__header">
                     <span class="card__title">Cancelar NF-e</span>
-                    <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-cancelar-nfe">✕</button>
+                    <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-cancelar-nfe" aria-label="Fechar">✕</button>
                 </div>
                 <form method="POST" action="{{ route('nfe.cancelar', $nfe) }}">
                     @csrf

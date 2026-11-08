@@ -17,7 +17,7 @@ class GrupoService
         $grupos = $this->repository->index($request);
 
         return view('grupo.index', [
-            'grupos'  => $grupos,
+            'grupos' => $grupos,
             'filtros' => $request->only(['busca']),
         ]);
     }

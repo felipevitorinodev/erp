@@ -116,7 +116,7 @@ class OrdemServicoRepository
         $atual = OrdemServico::whereKey($os->id)->lockForUpdate()->firstOrFail();
 
         if (! $atual->estaAberta()) {
-            throw new \RuntimeException('Esta ordem de serviço já foi encerrada (situação atual: ' . $atual->situacaoLabel() . ').');
+            throw new \RuntimeException('Esta ordem de serviço já foi encerrada (situação atual: '.$atual->situacaoLabel().').');
         }
 
         return $atual;

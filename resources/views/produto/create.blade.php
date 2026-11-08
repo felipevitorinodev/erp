@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Novo Produto')
-@section('page_title', 'Novo Produto')
+@section('title', 'Novo produto')
+@section('page_title', 'Novo produto')
 
 @section('breadcrumb')
-    <a href="{{ route('produto.index') }}">Produtos</a> / Novo Produto
+    <a href="{{ route('produto.index') }}">Produtos</a> / Novo produto
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados do Produto</span>
+            <span class="card__title">Dados do produto</span>
         </div>
 
         <form method="POST" action="{{ route('produto.store') }}">

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\ContasPagar;
 
 use App\Models\CategoriasFinanceiras\CategoriaFinanceira;
+use App\Models\Fornecedores\Fornecedor;
 use App\Traits\ConversorMoeda;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -19,13 +20,13 @@ class ContaPagarRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'descricao'       => 'required|string|max:200',
-            'fornecedor_id'   => 'nullable|exists:fornecedores,id',
-            'valor'           => 'required',
+            'descricao' => 'required|string|max:200',
+            'fornecedor_id' => 'nullable|exists:fornecedores,id',
+            'valor' => 'required',
             'data_vencimento' => 'required|date',
             'forma_pagamento' => 'nullable|string|max:100',
-            'categoria_id'    => 'nullable|exists:categorias_financeiras,id',
-            'observacoes'     => 'nullable|string',
+            'categoria_id' => 'nullable|exists:categorias_financeiras,id',
+            'observacoes' => 'nullable|string',
         ];
 
         if ($this->isMethod('post')) {
@@ -52,7 +53,7 @@ class ContaPagarRequest extends FormRequest
                     ->where('ativo', true)
                     ->exists();
 
-                if (!$valida) {
+                if (! $valida) {
                     $validator->errors()->add('categoria_id', 'Categoria inválida para conta a pagar.');
                 }
             }
@@ -60,10 +61,10 @@ class ContaPagarRequest extends FormRequest
             $empresaId = (int) auth()->user()->empresa_id;
 
             if ($this->filled('fornecedor_id')) {
-                $fornecedorOk = \App\Models\Fornecedores\Fornecedor::where('id', $this->input('fornecedor_id'))
+                $fornecedorOk = Fornecedor::where('id', $this->input('fornecedor_id'))
                     ->where('empresa_id', $empresaId)
                     ->exists();
-                if (!$fornecedorOk) {
+                if (! $fornecedorOk) {
                     $validator->errors()->add('fornecedor_id', 'Fornecedor inválido para esta empresa.');
                 }
             }
@@ -74,9 +75,9 @@ class ContaPagarRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'data_vencimento.after_or_equal' => 'A data de vencimento não pode ser anterior a hoje.',
         ];
     }
@@ -84,19 +85,19 @@ class ContaPagarRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'descricao'       => 'descrição',
-            'fornecedor_id'   => 'fornecedor',
-            'valor'           => 'valor',
+            'descricao' => 'descrição',
+            'fornecedor_id' => 'fornecedor',
+            'valor' => 'valor',
             'data_vencimento' => 'data de vencimento',
             'forma_pagamento' => 'forma de pagamento',
-            'categoria_id'    => 'categoria',
-            'observacoes'     => 'observações',
+            'categoria_id' => 'categoria',
+            'observacoes' => 'observações',
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        if (!$this->filled('categoria_id')) {
+        if (! $this->filled('categoria_id')) {
             $this->merge(['categoria_id' => null]);
         }
 

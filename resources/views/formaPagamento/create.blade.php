@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Forma de Pagamento')
-@section('page_title', 'Nova Forma de Pagamento')
+@section('title', 'Nova forma de pagamento')
+@section('page_title', 'Nova forma de pagamento')
 
 @section('breadcrumb')
-    <a href="{{ route('formaPagamento.index') }}">Formas de Pagamento</a> / Nova
+    <a href="{{ route('formaPagamento.index') }}">Formas de pagamento</a> / Nova
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Forma de Pagamento</span>
+            <span class="card__title">Dados da forma de pagamento</span>
         </div>
 
         <form method="POST" action="{{ route('formaPagamento.store') }}">

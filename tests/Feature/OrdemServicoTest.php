@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Comissoes\Comissao;
+use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
@@ -407,6 +408,60 @@ class OrdemServicoTest extends TestCase
             'comissao_os_percentual' => $os,
             'comissao_os_base' => $base,
         ]);
+    }
+
+    public function test_cancelar_a_venda_da_os_reabre_a_os_para_faturar_de_novo(): void
+    {
+        $os = $this->osComItens('Dinheiro');
+        app(OrdemServicoService::class)->faturar($os);
+        $venda = Venda::firstOrFail();
+
+        $this->post(route('venda.cancelar', $venda))
+            ->assertSessionHas('success', fn (string $mensagem) => str_contains($mensagem, 'A OS #'.$os->numero.' voltou'));
+
+        $os->refresh();
+        $this->assertSame('concluida', $os->situacao);
+        $this->assertNull($os->venda_id);
+        $this->assertSame('cancelada', $venda->fresh()->situacao);
+        $this->assertEquals(5.0, (float) $this->peca->fresh()->estoque_atual);
+
+        app(OrdemServicoService::class)->faturar($os);
+
+        $this->assertSame(2, Venda::count());
+        $os->refresh();
+        $this->assertSame('faturada', $os->situacao);
+        $this->assertNotSame($venda->id, $os->venda_id);
+        $this->assertEquals(4.0, (float) $this->peca->fresh()->estoque_atual);
+    }
+
+    public function test_excluir_a_venda_em_andamento_da_os_reabre_a_os(): void
+    {
+        $os = $this->osComItens('Boleto');
+        app(OrdemServicoService::class)->faturar($os);
+        $venda = Venda::firstOrFail();
+
+        $this->delete(route('venda.destroy', $venda))->assertSessionHas('success');
+
+        $os->refresh();
+        $this->assertSame('concluida', $os->situacao);
+        $this->assertNull($os->venda_id);
+        $this->assertSoftDeleted($venda);
+    }
+
+    public function test_cancelamento_recusado_mantem_a_os_faturada(): void
+    {
+        $os = $this->osComItens('Boleto');
+        app(OrdemServicoService::class)->faturar($os);
+        $venda = Venda::firstOrFail();
+        app(VendaRepository::class)->confirmar($venda);
+        ContaReceber::where('venda_id', $venda->id)->update(['situacao' => 'paga']);
+
+        $this->post(route('venda.cancelar', $venda))->assertSessionHas('error');
+
+        $os->refresh();
+        $this->assertSame('faturada', $os->situacao);
+        $this->assertSame($venda->id, $os->venda_id);
+        $this->assertSame('confirmada', $venda->fresh()->situacao);
     }
 
     private function osComItens(string $forma, ?int $tecnicoId = null): OrdemServico

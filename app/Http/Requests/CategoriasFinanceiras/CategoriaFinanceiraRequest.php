@@ -14,8 +14,8 @@ class CategoriaFinanceiraRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nome'  => 'required|string|max:100',
-            'tipo'  => 'required|in:receita,despesa',
+            'nome' => 'required|string|max:100',
+            'tipo' => 'required|in:receita,despesa',
             'ativo' => 'nullable|boolean',
         ];
     }
@@ -24,8 +24,8 @@ class CategoriaFinanceiraRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'max'      => 'O campo :attribute precisa ter no máximo :max caracteres.',
-            'in'       => 'O campo :attribute é inválido.',
+            'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
+            'in' => 'O campo :attribute é inválido.',
         ];
     }
 

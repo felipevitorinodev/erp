@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Formas de Pagamento')
-@section('page_title', 'Formas de Pagamento')
+@section('title', 'Formas de pagamento')
+@section('page_title', 'Formas de pagamento')
 
 @section('page_actions')
-    <a href="{{ route('formaPagamento.create') }}" class="btn btn--primary btn--sm">+ Nova Forma</a>
+    <a href="{{ route('formaPagamento.create') }}" class="btn btn--primary btn--sm">+ Nova forma de pagamento</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Formas de Pagamento</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -38,7 +38,7 @@
                         <tr>
                             <th>Nome</th>
                             <th>Tipo</th>
-                            <th>Gera Conta a Receber</th>
+                            <th>Gera conta a receber</th>
                             <th>Vencimento</th>
                             <th>Situação</th>
                             <th class="col-actions">Ações</th>
@@ -55,7 +55,7 @@
                                         <span class="badge badge--info">À vista</span>
                                     @endif
                                 </td>
-                                <td data-label="Gera Conta a Receber">{{ $forma->gera_conta_receber ? 'Sim' : 'Não' }}</td>
+                                <td data-label="Gera conta a receber">{{ $forma->gera_conta_receber ? 'Sim' : 'Não' }}</td>
                                 <td data-label="Vencimento">
                                     @if($forma->gera_conta_receber)
                                         {{ $forma->dias_vencimento }} dia(s)
@@ -92,11 +92,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    Nenhuma forma de pagamento cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="carteira"
+                                :colspan="6"
+                                titulo="Nenhuma forma de pagamento cadastrada"
+                                texto="Cadastre as formas aceitas, como dinheiro, Pix e cartão, para finalizar as vendas."
+                                :acao="route('formaPagamento.create')"
+                                acao-texto="+ Nova forma de pagamento"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

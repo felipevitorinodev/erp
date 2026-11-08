@@ -29,8 +29,8 @@ class TenantSafetyTest extends TestCase
         // criar usuário da empresa B
         $user = User::factory()->create([
             'empresa_id' => $empresaB->id,
-            'perfil'     => 'admin',
-            'ativo'      => true,
+            'perfil' => 'admin',
+            'ativo' => true,
         ]);
 
         // autenticar e tentar acessar rota de edição do produto (deve retornar 404)
@@ -38,4 +38,3 @@ class TenantSafetyTest extends TestCase
         $response->assertStatus(404);
     }
 }
-

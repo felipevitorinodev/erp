@@ -8,10 +8,8 @@ use App\Models\Grupos\Grupo;
 use App\Services\Grupos\GrupoService;
 use Illuminate\Http\Request;
 
-
 class GrupoController extends Controller
 {
-
     public function __construct(
         protected GrupoService $service
     ) {}
@@ -21,15 +19,18 @@ class GrupoController extends Controller
         return $this->service->index($request);
     }
 
-    public function create(){
+    public function create()
+    {
         return $this->service->create();
-    } 
+    }
 
-    public function store(GrupoRequest $request){
+    public function store(GrupoRequest $request)
+    {
         return $this->service->store($request);
     }
 
-    public function show(){
+    public function show()
+    {
         return false;
     }
 
@@ -43,7 +44,8 @@ class GrupoController extends Controller
         return $this->service->update($request, $grupo);
     }
 
-    public function destroy(Grupo $grupo){
+    public function destroy(Grupo $grupo)
+    {
         return $this->service->destroy($grupo->id);
     }
 }

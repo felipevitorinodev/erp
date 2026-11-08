@@ -4,7 +4,7 @@
 @section('page_title', 'Grupos')
 
 @section('page_actions')
-    <a href="{{ route('grupo.create') }}" class="btn btn--primary btn--sm">+ Nova grupo</a>
+    <a href="{{ route('grupo.create') }}" class="btn btn--primary btn--sm">+ Novo grupo</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de grupos</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -37,7 +37,7 @@
                     <thead>
                         <tr>
                             <th>Nome</th>
-                            <th>grupo Pai</th>
+                            <th>Grupo pai</th>
                             <th>Situação</th>
                             <th class="col-actions">Ações</th>
                         </tr>
@@ -46,12 +46,12 @@
                         @forelse($grupos as $grupo)
                             <tr>
                                 <td data-label="Nome">{{ $grupo->nome }}</td>
-                                <td data-label="grupo Pai">{{ $grupo->parent->nome ?? '—' }}</td>
+                                <td data-label="Grupo pai">{{ $grupo->parent->nome ?? '—' }}</td>
                                 <td data-label="Situação">
                                     @if($grupo->ativo)
-                                        <span class="badge badge--success">Ativa</span>
+                                        <span class="badge badge--success">Ativo</span>
                                     @else
-                                        <span class="badge badge--neutral">Inativa</span>
+                                        <span class="badge badge--neutral">Inativo</span>
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
@@ -76,11 +76,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    Nenhuma grupo cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="etiquetas"
+                                :colspan="4"
+                                titulo="Nenhum grupo cadastrado"
+                                texto="Grupos organizam os produtos e facilitam buscas e relatórios."
+                                :acao="route('grupo.create')"
+                                acao-texto="+ Novo grupo"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

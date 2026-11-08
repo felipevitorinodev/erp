@@ -20,15 +20,31 @@ class NfceRepository
             ->get(['id', 'modelo', 'situacao', 'ambiente', 'serie', 'codigo_status', 'numero']);
     }
 
-    public function existePendente(int $empresaId, int $ambiente, string $serie): bool
+    /** A NFC-e pendente que trava a série (com a venda, para dizer onde consultar). */
+    public function pendenteDaSerie(int $empresaId, int $ambiente, string $serie): ?Nfe
     {
         return Nfe::query()
+            ->with('venda:id,numero')
             ->where('empresa_id', $empresaId)
             ->where('modelo', Nfe::MODELO_NFCE)
             ->where('ambiente', $ambiente)
             ->where('serie', $serie)
             ->where('situacao', 'pendente')
-            ->exists();
+            ->oldest('id')
+            ->first();
+    }
+
+    /** NFC-e da empresa esperando resposta da SEFAZ, em qualquer série e ambiente. */
+    public function pendentes(int $empresaId): Collection
+    {
+        return Nfe::query()
+            ->with('venda:id,numero')
+            ->where('empresa_id', $empresaId)
+            ->where('modelo', Nfe::MODELO_NFCE)
+            ->where('situacao', 'pendente')
+            ->orderBy('id')
+            ->limit(10)
+            ->get();
     }
 
     public function reabrirRejeitada(Nfe $nfe): Nfe

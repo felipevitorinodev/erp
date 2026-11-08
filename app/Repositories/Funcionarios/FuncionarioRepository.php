@@ -26,6 +26,7 @@ class FuncionarioRepository
     public function store(array $data)
     {
         $data['empresa_id'] = auth()->user()->empresa_id;
+
         return Funcionario::create($data);
     }
 

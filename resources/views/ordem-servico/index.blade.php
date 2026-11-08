@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Ordens de Serviço')
-@section('page_title', 'Ordens de Serviço')
+@section('title', 'Ordens de serviço')
+@section('page_title', 'Ordens de serviço')
 
 @section('page_actions')
     <a href="{{ route('ordem-servico.create') }}" class="btn btn--primary btn--sm">+ Nova OS</a>
@@ -48,7 +48,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Ordens de Serviço</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -108,11 +108,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted empty-state">
-                                    Nenhuma ordem de serviço cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="ferramentas"
+                                :colspan="9"
+                                titulo="Nenhuma ordem de serviço cadastrada"
+                                texto="Registre o equipamento e o problema e acompanhe até o faturamento."
+                                :acao="route('ordem-servico.create')"
+                                acao-texto="+ Nova OS"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

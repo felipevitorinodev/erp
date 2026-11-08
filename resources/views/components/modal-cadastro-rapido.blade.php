@@ -2,10 +2,10 @@
     Modal de Cadastro Rápido
     Uso: @include('components.modal-cadastro-rapido', [
         'id' => 'modal-novo-grupo',
-        'titulo' => 'Novo Grupo',
+        'titulo' => 'Novo grupo',
         'rota' => route('api.grupos.store'),
         'campos' => [
-            ['name' => 'nome', 'label' => 'Nome do Grupo', 'type' => 'text', 'required' => true],
+            ['name' => 'nome', 'label' => 'Nome do grupo', 'type' => 'text', 'required' => true],
             ['name' => 'descricao', 'label' => 'Descrição', 'type' => 'textarea'],
         ],
         'onSuccess' => 'function(data) { /* callback */ }'

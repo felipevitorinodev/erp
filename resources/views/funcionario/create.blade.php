@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Novo Funcionário')
-@section('page_title', 'Novo Funcionário')
+@section('title', 'Novo funcionário')
+@section('page_title', 'Novo funcionário')
 
 @section('breadcrumb')
-    <a href="{{ route('funcionario.index') }}">Funcionários</a> / Novo Funcionário
+    <a href="{{ route('funcionario.index') }}">Funcionários</a> / Novo funcionário
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados do Funcionário</span>
+            <span class="card__title">Dados do funcionário</span>
         </div>
 
         <form method="POST" action="{{ route('funcionario.store') }}">
@@ -48,7 +48,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Data de Nascimento</label>
+                            <label class="form-label">Data de nascimento</label>
                             <input type="date" name="data_nascimento"
                                 class="form-control @error('data_nascimento') is-invalid @enderror"
                                 value="{{ old('data_nascimento') }}">
@@ -144,7 +144,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Tipo de Contrato</label>
+                            <label class="form-label">Tipo de contrato</label>
                             <select name="tipo_contrato" class="form-control @error('tipo_contrato') is-invalid @enderror">
                                 <option value="">Selecione</option>
                                 @foreach(['CLT', 'PJ', 'Autonomo', 'Estagio'] as $tipo)
@@ -157,7 +157,7 @@
 
                     <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
                         <div class="form-group">
-                            <label class="form-label">Data de Admissão</label>
+                            <label class="form-label">Data de admissão</label>
                             <input type="date" name="data_admissao"
                                 class="form-control @error('data_admissao') is-invalid @enderror"
                                 value="{{ old('data_admissao') }}">
@@ -165,7 +165,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Data de Demissão</label>
+                            <label class="form-label">Data de demissão</label>
                             <input type="date" name="data_demissao"
                                 class="form-control @error('data_demissao') is-invalid @enderror"
                                 value="{{ old('data_demissao') }}">
@@ -187,8 +187,7 @@
                     <div class="form-section__title">Observações</div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Observações</label>
-                            <textarea style="resize: none;" name="observacoes"
+                            <textarea aria-label="Observações" style="resize: none;" name="observacoes"
                                 class="form-control @error('observacoes') is-invalid @enderror" rows="3"
                                 maxlength="1000">{{ old('observacoes') }}</textarea>
                             @error('observacoes')<span class="form-error">{{ $message }}</span>@enderror

@@ -6,6 +6,7 @@ use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Usuarios\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class CadastrosIsolamentoTest extends TestCase
@@ -29,7 +30,7 @@ class CadastrosIsolamentoTest extends TestCase
         ]));
     }
 
-    private function postCliente(): \Illuminate\Testing\TestResponse
+    private function postCliente(): TestResponse
     {
         return $this->post(route('cliente.store'), [
             'empresa_id' => $this->empresa->id,

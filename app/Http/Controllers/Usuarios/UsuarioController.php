@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Usuarios;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Usuarios\UsuarioRequest;
 use App\Models\Usuarios\User;
+use App\Support\Auditoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,13 +36,18 @@ class UsuarioController extends Controller
 
     public function store(UsuarioRequest $request)
     {
-        User::create([
+        $usuario = User::create([
             'empresa_id' => auth()->user()->empresa_id,
             'name' => $request->name,
             'email' => $request->email,
             'password' => $request->password,
             'perfil' => $request->perfil,
             'ativo' => $request->boolean('ativo', true),
+        ]);
+
+        Auditoria::registrar('usuario.criado', 'usuario', $usuario->id, [
+            'perfil' => $usuario->perfil,
+            'ativo' => (bool) $usuario->ativo,
         ]);
 
         return redirect()->route('usuario.index')
@@ -84,7 +90,15 @@ class UsuarioController extends Controller
             $dados['password'] = $request->password;
         }
 
+        $antes = ['perfil' => $usuario->perfil, 'ativo' => (bool) $usuario->ativo];
+
         $usuario->update($dados);
+
+        Auditoria::registrar('usuario.alterado', 'usuario', $usuario->id, [
+            'antes' => $antes,
+            'depois' => ['perfil' => $usuario->perfil, 'ativo' => (bool) $usuario->ativo],
+            'senha_alterada' => $request->filled('password'),
+        ]);
 
         $sessoes = DB::table('sessions')->where('user_id', $usuario->id);
         if (! $usuario->ativo) {
@@ -118,6 +132,10 @@ class UsuarioController extends Controller
 
         DB::table('sessions')->where('user_id', $usuario->id)->delete();
         $usuario->delete();
+
+        Auditoria::registrar('usuario.excluido', 'usuario', $usuario->id, [
+            'perfil' => $usuario->perfil,
+        ]);
 
         return redirect()->route('usuario.index')
             ->with('success', 'Usuário excluído com sucesso.');

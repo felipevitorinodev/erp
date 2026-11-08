@@ -1,7 +1,7 @@
 @php $produto = $produto ?? null; @endphp
 
 <div class="form-section">
-    <div class="form-section__title">Dados do produto</div>
+    <div class="form-section__title">Identificação</div>
     <div class="form-grid form-grid--col-4">
         <div class="form-group form-group--span-1">
             <label class="form-label">Código</label>
@@ -22,7 +22,7 @@
         </div>
 
         <div class="form-group form-group--span-2">
-            <label class="form-label">Código de Barras</label>
+            <label class="form-label">Código de barras</label>
             <input type="text" name="codigo_barras" class="form-control @error('codigo_barras') is-invalid @enderror"
                 value="{{ old('codigo_barras', $produto->codigo_barras ?? '') }}" maxlength="50">
             @error('codigo_barras')
@@ -60,7 +60,7 @@
 
         <div class="form-group">
             <label class="form-label">
-                Unidade de Medida
+                Unidade de medida
                 <button type="button" class="btn-add-inline" id="btn-add-unidade" title="Criar nova unidade">+</button>
             </label>
             <div class="autocomplete-wrap">
@@ -77,7 +77,7 @@
 
         <div class="form-group form-group--span-2">
             <label class="form-label">
-                Fornecedor Principal
+                Fornecedor principal
                 <button type="button" class="btn-add-inline" id="btn-add-fornecedor" title="Criar novo fornecedor">+</button>
             </label>
             <div class="autocomplete-wrap">
@@ -124,7 +124,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">CFOP Padrão</label>
+            <label class="form-label">CFOP padrão</label>
             <input type="text" name="cfop_padrao" class="form-control @error('cfop_padrao') is-invalid @enderror"
                 value="{{ old('cfop_padrao', $produto->cfop_padrao ?? '') }}" maxlength="5">
             @error('cfop_padrao')
@@ -165,13 +165,13 @@
     <div class="form-section__title">Preços e estoque</div>
     <div class="form-grid form-grid--col-4">
         <div class="form-group">
-            <label class="form-label">Preço de Custo</label>
+            <label class="form-label">Preço de custo</label>
             @include('components.input-numeric', [
                 'name' => 'preco_custo',
                 'value' => old(
                     'preco_custo',
                     isset($produto) ? number_format($produto->preco_custo ?? 0, 2, ',', '.') : '0,00'),
-                'class' => $errors->has('preco_custo') ? 'is-invalid' : '',
+                'class' => ($errors->has('preco_custo') ? 'is-invalid' : '') . ' text-right',
                 'decimals' => 2,
             ])
             @error('preco_custo')
@@ -180,13 +180,13 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Preço de Venda</label>
+            <label class="form-label">Preço de venda</label>
             @include('components.input-numeric', [
                 'name' => 'preco_venda',
                 'value' => old(
                     'preco_venda',
                     isset($produto) ? number_format($produto->preco_venda ?? 0, 2, ',', '.') : '0,00'),
-                'class' => $errors->has('preco_venda') ? 'is-invalid' : '',
+                'class' => ($errors->has('preco_venda') ? 'is-invalid' : '') . ' text-right',
                 'decimals' => 2,
             ])
             @error('preco_venda')
@@ -195,13 +195,13 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Preço Mínimo</label>
+            <label class="form-label">Preço mínimo</label>
             @include('components.input-numeric', [
                 'name' => 'preco_minimo',
                 'value' => old(
                     'preco_minimo',
                     isset($produto) ? number_format($produto->preco_minimo ?? 0, 2, ',', '.') : '0,00'),
-                'class' => $errors->has('preco_minimo') ? 'is-invalid' : '',
+                'class' => ($errors->has('preco_minimo') ? 'is-invalid' : '') . ' text-right',
                 'decimals' => 2,
             ])
             @error('preco_minimo')
@@ -210,7 +210,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Controla Estoque?</label>
+            <label class="form-label">Controla estoque?</label>
             <select name="controla_estoque" class="form-control">
                 <option value="1"
                     {{ old('controla_estoque', $produto->controla_estoque ?? 1) == 1 ? 'selected' : '' }}>Sim
@@ -224,7 +224,7 @@
 
     <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
         <div class="form-group">
-            <label class="form-label">Estoque Mínimo</label>
+            <label class="form-label">Estoque mínimo</label>
             @include('components.input-quantity', [
                 'name' => 'estoque_minimo',
                 'value' => old(
@@ -239,7 +239,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Estoque Máximo</label>
+            <label class="form-label">Estoque máximo</label>
             @include('components.input-quantity', [
                 'name' => 'estoque_maximo',
                 'value' => old(
@@ -249,6 +249,7 @@
                         : ''),
                 'class' => ($errors->has('estoque_maximo') ? 'is-invalid' : '') . ' text-right input-qtd',
                 'decimals' => 2,
+                'placeholder' => 'Opcional',
             ])
             @error('estoque_maximo')
                 <span class="form-error">{{ $message }}</span>
@@ -256,7 +257,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Estoque Atual</label>
+            <label class="form-label">Estoque atual</label>
             @if (isset($produto))
                 <input type="text" class="form-control text-right" readonly tabindex="-1"
                     value="{{ number_format($produto->estoque_atual ?? 0, 2, ',', '.') }}">
@@ -277,11 +278,10 @@
 </div>
 
 <div class="form-section">
-    <div class="form-section__title">Observações</div>
+    <div class="form-section__title">Descrição</div>
     <div class="form-grid">
         <div class="form-group">
-            <label class="form-label">Descrição</label>
-            <textarea name="descricao" class="form-control @error('descricao') is-invalid @enderror" rows="3">{{ old('descricao', $produto->descricao ?? '') }}</textarea>
+            <textarea aria-label="Descrição" name="descricao" class="form-control @error('descricao') is-invalid @enderror" rows="3">{{ old('descricao', $produto->descricao ?? '') }}</textarea>
             @error('descricao')
                 <span class="form-error">{{ $message }}</span>
             @enderror
@@ -293,16 +293,16 @@
 @push('modals')
 @include('components.modal-cadastro-rapido', [
     'id' => 'modal-novo-grupo',
-    'titulo' => 'Novo Grupo',
+    'titulo' => 'Novo grupo',
     'rota' => route('api.grupos.store'),
     'campos' => [
-        ['name' => 'nome', 'label' => 'Nome do Grupo', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: Bebidas'],
+        ['name' => 'nome', 'label' => 'Nome do grupo', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: Bebidas'],
     ],
 ])
 
 @include('components.modal-cadastro-rapido', [
     'id' => 'modal-nova-unidade',
-    'titulo' => 'Nova Unidade de Medida',
+    'titulo' => 'Nova unidade de medida',
     'rota' => route('api.unidades-medida.store'),
     'campos' => [
         ['name' => 'nome', 'label' => 'Nome', 'type' => 'text', 'required' => true, 'placeholder' => 'Ex: Unidade'],
@@ -312,10 +312,10 @@
 
 @include('components.modal-cadastro-rapido', [
     'id' => 'modal-novo-fornecedor',
-    'titulo' => 'Novo Fornecedor',
+    'titulo' => 'Novo fornecedor',
     'rota' => route('api.fornecedores.store'),
     'campos' => [
-        ['name' => 'nome', 'label' => 'Nome / Razão Social', 'type' => 'text', 'required' => true],
+        ['name' => 'nome', 'label' => 'Nome / razão social', 'type' => 'text', 'required' => true],
         ['name' => 'cnpj', 'label' => 'CNPJ', 'type' => 'text', 'placeholder' => '00.000.000/0000-00'],
         ['name' => 'telefone', 'label' => 'Telefone', 'type' => 'text', 'placeholder' => '(00) 00000-0000'],
     ],

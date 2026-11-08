@@ -9,6 +9,7 @@ use App\Models\Estoque\EntradaEstoque;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
 use App\Repositories\Estoque\EntradaEstoqueRepository;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -62,7 +63,7 @@ class EntradaEstoqueService
         EntradaEstoque::onlyTrashed()
             ->where('empresa_id', $empresaId)
             ->where('chave_acesso', $parsed['nota']['chave_acesso'])
-            ->update(['chave_acesso' => null, 'xml_importado' => null]);
+            ->update(['chave_acesso' => null]); // o XML continua guardado na entrada excluída
 
         $entradaExistente = EntradaEstoque::where('empresa_id', $empresaId)
             ->where('chave_acesso', $parsed['nota']['chave_acesso'])
@@ -206,7 +207,7 @@ class EntradaEstoqueService
                 EntradaEstoque::onlyTrashed()
                     ->where('empresa_id', $empresaId)
                     ->where('chave_acesso', $chaveAcesso)
-                    ->update(['chave_acesso' => null, 'xml_importado' => null]);
+                    ->update(['chave_acesso' => null]); // o XML continua guardado na entrada excluída
 
                 $entradaExistente = EntradaEstoque::where('empresa_id', $empresaId)
                     ->where('chave_acesso', $chaveAcesso)
@@ -404,6 +405,11 @@ class EntradaEstoqueService
                 ->with('error', MensagemPublica::de($ex));
         }
 
+        Auditoria::registrar('entrada_estoque.cancelada', 'entrada_estoque', $entradaEstoque->id, [
+            'numero' => $entradaEstoque->numero,
+            'total' => (float) $entradaEstoque->total,
+        ]);
+
         return redirect()->route('entrada-estoque.show', $entradaEstoque)
             ->with('success', 'Entrada #'.$entradaEstoque->numero.' cancelada. Estoque e conta a pagar revertidos.');
     }
@@ -421,6 +427,12 @@ class EntradaEstoqueService
             return redirect()->route('entrada-estoque.show', $entradaEstoque)
                 ->with('error', MensagemPublica::de($ex));
         }
+
+        Auditoria::registrar('entrada_estoque.excluida', 'entrada_estoque', $entradaEstoque->id, [
+            'numero' => $numero,
+            'situacao_anterior' => $entradaEstoque->situacao,
+            'total' => (float) $entradaEstoque->total,
+        ]);
 
         $msg = $eraConfirmada
             ? 'Compra #'.$numero.' excluída. Estoque e conta a pagar foram revertidos.'

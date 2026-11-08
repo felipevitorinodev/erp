@@ -10,10 +10,12 @@ use App\Services\Empresas\EmpresaService;
 use App\Services\Nfes\NfeBuilderService;
 use App\Services\Nfes\NfeSenderService;
 use App\Services\Nfes\NfeVinculoFiscal;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use NFePHP\Common\Certificate;
 use NFePHP\Common\Keys;
 use NFePHP\DA\NFe\Danfce;
 use RuntimeException;
@@ -93,11 +95,11 @@ class NfceService
             }
 
             if ($nfes->where('situacao', 'pendente')->isNotEmpty()) {
-                return 'Esta venda já possui uma nota pendente. Consulte a SEFAZ antes de emitir de novo. Nenhum número novo foi usado.';
+                return 'Esta venda já tem uma nota pendente. Use "Consultar SEFAZ" no quadro Nota fiscal da venda antes de emitir de novo. Nenhum número novo foi usado.';
             }
 
-            if ($this->repository->existePendente((int) $empresa->id, $ambiente, $serie)) {
-                return 'Há uma NFC-e pendente de confirmação na SEFAZ. Consulte essa nota antes de emitir outra. Nenhum número novo foi usado.';
+            if ($pendente = $this->repository->pendenteDaSerie((int) $empresa->id, $ambiente, $serie)) {
+                return 'A NFC-e da venda nº '.($pendente->venda?->numero ?? '—').' está pendente na SEFAZ. Abra essa venda e use "Consultar SEFAZ" antes de emitir outra. Nenhum número novo foi usado.';
             }
 
             $ultima = $nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFCE);
@@ -168,6 +170,112 @@ class NfceService
         );
     }
 
+    /**
+     * Resolve a NFC-e que ficou pendente (sem resposta da SEFAZ): pergunta à SEFAZ pela chave.
+     *
+     * @return array{ok: bool, situacao: ?string, mensagem: string, numero: ?string, chave: ?string, danfe_url: ?string}
+     */
+    public function consultar(Nfe $nfe): array
+    {
+        $this->autorizarNota($nfe);
+
+        if ($nfe->situacao !== 'pendente') {
+            return $this->resposta($nfe->situacao === 'autorizada', $nfe, 'Esta NFC-e não está pendente. Nada foi alterado.');
+        }
+
+        if (blank($nfe->chave_acesso) || blank($nfe->xml_assinado)) {
+            // Sem XML assinado a nota nunca foi transmitida: o número volta a ser usado na próxima emissão.
+            $nfe = $this->repository->atualizar($nfe, [
+                'situacao' => 'rejeitada',
+                'motivo_status' => 'A NFC-e não chegou a ser transmitida à SEFAZ.',
+            ]);
+
+            return $this->resposta(false, $nfe, 'A NFC-e não chegou a ser enviada à SEFAZ. Você pode emitir de novo: o mesmo número será usado.');
+        }
+
+        try {
+            $sender = $this->sender($this->repository->empresa((int) $nfe->empresa_id));
+        } catch (RuntimeException $e) {
+            return $this->resposta(false, $nfe, MensagemPublica::de($e));
+        }
+
+        $resultado = $sender->consultar($nfe->chave_acesso, $nfe->xml_assinado, (int) $nfe->ambiente);
+        $nfe = $this->gravarResultado($nfe, $resultado);
+
+        return $this->resposta($nfe->situacao === 'autorizada', $nfe, $this->mensagemConsulta($nfe));
+    }
+
+    /**
+     * Cancela a NFC-e autorizada na SEFAZ (evento 110111). A venda continua confirmada:
+     * cancelar a venda é outro passo, liberado depois deste.
+     *
+     * @return array{ok: bool, situacao: ?string, mensagem: string, numero: ?string, chave: ?string, danfe_url: ?string}
+     */
+    public function cancelar(Nfe $nfe, string $justificativa): array
+    {
+        $this->autorizarNota($nfe);
+
+        if ($nfe->situacao !== 'autorizada') {
+            return $this->resposta(false, $nfe, 'Só uma NFC-e autorizada pode ser cancelada.');
+        }
+
+        if (! $nfe->podeCancelar()) {
+            return $this->resposta(false, $nfe, 'O prazo para cancelar esta NFC-e já passou. Fale com o contador sobre a nota de devolução.');
+        }
+
+        if (blank($nfe->chave_acesso) || blank($nfe->protocolo)) {
+            return $this->resposta(false, $nfe, 'Esta NFC-e não tem chave ou protocolo de autorização. Use "Consultar SEFAZ" antes.');
+        }
+
+        try {
+            $sender = $this->sender($this->repository->empresa((int) $nfe->empresa_id));
+        } catch (RuntimeException $e) {
+            return $this->resposta(false, $nfe, MensagemPublica::de($e));
+        }
+
+        $resultado = $sender->cancelar($nfe->chave_acesso, $justificativa, $nfe->protocolo, (int) $nfe->ambiente);
+
+        if (($resultado['status'] ?? '') === 'cancelada') {
+            $nfe = $this->repository->atualizar($nfe, [
+                'situacao' => 'cancelada',
+                'codigo_status' => $resultado['codigo'] ?? '135',
+                'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Cancelamento homologado'), 0, 255),
+                'xml_cancelamento' => $resultado['xml_evento'] ?? null,
+                'data_cancelamento' => now(),
+            ]);
+            Auditoria::registrar('nfce.cancelada', 'nfe', $nfe->id, ['venda_id' => $nfe->venda_id, 'numero' => $nfe->numero]);
+
+            return $this->resposta(true, $nfe, 'NFC-e nº '.(int) $nfe->numero.' cancelada na SEFAZ.');
+        }
+
+        $codigo = (string) ($resultado['codigo'] ?? '');
+        $mensagem = 'A SEFAZ não aceitou o cancelamento: '.rtrim((string) ($resultado['motivo'] ?? 'motivo não informado'), '.')
+            .($codigo !== '' ? ' (código '.$codigo.').' : '.');
+        if ($codigo === '501') {
+            $mensagem .= ' O prazo de cancelamento acabou. Fale com o contador sobre a nota de devolução.';
+        }
+
+        return $this->resposta(false, $nfe, $mensagem);
+    }
+
+    /** XML autorizado (ou o do evento de cancelamento) para o contador. */
+    public function xml(Nfe $nfe, bool $cancelamento = false)
+    {
+        $this->autorizarNota($nfe);
+
+        $conteudo = $cancelamento ? $nfe->xml_cancelamento : $nfe->xml_autorizado;
+        if (blank($conteudo)) {
+            return back()->with('error', 'O XML desta NFC-e não está disponível.');
+        }
+
+        $nome = ($nfe->chave_acesso ?: $nfe->numero).($cancelamento ? '-procEventoNFe' : '-nfce').'.xml';
+
+        return response($conteudo, 200, [
+            'Content-Type' => 'application/xml',
+            'Content-Disposition' => 'attachment; filename="'.$nome.'"',
+        ]);
+    }
+
     public function danfe(Venda $venda)
     {
         $this->autorizarVenda($venda);
@@ -180,20 +288,81 @@ class NfceService
         return $this->pdf($nfe);
     }
 
+    /** A empresa tem o mínimo para emitir NFC-e no ambiente atual (certificado, CSC e idCSC). */
+    public function configurada(Empresa $empresa): bool
+    {
+        $producao = (int) ($empresa->nfe_ambiente ?: 2) === 1;
+
+        return filled($empresa->certificado_path)
+            && filled($producao ? $empresa->nfce_csc_producao : $empresa->nfce_csc_homologacao)
+            && filled($producao ? $empresa->nfce_id_csc_producao : $empresa->nfce_id_csc_homologacao);
+    }
+
+    /**
+     * Confere a configuração da NFC-e sem emitir nada: certificado, CSC, dados fiscais,
+     * notas pendentes e o serviço da SEFAZ para NFC-e. As mensagens não mostram números de documento.
+     *
+     * @return list<array{ok: bool, aviso?: bool, titulo: string, texto: string}>
+     */
+    public function verificar(Empresa $empresa): array
+    {
+        $producao = (int) ($empresa->nfe_ambiente ?: 2) === 1;
+        $itens = [[
+            'ok' => true,
+            'aviso' => ! $producao,
+            'titulo' => 'Ambiente',
+            'texto' => $producao
+                ? 'Produção: as notas têm valor fiscal.'
+                : 'Homologação: as notas são de teste e não têm valor fiscal.',
+        ]];
+
+        $certificado = $this->conferirCertificado($empresa);
+        $itens[] = $certificado;
+
+        $builder = null;
+        try {
+            $builder = new NfceBuilderService($empresa);
+            $builder->validarCadastroNfce([]);
+            $itens[] = ['ok' => true, 'titulo' => 'Dados da empresa e CSC', 'texto' => 'Endereço, IBGE, regime e CSC do ambiente estão preenchidos.'];
+        } catch (RuntimeException $e) {
+            $itens[] = ['ok' => false, 'titulo' => 'Dados da empresa e CSC', 'texto' => MensagemPublica::de($e)];
+        }
+
+        $pendentes = $this->repository->pendentes((int) $empresa->id);
+        $itens[] = $pendentes->isEmpty()
+            ? ['ok' => true, 'titulo' => 'Notas pendentes', 'texto' => 'Nenhuma NFC-e esperando resposta da SEFAZ.']
+            : ['ok' => false, 'titulo' => 'Notas pendentes', 'texto' => 'Consulte a NFC-e das vendas nº '
+                .$pendentes->map(fn (Nfe $n) => $n->venda?->numero ?? '—')->implode(', ')
+                .'. Enquanto houver nota pendente, nenhuma outra NFC-e é emitida.'];
+
+        if (! $certificado['ok'] || $builder === null) {
+            $itens[] = ['ok' => false, 'titulo' => 'SEFAZ', 'texto' => 'Não consultada: corrija os itens acima antes.'];
+
+            return $itens;
+        }
+
+        $sefaz = $this->mensagemSefazIndisponivel($empresa, $builder);
+        $itens[] = $sefaz === null
+            ? ['ok' => true, 'titulo' => 'SEFAZ', 'texto' => 'Serviço de NFC-e da '.strtoupper((string) $empresa->uf).' em operação. O certificado foi aceito na comunicação.']
+            : ['ok' => false, 'titulo' => 'SEFAZ', 'texto' => $sefaz];
+
+        return $itens;
+    }
+
     private function pdf(Nfe $nfe)
     {
         try {
             $pdf = (new Danfce($nfe->xml_autorizado))->render();
         } catch (Throwable $e) {
-            Log::error('Falha ao gerar DANFE', [
+            Log::error('Falha ao gerar DANFC-e', [
                 'nfe_id' => $nfe->id,
-                'exception' => $e->getMessage(),
+                'exception' => mb_substr($e->getMessage(), 0, 200),
             ]);
 
-            return back()->with('error', 'Não foi possível gerar o DANFE desta NF-e.');
+            return back()->with('error', 'Não foi possível gerar o DANFC-e desta NFC-e.');
         }
 
-        $nome = 'danfe_'.$nfe->numero.'.pdf';
+        $nome = 'nfce_'.$nfe->numero.'.pdf';
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -234,10 +403,60 @@ class NfceService
         }
 
         try {
-            return (new NfeSenderService($empresa, $builder->tools()))->motivoSeIndisponivel();
+            $motivo = (new NfeSenderService($empresa, $builder->tools()))->motivoSeIndisponivel();
         } catch (Throwable) {
-            return 'Não foi possível consultar o status da SEFAZ. A emissão foi bloqueada e nenhum número foi usado.';
+            $motivo = 'Não foi possível consultar o status da SEFAZ. A emissão foi bloqueada e nenhum número foi usado.';
         }
+
+        // Sem contingência na NFC-e: a nota é emitida depois, pela tela da venda.
+        return $motivo === null
+            ? null
+            : trim(str_replace('Contingência (SVC ou EPEC) não está habilitada: tpEmis permanece 1.', '', $motivo))
+                .' Tente emitir de novo em alguns minutos.';
+    }
+
+    /** Envio, consulta e cancelamento usam o Tools da NFC-e (modelo 65 e endereços da NFC-e na SEFAZ). */
+    private function sender(Empresa $empresa): NfeSenderService
+    {
+        return new NfeSenderService($empresa, (new NfceBuilderService($empresa))->tools());
+    }
+
+    /** @return array{ok: bool, titulo: string, texto: string} */
+    private function conferirCertificado(Empresa $empresa): array
+    {
+        $titulo = 'Certificado digital';
+        $arquivo = $empresa->certificado_path ? storage_path('app/'.$empresa->certificado_path) : '';
+        $senha = $empresa->certificado_senha_decrypted;
+
+        if ($arquivo === '' || ! is_file($arquivo) || blank($senha)) {
+            return ['ok' => false, 'titulo' => $titulo, 'texto' => 'Envie o certificado A1 (.pfx) e a senha na seção Certificado digital.'];
+        }
+
+        try {
+            $certificado = Certificate::readPfx((string) file_get_contents($arquivo), (string) $senha);
+        } catch (Throwable) {
+            return ['ok' => false, 'titulo' => $titulo, 'texto' => 'O certificado não abriu: a senha está errada ou o arquivo está danificado.'];
+        }
+
+        $validade = $certificado->getValidTo();
+        if ($certificado->isExpired()) {
+            return ['ok' => false, 'titulo' => $titulo, 'texto' => 'O certificado venceu em '.$validade->format('d/m/Y').'. Renove antes de emitir.'];
+        }
+
+        $cnpjCertificado = preg_replace('/\D/', '', (string) $certificado->getCnpj()) ?? '';
+        $cnpjEmpresa = preg_replace('/\D/', '', (string) $empresa->cnpj) ?? '';
+        if ($cnpjCertificado !== '' && substr($cnpjCertificado, 0, 8) !== substr($cnpjEmpresa, 0, 8)) {
+            return ['ok' => false, 'titulo' => $titulo, 'texto' => 'O certificado é de outra empresa: o CNPJ dele não confere com o desta empresa.'];
+        }
+
+        $dias = (int) now()->startOfDay()->diffInDays($validade, false);
+
+        return [
+            'ok' => true,
+            'aviso' => $dias <= 30,
+            'titulo' => $titulo,
+            'texto' => 'Válido até '.$validade->format('d/m/Y').($dias <= 30 ? ' (faltam '.$dias.' dias: providencie a renovação).' : '.'),
+        ];
     }
 
     private function gravarResultado(Nfe $nfe, array $resultado): Nfe
@@ -276,14 +495,27 @@ class NfceService
 
     private function mensagemResultado(Nfe $nfe): string
     {
-        $motivo = trim((string) $nfe->motivo_status);
-        $codigo = $nfe->codigo_status ? ' Código '.$nfe->codigo_status.'.' : '';
+        $motivo = rtrim($nfe->motivoParaTela(), '.');
+        $codigo = $nfe->codigo_status ? ' (código '.$nfe->codigo_status.').' : ($motivo !== '' ? '.' : '');
 
         return match ($nfe->situacao) {
-            'autorizada' => 'NFC-e autorizada.',
+            'autorizada' => 'NFC-e nº '.(int) $nfe->numero.' autorizada.',
             'rejeitada' => 'NFC-e rejeitada: '.($motivo !== '' ? $motivo : 'a SEFAZ não informou o motivo.').$codigo,
             'denegada' => 'NFC-e denegada: '.$motivo.$codigo.' O número foi consumido.',
-            default => 'A NFC-e ficou pendente de confirmação na SEFAZ. Consulte a nota antes de emitir outra. '.$motivo,
+            // O motivo técnico fica gravado e aparece no quadro da venda; aqui basta dizer o que fazer.
+            default => 'A SEFAZ não respondeu a tempo e a NFC-e ficou pendente. Use "Consultar SEFAZ" na tela da venda antes de emitir outra.',
+        };
+    }
+
+    private function mensagemConsulta(Nfe $nfe): string
+    {
+        $motivo = trim((string) $nfe->motivo_status);
+
+        return match (true) {
+            $nfe->situacao === 'autorizada' => 'NFC-e nº '.(int) $nfe->numero.' autorizada. Já pode imprimir.',
+            $nfe->situacao === 'rejeitada' && $nfe->codigo_status === '217' => 'A SEFAZ não recebeu esta NFC-e. Você pode emitir de novo: o mesmo número será usado.',
+            $nfe->situacao === 'pendente' => trim('A SEFAZ ainda não confirmou esta NFC-e. '.$motivo).' Tente consultar de novo em alguns minutos.',
+            default => $this->mensagemResultado($nfe),
         };
     }
 
@@ -298,7 +530,7 @@ class NfceService
             'mensagem' => $mensagem,
             'numero' => $nfe?->numero,
             'chave' => $nfe?->chave_acesso,
-            'danfe_url' => $ok && $nfe?->venda_id ? route('venda.nfce.danfe', $nfe->venda_id) : null,
+            'danfe_url' => $nfe?->situacao === 'autorizada' && $nfe->venda_id ? route('venda.nfce.danfe', $nfe->venda_id) : null,
         ];
     }
 
@@ -376,6 +608,14 @@ class NfceService
     private function autorizarVenda(Venda $venda): void
     {
         if ((int) $venda->empresa_id !== (int) auth()->user()->empresa_id) {
+            abort(404);
+        }
+    }
+
+    /** Só NFC-e (modelo 65) da empresa do usuário; a NF-e tem as rotas dela. */
+    private function autorizarNota(Nfe $nfe): void
+    {
+        if ((int) $nfe->empresa_id !== (int) auth()->user()->empresa_id || (int) $nfe->modelo !== Nfe::MODELO_NFCE) {
             abort(404);
         }
     }

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Novo Perfil')
-@section('page_title', 'Novo Perfil')
+@section('title', 'Novo perfil')
+@section('page_title', 'Novo perfil')
 
 @section('breadcrumb')
     <a href="{{ route('permissao.index') }}">Permissões</a> / Novo

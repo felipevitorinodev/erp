@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Histórico de Estoque')
-@section('page_title', 'Histórico de Estoque')
+@section('title', 'Histórico de estoque')
+@section('page_title', 'Histórico de estoque')
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('estoque.ajuste.create') }}" class="btn btn--primary btn--sm">+ Novo Ajuste</a>
+        <a href="{{ route('estoque.ajuste.create') }}" class="btn btn--primary btn--sm">+ Novo ajuste</a>
     </div>
 @endsection
 
@@ -89,15 +89,16 @@
                                 <td data-label="Antes" class="col-num">{{ number_format($mov->estoque_antes, 2, ',', '.') }}</td>
                                 <td data-label="Depois" class="col-num">{{ number_format($mov->estoque_depois, 2, ',', '.') }}</td>
                                 <td data-label="Motivo">{{ $mov->motivo }}</td>
-                                <td data-label="Origem">{{ $mov->origem ?? '—' }}</td>
+                                <td data-label="Origem">{{ ['venda' => 'Venda', 'entrada_estoque' => 'Entrada de estoque', 'ajuste_manual' => 'Ajuste manual'][$mov->origem] ?? ($mov->origem ? ucfirst(str_replace('_', ' ', $mov->origem)) : '—') }}</td>
                                 <td data-label="Usuário">{{ $mov->usuario->name ?? '—' }}</td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted" style="padding:2rem;">
-                                    Nenhuma movimentação encontrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="estoque"
+                                :colspan="9"
+                                titulo="Nenhuma movimentação encontrada"
+                                texto="Vendas, entradas e ajustes deste produto aparecem aqui."
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

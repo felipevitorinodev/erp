@@ -18,7 +18,7 @@ class CategoriaFinanceiraService
 
         return view('categoria-financeira.index', [
             'categorias' => $categorias,
-            'busca'      => $request->get('busca'),
+            'busca' => $request->get('busca'),
         ]);
     }
 

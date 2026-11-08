@@ -1,0 +1,526 @@
+/* =========================================================
+   ASSISTENTE (componente x-comandos)
+   Painel ao lado no computador e tela cheia no celular.
+   Cores pelos tokens do app.css.
+   ========================================================= */
+
+/* ---------- Botão flutuante ---------- */
+.comandos-botao {
+    position: fixed;
+    right: 20px;
+    bottom: calc(var(--footer-h, 40px) + 16px + env(safe-area-inset-bottom, 0px));
+    z-index: 9000;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 48px;
+    padding: 0 1.1rem 0 0.9rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(22, 58, 95, 0.28);
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.comandos-botao svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+}
+
+.comandos-botao:hover {
+    background: var(--color-primary-lt);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(22, 58, 95, 0.32);
+}
+
+.comandos-botao:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
+/* Com o painel aberto o botão some (o painel ocupa o mesmo canto). */
+body.comandos-aberto .comandos-botao {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ---------- Painel ---------- */
+.comandos {
+    position: fixed;
+    right: 20px;
+    bottom: calc(var(--footer-h, 40px) + 16px);
+    z-index: 10065;
+    display: flex;
+    flex-direction: column;
+    width: min(410px, calc(100vw - 40px));
+    height: min(640px, calc(100vh - var(--header-h) - var(--footer-h, 40px) - 32px));
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 60px rgba(22, 58, 95, 0.22);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    transform-origin: bottom right;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.comandos[hidden] {
+    display: none;
+}
+
+.comandos.is-aberto {
+    opacity: 1;
+    transform: none;
+}
+
+.comandos__topo {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 0.75rem 0.75rem 1rem;
+    background: var(--color-primary);
+    color: #fff;
+    border-bottom: 2px solid var(--color-accent);
+}
+
+.comandos__marca {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.comandos__marca svg {
+    width: 20px;
+    height: 20px;
+}
+
+.comandos__cabecalho {
+    flex: 1;
+    min-width: 0;
+}
+
+.comandos__titulo {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.comandos__subtitulo {
+    margin: 0.1rem 0 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.comandos__icone-btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+
+.comandos__icone-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.comandos__icone-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.comandos__icone-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+/* ---------- Conversa ---------- */
+.comandos__conversa {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--color-bg);
+}
+
+.comandos-boas-vindas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0 0.5rem;
+    text-align: center;
+}
+
+.comandos-boas-vindas__titulo {
+    margin: 0.35rem 0 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.comandos-boas-vindas__texto {
+    margin: 0 0 0.5rem;
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+/* Botões de tarefa e de resposta */
+.comandos-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+}
+
+.comandos-opcoes--centro {
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+
+.comandos-chip {
+    max-width: 100%;
+    min-height: 34px;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--color-border-mid);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.comandos-chip:hover:not(:disabled),
+.comandos-chip:focus-visible {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+/* Pergunta já respondida: os botões ficam só como registro; o escolhido fica marcado. */
+.comandos-opcoes.is-usada .comandos-chip {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.comandos-opcoes.is-usada .comandos-chip.is-escolhido {
+    opacity: 1;
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+}
+
+.comandos-exemplo {
+    margin-top: 0.6rem;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-style: italic;
+    cursor: pointer;
+}
+
+.comandos-exemplo:hover,
+.comandos-exemplo:focus-visible {
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    outline: none;
+}
+
+/* Mensagens */
+.comandos-msg {
+    max-width: 88%;
+    padding: 0.6rem 0.8rem;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    animation: comandos-entra 0.2s ease-out;
+}
+
+.comandos-msg--usuario {
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.comandos-msg--sistema {
+    align-self: flex-start;
+    border: 1px solid var(--color-border);
+    border-bottom-left-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+/* Prévia ocupa a largura toda: tem botões e, na venda, itens. */
+.comandos-msg--confirmacao {
+    width: 88%;
+    border-left: 3px solid var(--color-primary);
+}
+
+.comandos-msg--erro { border-left: 3px solid var(--color-error); }
+.comandos-msg--sucesso { border-left: 3px solid var(--color-success); }
+
+.comandos-msg__texto {
+    margin: 0;
+    color: var(--color-text);
+}
+
+.comandos-msg--confirmacao .comandos-msg__texto,
+.comandos-msg--sucesso .comandos-msg__texto {
+    font-weight: 600;
+}
+
+.comandos-msg__detalhe {
+    margin: 0.25rem 0 0;
+    font-size: 13px;
+    color: var(--color-text-mid);
+}
+
+.comandos-msg__aviso {
+    margin: 0.45rem 0 0;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+    font-size: 13px;
+}
+
+.comandos-msg__visto {
+    width: 40px;
+    margin-bottom: 0.35rem;
+}
+
+.comandos-msg__acoes {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+}
+
+.comandos-msg__acoes .btn {
+    flex: 1;
+}
+
+.comandos-msg__link {
+    margin-top: 0.6rem;
+}
+
+.comandos-msg__nota {
+    margin: 0.4rem 0 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* Prévia cancelada, expirada ou trocada por outra */
+.comandos-msg.is-encerrado {
+    opacity: 0.6;
+}
+
+.comandos-msg.is-confirmado {
+    border-left-color: var(--color-success);
+}
+
+/* Itens da venda e da consulta */
+.comandos-itens {
+    margin: 0.45rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.comandos-itens li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed var(--color-border);
+    font-size: 13px;
+}
+
+.comandos-itens li:last-child {
+    border-bottom: none;
+}
+
+.comandos-itens__valor {
+    flex: none;
+    max-width: 55%;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Três pontinhos enquanto o servidor responde */
+.comandos-msg--espera {
+    display: inline-flex;
+    gap: 5px;
+    width: auto;
+    padding: 0.75rem 0.9rem;
+}
+
+.comandos-espera__ponto {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-border-mid);
+    animation: comandos-ponto 1s ease-in-out infinite;
+}
+
+.comandos-espera__ponto:nth-child(2) { animation-delay: 0.15s; }
+.comandos-espera__ponto:nth-child(3) { animation-delay: 0.3s; }
+
+/* ---------- Campo de envio ---------- */
+.comandos__envio {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.comandos__campo {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0.85rem;
+    border: 1px solid var(--color-border-mid);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--color-text);
+    font-family: var(--font-main);
+    font-size: 16px; /* 16px evita o zoom automático do iPhone */
+}
+
+.comandos__campo:focus {
+    border-color: var(--color-primary);
+    outline: 2px solid var(--color-primary-soft);
+}
+
+.comandos__enviar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.comandos__enviar svg {
+    width: 20px;
+    height: 20px;
+}
+
+.comandos__enviar:hover { background: #B8420F; }
+.comandos__enviar:active { transform: scale(0.94); }
+.comandos__enviar:disabled { opacity: 0.55; cursor: progress; }
+
+.comandos__enviar:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+@keyframes comandos-entra {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes comandos-ponto {
+    0%, 100% { opacity: 0.35; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* Até 900px o rodapé some (app.css): botão e painel descem para a borda. */
+@media (max-width: 900px) {
+    .comandos-botao { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .comandos { bottom: 16px; height: min(640px, calc(100vh - var(--header-h) - 32px)); }
+}
+
+/* ---------- Celular: botão redondo e painel em tela cheia ---------- */
+@media (max-width: 640px) {
+    .comandos-botao {
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .comandos-botao svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .comandos-botao__texto {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .comandos {
+        inset: 0 0 auto 0;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        border: none;
+        border-radius: 0;
+        transform: translateY(16px);
+    }
+
+    .comandos__topo {
+        padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    }
+
+    .comandos-msg {
+        max-width: 94%;
+    }
+
+    .comandos-msg--confirmacao {
+        width: 94%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .comandos,
+    .comandos-botao,
+    .comandos-msg,
+    .comandos-espera__ponto {
+        animation: none !important;
+        transition: none !important;
+    }
+}

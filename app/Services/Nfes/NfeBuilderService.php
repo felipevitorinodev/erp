@@ -5,11 +5,12 @@ namespace App\Services\Nfes;
 use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Produtos\Produto;
-use App\Repositories\Nfes\NfeRepository;
 use App\Models\Vendas\Venda;
+use App\Repositories\Nfes\NfeRepository;
 use Carbon\Carbon;
 use NFePHP\Common\Certificate;
 use NFePHP\Common\Keys;
+use NFePHP\Common\TimeZoneByUF;
 use NFePHP\Common\UFList;
 use NFePHP\NFe\Make;
 use NFePHP\NFe\Tools;
@@ -54,7 +55,7 @@ class NfeBuilderService
         $this->vinculo = NfeVinculoFiscal::daEmpresa($this->empresa)->usarVenda($venda);
 
         if ($venda->itens->isEmpty()) {
-            throw new RuntimeException('A venda não possui itens para emitir a NF-e.');
+            throw new RuntimeException('A venda não tem itens para emitir a nota fiscal.');
         }
 
         $numero = $this->numeroNfe($venda);
@@ -83,15 +84,16 @@ class NfeBuilderService
     {
         $this->tools = new Tools($this->configuracaoJson(), $this->lerCertificado());
         $this->ajustarModelo();
+
+        // Só os testes registram "nfe.soap" (SEFAZ simulada). Em uso real o Tools fala com a SEFAZ.
+        if (app()->bound('nfe.soap')) {
+            $this->tools->loadSoapClass(app('nfe.soap'));
+        }
     }
 
-    protected function ajustarModelo(): void
-    {
-    }
+    protected function ajustarModelo(): void {}
 
-    protected function antesDeMontar(): void
-    {
-    }
+    protected function antesDeMontar(): void {}
 
     protected function validarEmissaoInterna(): void
     {
@@ -104,7 +106,7 @@ class NfeBuilderService
         }
 
         if ($this->somenteDigitos($this->empresa->cod_ibge) === '' || strlen($this->somenteDigitos($this->empresa->cod_ibge)) !== 7) {
-            throw new RuntimeException('Informe o código IBGE do município na empresa antes de emitir a NF-e.');
+            throw new RuntimeException('Informe o código IBGE do município na empresa antes de emitir nota fiscal.');
         }
     }
 
@@ -131,7 +133,7 @@ class NfeBuilderService
         $cnpj = $this->somenteDigitos($this->empresa->cnpj);
 
         if (strlen($uf) !== 2 || strlen($cnpj) !== 14) {
-            throw new RuntimeException('Informe a UF e o CNPJ da empresa antes de emitir a NF-e.');
+            throw new RuntimeException('Informe a UF e o CNPJ da empresa antes de emitir nota fiscal.');
         }
 
         return json_encode([
@@ -493,13 +495,13 @@ class NfeBuilderService
         try {
             return UFList::getCodeByUF(strtoupper(trim($uf)));
         } catch (Throwable) {
-            throw new RuntimeException('A UF da empresa é inválida para a NF-e.');
+            throw new RuntimeException('A UF da empresa é inválida para a nota fiscal.');
         }
     }
 
     protected function fuso(int $cUf): string
     {
-        return \NFePHP\Common\TimeZoneByUF::get($cUf);
+        return TimeZoneByUF::get($cUf);
     }
 
     protected function cfopDoItem($item, ?Produto $produto): string
@@ -555,7 +557,7 @@ class NfeBuilderService
         $ncm = $this->somenteDigitos($item->ncm ?: $produto?->ncm);
 
         if (strlen($ncm) !== 8) {
-            throw new RuntimeException('Informe o NCM com 8 dígitos em todos os itens da NF-e.');
+            throw new RuntimeException('Informe o NCM com 8 dígitos em todos os itens da nota.');
         }
 
         return $ncm;
@@ -566,7 +568,7 @@ class NfeBuilderService
         $cep = $this->somenteDigitos($this->empresa->cep);
 
         if (strlen($cep) !== 8) {
-            throw new RuntimeException('Informe o CEP da empresa com 8 dígitos antes de emitir a NF-e.');
+            throw new RuntimeException('Informe o CEP da empresa com 8 dígitos antes de emitir nota fiscal.');
         }
 
         return $cep;
@@ -672,5 +674,4 @@ class NfeBuilderService
             }
         }
     }
-
 }

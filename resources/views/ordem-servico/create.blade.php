@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Ordem de Serviço')
-@section('page_title', 'Nova Ordem de Serviço')
+@section('title', 'Nova ordem de serviço')
+@section('page_title', 'Nova ordem de serviço')
 
 @section('breadcrumb')
-    <a href="{{ route('ordem-servico.index') }}">Ordens de Serviço</a> / Nova
+    <a href="{{ route('ordem-servico.index') }}">Ordens de serviço</a> / Nova
 @endsection
 
 @section('content')

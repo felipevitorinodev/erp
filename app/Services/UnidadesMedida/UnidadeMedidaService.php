@@ -18,7 +18,7 @@ class UnidadeMedidaService
 
         return view('unidadeMedida.index', [
             'unidadesMedida' => $unidadesMedida,
-            'filtros'        => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 

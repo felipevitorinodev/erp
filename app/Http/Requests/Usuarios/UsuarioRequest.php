@@ -20,8 +20,8 @@ class UsuarioRequest extends FormRequest
         $usuario = $this->route('usuario');
 
         return [
-            'name'     => 'required|string|max:255',
-            'email'    => [
+            'name' => 'required|string|max:255',
+            'email' => [
                 'required',
                 'email',
                 'max:255',
@@ -30,7 +30,7 @@ class UsuarioRequest extends FormRequest
             'password' => $this->isMethod('post')
                 ? 'required|string|min:6|confirmed'
                 : 'nullable|string|min:6|confirmed',
-            'perfil'   => [
+            'perfil' => [
                 'required',
                 'string',
                 Rule::exists('perfis', 'slug')->where(
@@ -39,7 +39,7 @@ class UsuarioRequest extends FormRequest
                         ->where('ativo', true)
                 ),
             ],
-            'ativo'    => 'nullable|boolean',
+            'ativo' => 'nullable|boolean',
         ];
     }
 
@@ -62,10 +62,10 @@ class UsuarioRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name'     => 'nome',
-            'email'    => 'e-mail',
+            'name' => 'nome',
+            'email' => 'e-mail',
             'password' => 'senha',
-            'perfil'   => 'perfil',
+            'perfil' => 'perfil',
         ];
     }
 }

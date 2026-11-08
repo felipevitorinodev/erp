@@ -16,7 +16,7 @@ class AuthSeeder extends Seeder
     {
         $empresa = Empresa::first();
 
-        if (!$empresa) {
+        if (! $empresa) {
             $this->command?->error('Nenhuma empresa encontrada. Rode EmpresaSeeder antes.');
 
             return;
@@ -26,10 +26,10 @@ class AuthSeeder extends Seeder
             ['email' => 'admin@dev.com'],
             [
                 'empresa_id' => $empresa->id,
-                'name'       => 'Desenvolvedor',
-                'password'   => Hash::make('dev@123'),
-                'perfil'     => 'admin',
-                'ativo'      => true,
+                'name' => 'Desenvolvedor',
+                'password' => Hash::make('dev@123'),
+                'perfil' => 'admin',
+                'ativo' => true,
             ]
         );
 
@@ -37,7 +37,7 @@ class AuthSeeder extends Seeder
         User::where('email', 'admin@dev.com')->update([
             'empresa_id' => $empresa->id,
             'perfil' => 'admin',
-            'ativo'  => true,
+            'ativo' => true,
         ]);
     }
 }

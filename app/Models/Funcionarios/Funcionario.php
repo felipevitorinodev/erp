@@ -6,8 +6,8 @@ use App\Models\Comissoes\Comissao;
 use App\Models\Empresas\Empresa;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Funcionario extends Model
@@ -41,13 +41,13 @@ class Funcionario extends Model
     ];
 
     protected $casts = [
-        'ativo'           => 'boolean',
-        'salario'              => 'decimal:2',
-        'percentual_comissao'  => 'decimal:2',
+        'ativo' => 'boolean',
+        'salario' => 'decimal:2',
+        'percentual_comissao' => 'decimal:2',
         'comissao_os_percentual' => 'decimal:2',
         'data_nascimento' => 'date',
-        'data_admissao'   => 'date',
-        'data_demissao'   => 'date',
+        'data_admissao' => 'date',
+        'data_demissao' => 'date',
     ];
 
     public function empresa()

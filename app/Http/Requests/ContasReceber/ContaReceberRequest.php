@@ -3,6 +3,8 @@
 namespace App\Http\Requests\ContasReceber;
 
 use App\Models\CategoriasFinanceiras\CategoriaFinanceira;
+use App\Models\Clientes\Cliente;
+use App\Models\Vendas\Venda;
 use App\Traits\ConversorMoeda;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -19,14 +21,14 @@ class ContaReceberRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'descricao'       => 'required|string|max:200',
-            'cliente_id'      => 'nullable|exists:clientes,id',
-            'venda_id'        => 'nullable|exists:vendas,id',
-            'valor'           => 'required',
+            'descricao' => 'required|string|max:200',
+            'cliente_id' => 'nullable|exists:clientes,id',
+            'venda_id' => 'nullable|exists:vendas,id',
+            'valor' => 'required',
             'data_vencimento' => 'required|date',
             'forma_pagamento' => 'nullable|string|max:100',
-            'categoria_id'    => 'nullable|exists:categorias_financeiras,id',
-            'observacoes'     => 'nullable|string',
+            'categoria_id' => 'nullable|exists:categorias_financeiras,id',
+            'observacoes' => 'nullable|string',
         ];
 
         if ($this->isMethod('post')) {
@@ -53,7 +55,7 @@ class ContaReceberRequest extends FormRequest
                     ->where('ativo', true)
                     ->exists();
 
-                if (!$valida) {
+                if (! $valida) {
                     $validator->errors()->add('categoria_id', 'Categoria inválida para conta a receber.');
                 }
             }
@@ -61,19 +63,19 @@ class ContaReceberRequest extends FormRequest
             $empresaId = (int) auth()->user()->empresa_id;
 
             if ($this->filled('cliente_id')) {
-                $clienteOk = \App\Models\Clientes\Cliente::where('id', $this->input('cliente_id'))
+                $clienteOk = Cliente::where('id', $this->input('cliente_id'))
                     ->where('empresa_id', $empresaId)
                     ->exists();
-                if (!$clienteOk) {
+                if (! $clienteOk) {
                     $validator->errors()->add('cliente_id', 'Cliente inválido para esta empresa.');
                 }
             }
 
             if ($this->filled('venda_id')) {
-                $vendaOk = \App\Models\Vendas\Venda::where('id', $this->input('venda_id'))
+                $vendaOk = Venda::where('id', $this->input('venda_id'))
                     ->where('empresa_id', $empresaId)
                     ->exists();
-                if (!$vendaOk) {
+                if (! $vendaOk) {
                     $validator->errors()->add('venda_id', 'Venda inválida para esta empresa.');
                 }
             }
@@ -84,9 +86,9 @@ class ContaReceberRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'data_vencimento.after_or_equal' => 'A data de vencimento não pode ser anterior a hoje.',
         ];
     }
@@ -94,20 +96,20 @@ class ContaReceberRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'descricao'       => 'descrição',
-            'cliente_id'      => 'cliente',
-            'venda_id'        => 'venda',
-            'valor'           => 'valor',
+            'descricao' => 'descrição',
+            'cliente_id' => 'cliente',
+            'venda_id' => 'venda',
+            'valor' => 'valor',
             'data_vencimento' => 'data de vencimento',
             'forma_pagamento' => 'forma de pagamento',
-            'categoria_id'    => 'categoria',
-            'observacoes'     => 'observações',
+            'categoria_id' => 'categoria',
+            'observacoes' => 'observações',
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        if (!$this->filled('categoria_id')) {
+        if (! $this->filled('categoria_id')) {
             $this->merge(['categoria_id' => null]);
         }
 

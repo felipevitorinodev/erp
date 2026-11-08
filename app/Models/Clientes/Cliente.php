@@ -3,14 +3,15 @@
 namespace App\Models\Clientes;
 
 use App\Models\Empresas\Empresa;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Cliente extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
     protected $table = 'clientes';
 
     protected $fillable = [

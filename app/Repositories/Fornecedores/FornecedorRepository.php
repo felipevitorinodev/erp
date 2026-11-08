@@ -27,7 +27,20 @@ class FornecedorRepository
     public function store(array $data)
     {
         $data['empresa_id'] = auth()->user()->empresa_id;
+
         return Fornecedor::create($data);
+    }
+
+    /** Cadastro rápido (produto e comandos) com os dados já validados por FornecedorRapidoRequest. */
+    public function cadastrarRapido(array $dados): Fornecedor
+    {
+        return Fornecedor::create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($dados['nome']),
+            'cnpj' => $dados['cnpj'] ?? null,
+            'telefone' => $dados['telefone'] ?? null,
+            'ativo' => true,
+        ]);
     }
 
     public function update(Fornecedor $fornecedor, array $data)

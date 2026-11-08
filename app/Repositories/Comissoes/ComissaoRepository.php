@@ -31,15 +31,15 @@ class ComissaoRepository
 
         return [
             'pendentes' => (float) $somas->pendentes,
-            'pagas'     => (float) $somas->pagas,
+            'pagas' => (float) $somas->pagas,
         ];
     }
 
     public function marcarPaga(Comissao $comissao): Comissao
     {
         $comissao->update([
-            'situacao'        => 'paga',
-            'data_pagamento'  => now()->toDateString(),
+            'situacao' => 'paga',
+            'data_pagamento' => now()->toDateString(),
         ]);
 
         return $comissao->fresh();

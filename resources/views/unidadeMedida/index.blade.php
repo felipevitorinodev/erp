@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Unidades de Medida')
-@section('page_title', 'Unidades de Medida')
+@section('title', 'Unidades de medida')
+@section('page_title', 'Unidades de medida')
 
 @section('page_actions')
-    <a href="{{ route('unidadeMedida.create') }}" class="btn btn--primary btn--sm">+ Nova Unidade</a>
+    <a href="{{ route('unidadeMedida.create') }}" class="btn btn--primary btn--sm">+ Nova unidade</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Unidades de Medida</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -76,11 +76,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    Nenhuma unidade cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="etiquetas"
+                                :colspan="4"
+                                titulo="Nenhuma unidade cadastrada"
+                                texto="Unidades como UN, KG e CX aparecem no cadastro de produtos e na nota."
+                                :acao="route('unidadeMedida.create')"
+                                acao-texto="+ Nova unidade"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

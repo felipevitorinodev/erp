@@ -17,26 +17,26 @@ class OrdemServicoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cliente_id'        => 'nullable|exists:clientes,id',
-            'funcionario_id'    => 'nullable|exists:funcionarios,id',
-            'data_abertura'     => 'required|date',
-            'data_previsao'     => 'nullable|date|after_or_equal:data_abertura',
-            'equipamento'       => 'required|string|max:150',
-            'marca'             => 'nullable|string|max:80',
-            'modelo'            => 'nullable|string|max:80',
-            'numero_serie'      => 'nullable|string|max:80',
-            'acessorios'        => 'nullable|string|max:255',
-            'defeito_relatado'  => 'nullable|string|max:5000',
-            'diagnostico'       => 'nullable|string|max:5000',
+            'cliente_id' => 'nullable|exists:clientes,id',
+            'funcionario_id' => 'nullable|exists:funcionarios,id',
+            'data_abertura' => 'required|date',
+            'data_previsao' => 'nullable|date|after_or_equal:data_abertura',
+            'equipamento' => 'required|string|max:150',
+            'marca' => 'nullable|string|max:80',
+            'modelo' => 'nullable|string|max:80',
+            'numero_serie' => 'nullable|string|max:80',
+            'acessorios' => 'nullable|string|max:255',
+            'defeito_relatado' => 'nullable|string|max:5000',
+            'diagnostico' => 'nullable|string|max:5000',
             'servico_executado' => 'nullable|string|max:5000',
-            'garantia'          => 'nullable|string|max:100',
-            'forma_pagamento'   => 'nullable|string|max:100',
-            'observacoes'       => 'nullable|string|max:5000',
-            'itens'             => 'nullable|array',
+            'garantia' => 'nullable|string|max:100',
+            'forma_pagamento' => 'nullable|string|max:100',
+            'observacoes' => 'nullable|string|max:5000',
+            'itens' => 'nullable|array',
             'itens.*.produto_id' => 'nullable',
             'itens.*.quantidade' => 'required|numeric|min:0.001',
             'itens.*.preco_unitario' => 'required|numeric|min:0',
-            'itens.*.desconto'   => 'nullable|numeric|min:0',
+            'itens.*.desconto' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -60,11 +60,11 @@ class OrdemServicoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required'       => 'O campo :attribute é obrigatório.',
-            'date'           => 'O campo :attribute deve ser uma data válida.',
-            'numeric'        => 'O campo :attribute deve ser numérico.',
-            'min'            => 'O campo :attribute deve ter no mínimo :min.',
-            'max'            => 'O campo :attribute deve ter no máximo :max caracteres.',
+            'required' => 'O campo :attribute é obrigatório.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
+            'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
             'after_or_equal' => 'A previsão não pode ser anterior à abertura.',
         ];
     }
@@ -72,13 +72,13 @@ class OrdemServicoRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'cliente_id'        => 'cliente',
-            'funcionario_id'    => 'técnico',
-            'data_abertura'     => 'data de abertura',
-            'data_previsao'     => 'previsão',
-            'equipamento'       => 'equipamento',
-            'numero_serie'      => 'nº de série',
-            'defeito_relatado'  => 'defeito relatado',
+            'cliente_id' => 'cliente',
+            'funcionario_id' => 'técnico',
+            'data_abertura' => 'data de abertura',
+            'data_previsao' => 'previsão',
+            'equipamento' => 'equipamento',
+            'numero_serie' => 'nº de série',
+            'defeito_relatado' => 'defeito relatado',
             'servico_executado' => 'serviço executado',
         ];
     }

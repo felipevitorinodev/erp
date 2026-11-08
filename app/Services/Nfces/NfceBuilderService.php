@@ -91,7 +91,7 @@ class NfceBuilderService extends NfeBuilderService
         $cnpj = $this->somenteDigitos($this->empresa->cnpj);
 
         if (strlen($uf) !== 2 || strlen($cnpj) !== 14) {
-            throw new RuntimeException('Informe a UF e o CNPJ da empresa antes de emitir a NF-e.');
+            throw new RuntimeException('Informe a UF e o CNPJ da empresa antes de emitir nota fiscal.');
         }
 
         return json_encode([
@@ -187,6 +187,8 @@ class NfceBuilderService extends NfeBuilderService
             'tPag' => $tPag,
             'xPag' => $tPag === '99' ? $this->limitar($venda->forma_pagamento ?: 'Outros', 60) : null,
             'vPag' => $this->valor($vPag),
+            // Cartão na NFC-e exige o grupo card (senão, rejeição 391). Sem TEF integrado ao sistema: tpIntegra 2 (maquininha).
+            'tpIntegra' => in_array($tPag, ['03', '04'], true) ? 2 : null,
         ]));
     }
 

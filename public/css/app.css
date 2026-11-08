@@ -560,8 +560,8 @@ a:hover {
 }
 .page-bar__actions .btn--sm {
     height: 34px;
-    padding: 0.25rem 0.6rem;
-    font-size: 0.85rem;
+    padding: 0.25rem 0.85rem;
+    font-size: 13px;
 }
 .page-bar__actions .btn--icon {
     padding: 0.25rem;
@@ -803,6 +803,184 @@ a:hover {
     .venda-doc__totais .totals-box--sale {
         max-width: none;
     }
+}
+
+/* Empresa: conferência da NFC-e. */
+.nfce-conferencia {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    scroll-margin-top: 5rem;
+}
+
+.nfce-conferencia__topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.nfce-conferencia__topo p {
+    margin: 0;
+}
+
+.nfce-conferencia__titulo {
+    font-weight: 600;
+}
+
+.nfce-conferencia__lista {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0.9rem 0 0;
+    padding: 0.9rem 0 0;
+    list-style: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.nfce-conferencia__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.nfce-conferencia__item svg {
+    flex: none;
+    margin-top: 0.15rem;
+}
+
+.nfce-conferencia__item--ok svg {
+    color: var(--color-success);
+}
+
+.nfce-conferencia__item--aviso svg {
+    color: var(--color-warning);
+}
+
+.nfce-conferencia__item--erro svg {
+    color: var(--color-error);
+}
+
+.nfce-conferencia__conclusao {
+    margin: 0.75rem 0 0;
+    font-weight: 600;
+}
+
+/* Venda: texto (não valor) no resumo da ficha e quadro "Nota fiscal". */
+.ficha__resumo strong.ficha__resumo-texto {
+    font-size: 1rem;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.nota-fiscal {
+    margin-top: 1rem;
+    scroll-margin-top: 5rem;
+}
+
+.nota-fiscal .ficha__head {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.nota-fiscal__tipo {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.nota-fiscal .alert {
+    margin-bottom: 1rem;
+}
+
+.nota-fiscal__motivo {
+    display: block;
+    margin-top: 0.35rem;
+}
+
+.nota-fiscal__texto {
+    margin: 0 0 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.nota-fiscal__acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.nota-fiscal .alert + .nota-fiscal__acoes,
+.nota-fiscal__texto + .nota-fiscal__acoes {
+    margin-top: 0;
+}
+
+.nota-fiscal__acoes + .nota-fiscal__emitir {
+    margin-top: 1.25rem;
+}
+
+.nota-fiscal__cancelar[open] {
+    flex-basis: 100%;
+}
+
+.nota-fiscal__cancelar > summary {
+    list-style: none;
+    width: max-content;
+}
+
+.nota-fiscal__cancelar > summary::-webkit-details-marker {
+    display: none;
+}
+
+.nota-fiscal__cancelar[open] > summary {
+    display: none;
+}
+
+.nota-fiscal__cancelar-form {
+    display: grid;
+    gap: 0.4rem;
+    max-width: 520px;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.nota-fiscal__opcoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 1rem 1.5rem;
+}
+
+.nota-fiscal__opcao-titulo {
+    margin: 0 0 0.15rem;
+    font-weight: 600;
+}
+
+.nota-fiscal__emitir {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.5rem 0.75rem;
+}
+
+.nota-fiscal__emitir .form-group {
+    flex: 1 1 220px;
+    max-width: 320px;
+    margin: 0;
+}
+
+.nota-fiscal__dica,
+.nota-fiscal__outra {
+    margin: 1rem 0 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 13px;
+    color: var(--color-text-muted);
 }
 
 /* =========================================
@@ -1504,6 +1682,21 @@ select.form-control {
     text-decoration: none;
 }
 
+/* Excluir só com ícone (listagens e telas de detalhe): contorno, para não ser o botão que mais chama
+   atenção na linha. O vermelho cheio fica para o botão de confirmação, que tem texto. */
+.btn--danger.btn--icon {
+    background: transparent;
+    color: var(--color-error);
+    border-color: var(--color-border);
+}
+
+.btn--danger.btn--icon:hover,
+.btn--danger.btn--icon:focus-visible {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    color: #FFF;
+}
+
 .btn--sm {
     padding: 0.3rem 0.65rem;
     font-size: 12px;
@@ -1816,21 +2009,24 @@ select.form-control {
     stroke: var(--color-primary);
 }
 
+/* Títulos do menu em caixa normal: mais fáceis de ler que caixa alta espaçada. */
 .sidebar__group-toggle .sidebar__group-label {
     flex: 1;
     padding: 0;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--color-text-mid);
     transition: color var(--transition);
 }
 
 .sidebar__group > .sidebar__link {
     font-family: var(--font-main);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .sidebar__icon {
@@ -1844,6 +2040,8 @@ select.form-control {
     color: var(--color-text-muted);
     transition: transform 0.2s ease, color var(--transition);
     line-height: 1;
+    /* "›" girado: aberto aponta para baixo, fechado aponta para a direita. */
+    transform: rotate(90deg);
 }
 
 .sidebar__group-toggle:hover .sidebar__group-arrow {
@@ -1882,7 +2080,7 @@ select.form-control {
 }
 
 .sidebar__group-arrow--collapsed {
-    transform: rotate(-90deg);
+    transform: none;
 }
 
 /* Sem animação no carregamento: o estado inicial do menu é aplicado direto, só os cliques animam. */
@@ -2321,9 +2519,25 @@ body.modal-ver-aberto {
     box-shadow: var(--shadow-md);
 }
 
-.text--danger {
-    color: var(--color-error);
+.text--danger,
+.table td.text--danger {
+    color: #B42318;
     font-weight: 600;
+}
+
+/* Aviso curto abaixo do valor da célula ("vencida há N dias", "abaixo do mínimo"): não depende só da cor. */
+.aviso-linha {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #B42318;
+}
+
+@media (max-width: 768px) {
+    .table--cards .aviso-linha {
+        display: inline;
+        margin-left: 0.35rem;
+    }
 }
 
 /* =========================================
@@ -2339,10 +2553,10 @@ body.modal-ver-aberto {
 }
 
 .section-toolbar__title {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--color-text-mid);
 }
 
@@ -2473,10 +2687,10 @@ body.modal-ver-aberto {
 }
 
 .item-card__footer-label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--color-text-muted);
 }
 
@@ -2747,15 +2961,6 @@ body.modal-ver-aberto {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-}
-
-.home-section-label::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 99px;
-    background: var(--color-accent);
-    flex-shrink: 0;
 }
 
 .main-actions-grid {
@@ -3478,10 +3683,10 @@ body.modal-ver-aberto {
 
     .table--cards td::before {
         content: attr(data-label);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+        text-transform: none;
+        letter-spacing: 0;
         color: var(--color-text-muted);
         text-align: left;
         flex: 0 0 34%;
@@ -3769,6 +3974,22 @@ body.modal-ver-aberto {
 .ver-fragment__acoes .page-actions .btn--icon::after {
     content: attr(aria-label);
     font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Telas de detalhe: as ações do topo mostram o nome ao lado do ícone, como no modal "Ver".
+   Só o Voltar continua apenas com a seta. */
+.page-bar__actions .page-actions .btn--icon:not([aria-label="Voltar"]) {
+    width: auto;
+    min-width: 34px;
+    padding: 0.25rem 0.75rem;
+    gap: 0.4rem;
+}
+
+.page-bar__actions .page-actions .btn--icon:not([aria-label="Voltar"])::after {
+    content: attr(aria-label);
+    font-size: 13px;
     font-weight: 600;
     line-height: 1;
 }
@@ -4096,6 +4317,37 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
 }
 .sk-nota { position: relative; z-index: 1; }
 
+/* Esqueleto dentro de tabelas e listas de sugestão carregadas por AJAX (ErpCarregamento.linhasEsqueleto/itensEsqueleto). */
+.sk-linha td { padding: 0.8rem 0.75rem; }
+.sk-linha:hover { background: transparent; }
+.sk-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    list-style: none;
+    cursor: default;
+}
+.sk-item .sk-bloco--meta { height: 9px; }
+
+/* Falha ao buscar: mensagem curta com opção de tentar de novo. */
+.carga-falha {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+.carga-falha button {
+    margin-left: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-primary);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .btn.is-busy { cursor: progress; }
 .btn--icon.is-busy { position: relative; color: transparent; }
 .btn--icon.is-busy > * { visibility: hidden; }
@@ -4180,11 +4432,13 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
 .toast-stack {
     position: fixed;
     top: calc(var(--header-h) + 12px);
-    right: 16px;
-    left: auto;
-    width: min(420px, calc(100vw - 32px));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(480px, calc(100vw - 32px));
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 0.5rem;
     margin: 0;
     z-index: 45000;
@@ -4203,7 +4457,7 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
     bottom: auto;
     right: auto;
     left: auto;
-    max-width: none;
+    max-width: 100%;
     margin: 0;
     padding: 0.85rem 0.85rem 0.85rem 1rem;
     border-radius: 12px;
@@ -4213,9 +4467,60 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
     line-height: 1.4;
     pointer-events: auto;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
     animation: toast-in 0.25s ease;
 }
 .toast__texto { flex: 1; min-width: 0; }
+.toast__icone {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -1px;
+}
+.toast__icone svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.toast__icone-aro {
+    opacity: 0.45;
+    stroke-width: 2;
+    stroke-dasharray: 63;
+    stroke-dashoffset: 63;
+    animation: toast-traco 0.4s ease-out forwards;
+}
+.toast__icone path {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    animation: toast-traco 0.3s 0.25s ease-out forwards;
+}
+.toast__tempo {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.45);
+    transform-origin: left center;
+    animation: toast-tempo linear forwards;
+}
+.toast.is-pausado .toast__tempo { animation-play-state: paused; }
+@keyframes toast-traco { to { stroke-dashoffset: 0; } }
+@keyframes toast-tempo {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .toast__icone-aro,
+    .toast__icone path {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+}
 .toast__linha { display: block; }
 .toast__linha + .toast__linha { margin-top: 0.35rem; }
 .toast__fechar {
@@ -4234,6 +4539,7 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
 .toast--success { background: #166534; color: #fff; }
 .toast--error   { background: #991b1b; color: #fff; }
 .toast--warning { background: #92400e; color: #fff; }
+.toast--info    { background: var(--color-primary); color: #fff; }
 @keyframes toast-in {
     from { opacity: 0; transform: translateY(-0.35rem); }
     to   { opacity: 1; transform: none; }
@@ -4299,7 +4605,7 @@ body.auth-body {
 
 .auth-aside {
     position: relative;
-    width: min(520px, 46vw);
+    width: min(380px, 36vw);
     min-width: 0;
     flex-shrink: 0;
     display: flex;
@@ -4308,31 +4614,20 @@ body.auth-body {
     gap: 2rem;
     padding: 2.4rem 2.75rem 1.6rem;
     color: #fff;
-    background:
-        radial-gradient(900px 420px at -8% -10%, rgba(227, 90, 18, 0.28), transparent 58%),
-        linear-gradient(168deg, #1C4E7C 0%, #163A5F 46%, #10283F 100%);
+    background: var(--color-primary);
     border-right: 3px solid var(--color-accent);
     overflow: hidden;
 }
 
-.auth-aside::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-    background-size: 52px 52px;
-    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-    pointer-events: none;
-}
-
 .auth-aside__topo,
-.auth-aside__body,
 .auth-aside__rodape {
     position: relative;
     z-index: 1;
+}
+
+/* Marca no meio do painel; o rodapé fica embaixo. */
+.auth-aside__topo {
+    margin: auto 0;
 }
 
 .auth-brand {
@@ -4354,76 +4649,9 @@ body.auth-body {
 
 .auth-aside__linha {
     margin-top: 0.85rem;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.62);
-}
-
-.auth-aside__body {
-    max-width: 22rem;
-    margin-top: auto;
-    margin-bottom: auto;
-}
-
-.auth-kicker {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #F3B08A;
-}
-
-.auth-pitch {
-    margin-top: 0.75rem;
-    font-size: 1.85rem;
-    font-weight: 600;
-    line-height: 1.22;
-    letter-spacing: -0.025em;
-    color: #fff;
-}
-
-.auth-lead {
-    margin-top: 0.9rem;
-    font-size: 15px;
-    line-height: 1.55;
-    color: rgba(255, 255, 255, 0.78);
-}
-
-.auth-points {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin: 1.7rem 0 0;
-    padding: 0;
-    list-style: none;
-}
-
-.auth-points li {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.auth-points__mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    border-radius: 9px;
-    color: #F6C7A8;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.auth-points__mark svg {
-    width: 16px;
-    height: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .auth-aside__rodape {
@@ -4438,9 +4666,7 @@ body.auth-body {
     align-items: center;
     justify-content: center;
     padding: 2.5rem 2rem;
-    background:
-        radial-gradient(820px 380px at 100% 0%, rgba(22, 58, 95, 0.06), transparent 62%),
-        var(--color-bg);
+    background: var(--color-bg);
 }
 
 .auth-card {
@@ -4449,17 +4675,10 @@ body.auth-body {
     min-width: 0;
     background: var(--color-surface);
     border: 1px solid #E2E8EF;
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 0;
-    box-shadow: 0 18px 48px rgba(22, 58, 95, 0.08);
+    box-shadow: var(--shadow-md);
     overflow: hidden;
-}
-
-.auth-card::before {
-    content: '';
-    display: block;
-    height: 3px;
-    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 62%, var(--color-accent) 100%);
 }
 
 .auth-card__corpo {
@@ -4716,14 +4935,12 @@ body.auth-body {
         border-bottom: 3px solid var(--color-accent);
     }
 
-    .auth-aside__body,
     .auth-aside__rodape {
         display: none;
     }
 
     .auth-aside__linha {
         margin-top: 0.45rem;
-        letter-spacing: 0.1em;
     }
 
     .auth-brand img {
@@ -4778,19 +4995,6 @@ body.auth-body {
         padding-top: 1.5rem;
         padding-bottom: 1.15rem;
         gap: 1.25rem;
-    }
-
-    .auth-pitch {
-        font-size: 1.45rem;
-    }
-
-    .auth-lead {
-        margin-top: 0.6rem;
-    }
-
-    .auth-points {
-        margin-top: 1.1rem;
-        gap: 0.55rem;
     }
 
     .auth-brand img {
@@ -4861,9 +5065,9 @@ body.auth-body {
 }
 .venda-topbar__total-label {
     display: block;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
     opacity: 0.8;
 }
 .venda-topbar__total-valor {
@@ -5068,10 +5272,10 @@ body.auth-body {
     border-bottom: none;
 }
 .venda-resumo__section h4 {
-    font-size: 0.85rem;
+    font-size: 13px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--color-text-muted);
     margin-bottom: 0.75rem;
 }
@@ -5191,9 +5395,9 @@ body.auth-body {
     z-index: 40;
 }
 .sticky-total-bar__label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
     opacity: 0.85;
 }
 .sticky-total-bar__value {
@@ -5213,11 +5417,11 @@ body.auth-body {
     border-top: none;
 }
 .form-section__title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--color-text);
     margin-bottom: 0.85rem;
 }
 

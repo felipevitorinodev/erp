@@ -24,7 +24,7 @@ class ImportarXmlRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $arquivo = $this->file('xml_file');
 
-            if (!$arquivo) {
+            if (! $arquivo) {
                 return;
             }
 
@@ -40,8 +40,8 @@ class ImportarXmlRequest extends FormRequest
     {
         return [
             'xml_file.required' => 'Selecione um arquivo XML.',
-            'xml_file.file'     => 'O arquivo enviado é inválido.',
-            'xml_file.max'      => 'O arquivo não pode ter mais de 2MB.',
+            'xml_file.file' => 'O arquivo enviado é inválido.',
+            'xml_file.max' => 'O arquivo não pode ter mais de 2MB.',
         ];
     }
 

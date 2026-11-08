@@ -7,7 +7,9 @@ use App\Models\CategoriasFinanceiras\CategoriaFinanceira;
 class CategoriaPadraoService
 {
     public const VENDAS = 'Vendas';
+
     public const COMPRAS = 'Compras / Estoque';
+
     public const COMISSOES = 'Comissões';
 
     public function idReceitaVendas(int $empresaId): ?int
@@ -27,15 +29,15 @@ class CategoriaPadraoService
 
     public function obterOuCriar(int $empresaId, string $nome, string $tipo): ?CategoriaFinanceira
     {
-        if ($empresaId <= 0 || !in_array($tipo, ['receita', 'despesa'], true)) {
+        if ($empresaId <= 0 || ! in_array($tipo, ['receita', 'despesa'], true)) {
             return null;
         }
 
         return CategoriaFinanceira::firstOrCreate(
             [
                 'empresa_id' => $empresaId,
-                'nome'       => $nome,
-                'tipo'       => $tipo,
+                'nome' => $nome,
+                'tipo' => $tipo,
             ],
             ['ativo' => true]
         );

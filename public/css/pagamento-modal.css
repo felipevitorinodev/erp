@@ -53,8 +53,8 @@
 .pg-secao {
     font-size: 12px;
     font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     color: #5E7084;
 }
 
@@ -303,10 +303,10 @@
 .pg-tabela th {
     padding: 9px 12px;
     text-align: left;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     color: #5E7084;
     background: #F7F9FC;
     border-bottom: 1px solid #E3E9F1;

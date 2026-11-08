@@ -4,7 +4,7 @@
 @section('page_title', 'Entrada #' . $entrada->numero)
 
 @section('breadcrumb')
-    <a href="{{ route('entrada-estoque.index') }}">Entradas de Estoque</a> / #{{ $entrada->numero }}
+    <a href="{{ route('entrada-estoque.index') }}">Entradas de estoque</a> / #{{ $entrada->numero }}
 @endsection
 
 @section('page_actions')
@@ -64,7 +64,7 @@
 
 @section('content')
 
-    <x-ficha titulo="Dados Gerais">
+    <x-ficha titulo="Dados gerais">
         <x-slot:status>
             <x-badge-situacao tipo="entrada" :valor="$entrada->situacao" />
         </x-slot:status>
@@ -106,7 +106,7 @@
                         <tr>
                             <th>Produto</th>
                             <th class="col-num">Quantidade</th>
-                            <th class="col-num">Preço Unitário</th>
+                            <th class="col-num">Preço unitário</th>
                             <th class="col-num">Desconto</th>
                             <th class="col-num">Total</th>
                         </tr>
@@ -121,7 +121,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Quantidade" class="col-num">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
-                                <td data-label="Preço Unitário" class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
+                                <td data-label="Preço unitário" class="col-num">R$ {{ number_format($item->preco_unitario, 2, ',', '.') }}</td>
                                 <td data-label="Desconto" class="col-num">R$ {{ number_format($item->desconto, 2, ',', '.') }}</td>
                                 <td data-label="Total" class="col-num text-bold">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
                             </tr>

@@ -78,8 +78,8 @@ class AjusteEstoqueController extends Controller
                     if ($estoqueAntes < $quantidade) {
                         throw new \Exception(
                             'Estoque insuficiente para o produto "'.$produto->nome.'". Disponível: '
-                            .number_format($estoqueAntes, 2, ',', '.')
-                            .', necessário: '.number_format($quantidade, 2, ',', '.').'.'
+                            .number_format($estoqueAntes, 3, ',', '.')
+                            .', necessário: '.number_format($quantidade, 3, ',', '.').'.'
                         );
                     }
                     $produto->decrement('estoque_atual', $quantidade);

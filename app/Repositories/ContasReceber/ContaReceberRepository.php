@@ -153,9 +153,9 @@ class ContaReceberRepository
             ? FormaPagamento::withTrashed()->where('empresa_id', $venda->empresa_id)->find($venda->forma_pagamento_id)
             : FormaPagamento::buscarPorNome($venda->forma_pagamento, (int) $venda->empresa_id);
 
-        if (!$forma && trim((string) $venda->forma_pagamento) !== '') {
+        if (! $forma && trim((string) $venda->forma_pagamento) !== '') {
             throw new \RuntimeException(
-                'Forma de pagamento "' . $venda->forma_pagamento . '" não encontrada ou inativa. Ajuste a forma de pagamento antes de confirmar.'
+                'Forma de pagamento "'.$venda->forma_pagamento.'" não encontrada ou inativa. Ajuste a forma de pagamento antes de confirmar.'
             );
         }
 
@@ -167,17 +167,17 @@ class ContaReceberRepository
             foreach (array_values($parcelas) as $indice => $parcela) {
                 $documento = trim((string) ($parcela['documento'] ?? ''));
                 $conta = ContaReceber::create([
-                    'empresa_id'      => $venda->empresa_id,
-                    'cliente_id'      => $venda->cliente_id,
-                    'venda_id'        => $venda->id,
-                    'descricao'       => 'Venda #' . $venda->numero . ' — ' . $forma->nome . ($total > 1 ? ' (' . ($indice + 1) . '/' . $total . ')' : ''),
-                    'valor'           => $parcela['valor'],
-                    'valor_pago'      => 0,
+                    'empresa_id' => $venda->empresa_id,
+                    'cliente_id' => $venda->cliente_id,
+                    'venda_id' => $venda->id,
+                    'descricao' => 'Venda #'.$venda->numero.' — '.$forma->nome.($total > 1 ? ' ('.($indice + 1).'/'.$total.')' : ''),
+                    'valor' => $parcela['valor'],
+                    'valor_pago' => 0,
                     'data_vencimento' => $parcela['vencimento'],
                     'forma_pagamento' => $forma->nome,
-                    'categoria_id'    => $categoriaId,
-                    'situacao'        => 'aberta',
-                    'observacoes'     => 'Gerada automaticamente na confirmação da venda.' . ($documento !== '' ? ' Documento ' . $documento . '.' : ''),
+                    'categoria_id' => $categoriaId,
+                    'situacao' => 'aberta',
+                    'observacoes' => 'Gerada automaticamente na confirmação da venda.'.($documento !== '' ? ' Documento '.$documento.'.' : ''),
                 ]);
                 $primeira ??= $conta;
             }
@@ -185,7 +185,7 @@ class ContaReceberRepository
             return $primeira;
         }
 
-        if (!$forma || !$forma->isPrazo()) {
+        if (! $forma || ! $forma->isPrazo()) {
             return null;
         }
 
@@ -194,17 +194,17 @@ class ContaReceberRepository
         $vencimento = $dataVenda ? $dataVenda->copy()->addDays($dias) : now()->addDays($dias);
 
         return ContaReceber::create([
-            'empresa_id'      => $venda->empresa_id,
-            'cliente_id'      => $venda->cliente_id,
-            'venda_id'        => $venda->id,
-            'descricao'       => 'Venda #' . $venda->numero . ' — ' . $forma->nome,
-            'valor'           => $venda->total,
-            'valor_pago'      => 0,
+            'empresa_id' => $venda->empresa_id,
+            'cliente_id' => $venda->cliente_id,
+            'venda_id' => $venda->id,
+            'descricao' => 'Venda #'.$venda->numero.' — '.$forma->nome,
+            'valor' => $venda->total,
+            'valor_pago' => 0,
             'data_vencimento' => $vencimento->format('Y-m-d'),
             'forma_pagamento' => $forma->nome,
-            'categoria_id'    => $categoriaId,
-            'situacao'        => 'aberta',
-            'observacoes'     => 'Gerada automaticamente na confirmação da venda.',
+            'categoria_id' => $categoriaId,
+            'situacao' => 'aberta',
+            'observacoes' => 'Gerada automaticamente na confirmação da venda.',
         ]);
     }
 }

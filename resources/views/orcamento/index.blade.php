@@ -4,7 +4,7 @@
 @section('page_title', 'Orçamentos')
 
 @section('page_actions')
-    <a href="{{ route('orcamento.create') }}" class="btn btn--primary btn--sm">+ Novo Orçamento</a>
+    <a href="{{ route('orcamento.create') }}" class="btn btn--primary btn--sm">+ Novo orçamento</a>
 @endsection
 
 @section('content')
@@ -50,7 +50,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Orçamentos</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -60,7 +60,7 @@
                             <th style="width:80px;">Número</th>
                             <th>Cliente</th>
                             <th>Data</th>
-                            <th>Forma Pgto.</th>
+                            <th>Pagamento</th>
                             <th class="col-num">Total</th>
                             <th>Situação</th>
                             <th class="col-actions">Ações</th>
@@ -72,7 +72,7 @@
                                 <td data-label="Número" class="text-muted">#{{ $orcamento->numero }}</td>
                                 <td data-label="Cliente">{{ $orcamento->cliente->nome ?? '— Consumidor Final —' }}</td>
                                 <td data-label="Data">{{ $orcamento->data_orcamento->format('d/m/Y') }}</td>
-                                <td data-label="Forma Pgto.">{{ $orcamento->forma_pagamento ?? '—' }}</td>
+                                <td data-label="Pagamento">{{ $orcamento->forma_pagamento ?? '—' }}</td>
                                 <td data-label="Total" class="col-num">R$ {{ number_format($orcamento->total, 2, ',', '.') }}</td>
                                 <td data-label="Situação">
                                     <x-badge-situacao tipo="orcamento" :valor="$orcamento->situacao" />
@@ -106,11 +106,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted empty-state">
-                                    Nenhum orçamento cadastrado.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="prancheta"
+                                :colspan="7"
+                                titulo="Nenhum orçamento cadastrado"
+                                texto="Orçamento aprovado vira venda ou ordem de serviço sem redigitar os itens."
+                                :acao="route('orcamento.create')"
+                                acao-texto="+ Novo orçamento"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

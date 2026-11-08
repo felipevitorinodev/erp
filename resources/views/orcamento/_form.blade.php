@@ -14,7 +14,7 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label form-label--required">Data do Orçamento</label>
+        <label class="form-label form-label--required">Data do orçamento</label>
         <input type="date" name="data_orcamento"
             class="form-control @error('data_orcamento') is-invalid @enderror"
             value="{{ old('data_orcamento', $orcamento ? $orcamento->data_orcamento?->format('Y-m-d') : date('Y-m-d')) }}">
@@ -22,7 +22,7 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label">Forma de Pagamento</label>
+        <label class="form-label">Forma de pagamento</label>
         <div class="autocomplete-wrap">
             <input type="text" id="input-forma-pagamento" class="form-control"
                 value="{{ old('forma_pagamento', $orcamento->forma_pagamento ?? '') }}"
@@ -38,7 +38,7 @@
 <div class="itens-panel">
     <div class="section-toolbar">
         <span class="section-toolbar__title">Itens do Orçamento</span>
-        <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar Item</button>
+        <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar item</button>
     </div>
 
     @error('itens')<span class="form-error">{{ $message }}</span>@enderror
@@ -75,7 +75,7 @@
                         ])
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Preço Unit.</label>
+                        <label class="form-label">Preço unit.</label>
                         <input type="tel" name="itens[{{ $i }}][preco_unitario]"
                             class="form-control text-right input-preco"
                             inputmode="numeric"
@@ -237,7 +237,7 @@
                     '<input type="tel" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd input-quantity input-numeric" inputmode="numeric" data-decimals=\"2\" value=\"1,00\">' +
                 '</div>' +
                 '<div class="form-group">' +
-                    '<label class="form-label">Preço Unit.</label>' +
+                    '<label class="form-label">Preço unit.</label>' +
                     '<input type="tel" name="itens[' + idx + '][preco_unitario]" class="form-control text-right input-preco input-numeric" inputmode="numeric" data-decimals=\"2\" value="0,00">' +
                 '</div>' +
                 '<div class="form-group">' +

@@ -10,6 +10,7 @@ use App\Models\Produtos\Produto;
 use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Vendas\VendaRepository;
 use App\Support\MensagemPublica;
+use App\Support\PrecoMinimo;
 use App\Traits\ConversorMoeda;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
@@ -48,6 +49,8 @@ class OrdemServicoService
                 ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
                 ->withInput();
         }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
 
         $os = $this->repository->store([
             'empresa_id' => auth()->user()->empresa_id,
@@ -149,6 +152,8 @@ class OrdemServicoService
                 ->withErrors(['desconto' => 'O desconto não pode ser maior que o subtotal dos itens.'])
                 ->withInput();
         }
+
+        PrecoMinimo::validar($itens, (float) $totais['desconto']);
 
         try {
             $this->repository->update($os, [...$this->dadosFormulario($request), ...$totais], $itens);

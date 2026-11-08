@@ -8,6 +8,7 @@ use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
 use App\Repositories\Nfes\NfeRepository;
 use App\Services\Empresas\EmpresaService;
+use App\Services\Nfces\NfceBuilderService;
 use App\Services\Vendas\VendaService;
 use App\Support\MensagemPublica;
 use Carbon\Carbon;
@@ -690,6 +691,7 @@ class NfeService
         return view('nfe.inutilizar', [
             'empresa' => $empresa,
             'inutilizacoes' => $this->repository->inutilizacoes((int) $empresa->id),
+            'modeloPadrao' => request()->integer('modelo') === Nfe::MODELO_NFCE ? Nfe::MODELO_NFCE : Nfe::MODELO_NFE,
         ]);
     }
 
@@ -697,6 +699,7 @@ class NfeService
     {
         $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
         $dados = $request->validate([
+            'modelo' => ['nullable', 'in:'.Nfe::MODELO_NFE.','.Nfe::MODELO_NFCE],
             'serie' => ['required', 'regex:/^\d{1,3}$/'],
             'ano' => ['required', 'regex:/^\d{2}$/'],
             'numero_inicial' => ['required', 'integer', 'min:1', 'max:999999999'],
@@ -707,6 +710,9 @@ class NfeService
             'numero_final.gte' => 'O número final precisa ser maior ou igual ao inicial.',
         ]);
 
+        // Sem modelo no envio vale a NF-e (como antes). NFC-e usa o Tools do modelo 65.
+        $modelo = (int) ($dados['modelo'] ?? Nfe::MODELO_NFE);
+        $nomeModelo = $modelo === Nfe::MODELO_NFCE ? 'NFC-e' : 'NF-e';
         $serie = str_pad($dados['serie'], 3, '0', STR_PAD_LEFT);
         $inicio = (int) $dados['numero_inicial'];
         $fim = (int) $dados['numero_final'];
@@ -716,12 +722,13 @@ class NfeService
             return back()->withInput()->with('error', 'A faixa pode ter no máximo 1000 números por envio.');
         }
 
-        if ($this->repository->faixaOcupada((int) $empresa->id, $ambiente, $serie, $inicio, $fim)) {
-            return back()->withInput()->with('error', 'Essa faixa tem uma NF-e já gravada nesta série e ambiente. Número rejeitado com código 539 continua sem reaproveitamento e não entra na inutilização por aqui.');
+        if ($this->repository->faixaOcupada((int) $empresa->id, $ambiente, $serie, $inicio, $fim, $modelo)) {
+            return back()->withInput()->with('error', 'Essa faixa tem uma '.$nomeModelo.' já gravada nesta série e ambiente. Se a nota foi rejeitada, emita de novo pela venda: o mesmo número é usado. Número rejeitado com código 539 não entra na inutilização por aqui.');
         }
 
         try {
-            $resultado = (new NfeSenderService($empresa))->inutilizar(
+            $tools = $modelo === Nfe::MODELO_NFCE ? (new NfceBuilderService($empresa))->tools() : null;
+            $resultado = (new NfeSenderService($empresa, $tools))->inutilizar(
                 (int) $serie,
                 $inicio,
                 $fim,
@@ -729,13 +736,15 @@ class NfeService
                 $ambiente,
                 $dados['ano']
             );
+        } catch (RuntimeException $e) {
+            return back()->withInput()->with('error', MensagemPublica::de($e));
         } catch (Throwable $e) {
             return back()->withInput()->with('error', 'Não foi possível inutilizar. Verifique o certificado e a conexão com a SEFAZ.');
         }
 
         $this->repository->criarInutilizacao([
             'empresa_id' => $empresa->id,
-            'modelo' => Nfe::MODELO_NFE,
+            'modelo' => $modelo,
             'ambiente' => $ambiente,
             'serie' => $serie,
             'ano' => $dados['ano'],
@@ -749,10 +758,12 @@ class NfeService
             'xml' => $resultado['xml'],
         ]);
 
+        $voltar = redirect()->route('nfe.inutilizar', $modelo === Nfe::MODELO_NFCE ? ['modelo' => $modelo] : []);
+
         if ($resultado['status'] === 'autorizada') {
-            return redirect()->route('nfe.inutilizar')->with('success', 'Faixa inutilizada. Protocolo '.$resultado['protocolo'].'.');
+            return $voltar->with('success', 'Faixa de '.$nomeModelo.' inutilizada. Protocolo '.$resultado['protocolo'].'.');
         }
 
-        return redirect()->route('nfe.inutilizar')->with('error', $resultado['motivo']);
+        return $voltar->with('error', $resultado['motivo']);
     }
 }

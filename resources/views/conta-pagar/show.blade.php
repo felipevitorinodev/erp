@@ -1,10 +1,10 @@
 @extends(request()->boolean('modal') ? 'layouts.ver-modal' : 'layouts.app')
 
-@section('title', 'Conta a Pagar #' . $conta->id)
-@section('page_title', 'Conta a Pagar #' . $conta->id)
+@section('title', 'Conta a pagar #' . $conta->id)
+@section('page_title', 'Conta a pagar #' . $conta->id)
 
 @section('breadcrumb')
-    <a href="{{ route('conta-pagar.index') }}">Contas a Pagar</a> / #{{ $conta->id }}
+    <a href="{{ route('conta-pagar.index') }}">Contas a pagar</a> / #{{ $conta->id }}
 @endsection
 
 @section('page_actions')
@@ -15,7 +15,7 @@
         </a>
         
         @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
-            <button type="button" class="btn btn--success btn--sm" id="btn-abrir-pagar">Registrar Pagamento</button>
+            <button type="button" class="btn btn--success btn--sm" id="btn-abrir-pagar">Registrar pagamento</button>
             <a href="{{ route('conta-pagar.edit', $conta) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
                 <x-icon name="edit" />
             </a>
@@ -46,7 +46,7 @@
 
 @section('content')
 
-    <x-ficha titulo="Dados da Conta">
+    <x-ficha titulo="Dados da conta">
         <x-slot:status>
             <x-badge-situacao tipo="conta" :valor="$conta->situacao" />
         </x-slot:status>
@@ -115,14 +115,14 @@
         <div class="modal-overlay" id="modal-pagar" hidden>
             <div class="modal-box">
                 <div class="modal-box__header">
-                    <span class="card__title">Registrar Pagamento</span>
-                    <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-pagar">✕</button>
+                    <span class="card__title">Registrar pagamento</span>
+                    <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-pagar" aria-label="Fechar">✕</button>
                 </div>
                 <form method="POST" action="{{ route('conta-pagar.pagar', $conta) }}">
                     @csrf
                     <div class="modal-box__body">
                         <div class="form-group">
-                            <label class="form-label form-label--required">Valor Pago</label>
+                            <label class="form-label form-label--required">Valor pago</label>
                             @include('components.input-numeric', [
                                 'name' => 'valor_pago',
                                 'value' => old(
@@ -137,7 +137,7 @@
                             @enderror
                         </div>
                         <div class="form-group" style="margin-top:0.75rem;">
-                            <label class="form-label form-label--required">Data Pagamento</label>
+                            <label class="form-label form-label--required">Data do pagamento</label>
                             <input type="date" name="data_pagamento" class="form-control"
                                 value="{{ old('data_pagamento', date('Y-m-d')) }}" required>
                             @error('data_pagamento')
@@ -145,7 +145,7 @@
                             @enderror
                         </div>
                         <div class="form-group" style="margin-top:0.75rem;">
-                            <label class="form-label">Forma de Pagamento</label>
+                            <label class="form-label">Forma de pagamento</label>
                             <input type="text" name="forma_pagamento" class="form-control"
                                 value="{{ old('forma_pagamento', $conta->forma_pagamento) }}" maxlength="100">
                         </div>

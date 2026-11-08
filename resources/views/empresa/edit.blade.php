@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Empresa')
-@section('page_title', 'Editar Empresa')
+@section('title', 'Editar empresa')
+@section('page_title', 'Editar empresa')
 
 @section('breadcrumb')
-    <a href="{{ route('empresa.index') }}">Empresas</a> / Editar Empresa
+    <a href="{{ route('empresa.index') }}">Empresas</a> / Editar empresa
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Empresa</span>
+            <span class="card__title">Dados da empresa</span>
         </div>
 
         <form method="POST" action="{{ route('empresa.update', $empresa) }}" enctype="multipart/form-data">
@@ -24,7 +24,7 @@
                     <div class="form-section__title">Identificação</div>
                     <div class="form-grid form-grid--col-2">
                         <div class="form-group">
-                            <label class="form-label form-label--required">Razão Social</label>
+                            <label class="form-label form-label--required">Razão social</label>
                             <input type="text" name="razao_social"
                                 class="form-control @error('razao_social') is-invalid @enderror"
                                 value="{{ old('razao_social', $empresa->razao_social) }}" maxlength="150">
@@ -34,7 +34,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Nome Fantasia</label>
+                            <label class="form-label">Nome fantasia</label>
                             <input type="text" name="nome_fantasia"
                                 class="form-control @error('nome_fantasia') is-invalid @enderror"
                                 value="{{ old('nome_fantasia', $empresa->nome_fantasia) }}" maxlength="150">
@@ -46,7 +46,7 @@
 
                     <div class="form-grid form-grid--col-2" style="margin-top: 1rem;">
                         <div class="form-group">
-                            <label class="form-label">Inscrição Estadual</label>
+                            <label class="form-label">Inscrição estadual</label>
                             <input type="text" name="ie" class="form-control @error('ie') is-invalid @enderror"
                                 value="{{ old('ie', $empresa->ie) }}" maxlength="20">
                             @error('ie')
@@ -55,7 +55,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Inscrição Municipal</label>
+                            <label class="form-label">Inscrição municipal</label>
                             <input type="text" name="im" class="form-control @error('im') is-invalid @enderror"
                                 value="{{ old('im', $empresa->im) }}" maxlength="20">
                             @error('im')
@@ -196,7 +196,7 @@
 
                 <div class="form-section">
                     <div class="form-section__title" style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
-                        Certificado Digital NF-e
+                        Certificado digital NF-e
                         @if ($empresa->certificado_path && is_file(storage_path('app/'.$empresa->certificado_path)))
                             <span class="badge badge--success">Certificado configurado</span>
                         @else
@@ -217,7 +217,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Senha do Certificado</label>
+                            <label class="form-label">Senha do certificado</label>
                             <input type="password" name="certificado_senha" autocomplete="new-password"
                                 class="form-control @error('certificado_senha') is-invalid @enderror">
                             <small class="text-muted">Deixe em branco para manter a senha atual</small>
@@ -229,7 +229,7 @@
                 </div>
 
                 <div class="form-section">
-                    <div class="form-section__title">Dados Fiscais</div>
+                    <div class="form-section__title">Dados fiscais</div>
                     @php
                         $crtEmpresa = (int) old('crt', $empresa->crt ?? 1);
                     @endphp
@@ -374,11 +374,12 @@
                     </div>
                 </div>
 
-                <div class="form-section">
+                <div class="form-section" id="nfce">
                     <div class="form-section__title">NFC-e</div>
                     <p class="text-muted" style="margin-bottom: 1rem;">
                         O CSC é gravado criptografado e a tela só mostra se está preenchido ou vazio.
                         A série 001 é provisória até o contador informar a série definitiva. Ela não altera a série da NF-e.
+                        O ambiente (homologação ou produção) e o certificado são os mesmos da NF-e.
                     </p>
                     <label style="display:flex; gap:.5rem; align-items:flex-start; margin-bottom: 1rem;">
                         <input type="hidden" name="nfce_emitir_pdv" value="0">
@@ -455,6 +456,34 @@
                             @enderror
                         </div>
                     </div>
+
+                    {{-- Conferência sem emitir nota. O formulário fica fora deste (não dá para aninhar forms). --}}
+                    <div class="nfce-conferencia">
+                        <div class="nfce-conferencia__topo">
+                            <div>
+                                <p class="nfce-conferencia__titulo">Conferir a NFC-e</p>
+                                <p class="text-muted">Confere certificado, CSC, dados da empresa e a SEFAZ sem emitir nota. Salve as alterações antes.</p>
+                            </div>
+                            <button type="submit" form="form-verificar-nfce" class="btn btn--ghost btn--sm"
+                                data-espera="Conferindo..."
+                                data-demora="Consultando a SEFAZ.">Conferir agora</button>
+                        </div>
+                        @if (is_array(session('nfce_verificacao')))
+                            <ul class="nfce-conferencia__lista" aria-label="Resultado da conferência">
+                                @foreach (session('nfce_verificacao') as $item)
+                                    @php $tom = ! $item['ok'] ? 'erro' : (! empty($item['aviso']) ? 'aviso' : 'ok'); @endphp
+                                    <li class="nfce-conferencia__item nfce-conferencia__item--{{ $tom }}">
+                                        <x-icon :name="$tom === 'erro' ? 'x-circle' : ($tom === 'aviso' ? 'alert-triangle' : 'check')" :size="16" />
+                                        <span><strong>{{ $item['titulo'] }}:</strong> {{ $item['texto'] }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                            @php $falhas = collect(session('nfce_verificacao'))->where('ok', false)->count(); @endphp
+                            <p class="nfce-conferencia__conclusao">
+                                {{ $falhas === 0 ? 'Tudo certo para emitir NFC-e.' : ($falhas === 1 ? 'Corrija o item marcado antes de emitir.' : 'Corrija os '.$falhas.' itens marcados antes de emitir.') }}
+                            </p>
+                        @endif
+                    </div>
                 </div>
 
             </div>
@@ -464,6 +493,9 @@
                 <button type="submit" class="btn btn--primary">Salvar</button>
             </div>
 
+        </form>
+        <form method="POST" action="{{ route('empresa.nfce.verificar', $empresa) }}" id="form-verificar-nfce" hidden>
+            @csrf
         </form>
     </div>
 

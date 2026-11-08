@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Venda')
-@section('page_title', 'Editar Venda')
+@section('title', 'Editar venda')
+@section('page_title', 'Editar venda')
 
 @section('breadcrumb')
     <a href="{{ route('venda.index') }}">Vendas</a> /
@@ -17,7 +17,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Venda</span>
+            <span class="card__title">Dados da venda</span>
         </div>
 
         <form method="POST" action="{{ route('venda.update', $venda) }}" id="form-venda">

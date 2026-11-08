@@ -94,7 +94,7 @@
 
 @section('content')
 
-    <x-ficha titulo="Dados Gerais">
+    <x-ficha titulo="Dados gerais">
         <x-slot:status>
             <x-badge-situacao tipo="orcamento" :valor="$orcamento->situacao" />
         </x-slot:status>
@@ -148,7 +148,7 @@
                         <tr>
                             <th>Produto</th>
                             <th class="col-num">Qtd.</th>
-                            <th class="col-num">Preço Unit.</th>
+                            <th class="col-num">Preço unit.</th>
                             <th class="col-num">Desconto</th>
                             <th class="col-num">Total</th>
                         </tr>

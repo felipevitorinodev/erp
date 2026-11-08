@@ -27,6 +27,8 @@ class VendaController extends Controller
                 ->orderBy('nome')
                 ->get(),
             'emitirNfce' => (bool) $empresa?->nfce_emitir_pdv,
+            // Regra da Paraíba: NFC-e de R$ 500,00 ou mais exige CPF/CNPJ (validada no NfceService).
+            'nfceDocumentoAcima500' => strtoupper((string) $empresa?->uf) === 'PB',
         ]);
     }
 

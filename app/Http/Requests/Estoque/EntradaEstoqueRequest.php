@@ -21,17 +21,17 @@ class EntradaEstoqueRequest extends FormRequest
     {
         return [
             'fornecedor_id' => 'nullable|exists:fornecedores,id',
-            'numero'        => 'required|string|max:20',
-            'data_entrada'  => 'required|date',
-            'desconto'      => 'nullable|numeric|min:0',
-            'observacoes'   => 'nullable|string',
-            'itens'         => 'required|array|min:1',
-            'itens.*.produto_id'     => 'nullable|exists:produtos,id',
-            'itens.*.produto_nome'   => 'nullable|string|max:255',
+            'numero' => 'required|string|max:20',
+            'data_entrada' => 'required|date',
+            'desconto' => 'nullable|numeric|min:0',
+            'observacoes' => 'nullable|string',
+            'itens' => 'required|array|min:1',
+            'itens.*.produto_id' => 'nullable|exists:produtos,id',
+            'itens.*.produto_nome' => 'nullable|string|max:255',
             'itens.*.produto_codigo' => 'nullable|string|max:50',
-            'itens.*.quantidade'     => 'required|numeric|min:0.001',
+            'itens.*.quantidade' => 'required|numeric|min:0.001',
             'itens.*.preco_unitario' => 'required|numeric|min:0',
-            'itens.*.desconto'       => 'nullable|numeric|min:0',
+            'itens.*.desconto' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -44,7 +44,7 @@ class EntradaEstoqueRequest extends FormRequest
                 $ok = Fornecedor::where('id', $this->input('fornecedor_id'))
                     ->where('empresa_id', $empresaId)
                     ->exists();
-                if (!$ok) {
+                if (! $ok) {
                     $validator->errors()->add('fornecedor_id', 'Fornecedor inválido para esta empresa.');
                 }
             }
@@ -56,8 +56,8 @@ class EntradaEstoqueRequest extends FormRequest
                 $ok = Produto::where('id', $item['produto_id'])
                     ->where('empresa_id', $empresaId)
                     ->exists();
-                if (!$ok) {
-                    $validator->errors()->add('itens.' . $idx . '.produto_id', 'Produto inválido para esta empresa.');
+                if (! $ok) {
+                    $validator->errors()->add('itens.'.$idx.'.produto_id', 'Produto inválido para esta empresa.');
                 }
             }
         });
@@ -67,24 +67,24 @@ class EntradaEstoqueRequest extends FormRequest
     {
         return [
             'fornecedor_id' => 'fornecedor',
-            'numero'        => 'número da NF',
-            'data_entrada'  => 'data de entrada',
-            'desconto'      => 'desconto',
-            'observacoes'   => 'observações',
-            'itens'         => 'itens',
+            'numero' => 'número da NF',
+            'data_entrada' => 'data de entrada',
+            'desconto' => 'desconto',
+            'observacoes' => 'observações',
+            'itens' => 'itens',
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $items = $this->input('itens', []);
-        if (!is_array($items)) {
+        if (! is_array($items)) {
             return;
         }
 
         foreach ($items as $k => $it) {
             foreach (['quantidade', 'preco_unitario', 'desconto'] as $field) {
-                if (!isset($it[$field])) {
+                if (! isset($it[$field])) {
                     continue;
                 }
                 $items[$k][$field] = $this->normalizarNumero((string) $it[$field]);

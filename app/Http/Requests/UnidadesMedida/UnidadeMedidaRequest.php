@@ -15,9 +15,9 @@ class UnidadeMedidaRequest extends FormRequest
     {
         return [
             'empresa_id' => 'required|exists:empresa,id',
-            'nome'       => 'required|string|max:255',
-            'sigla'      => 'required|string|max:10',
-            'ativo'      => 'nullable|boolean',
+            'nome' => 'required|string|max:255',
+            'sigla' => 'required|string|max:10',
+            'ativo' => 'nullable|boolean',
         ];
     }
 
@@ -25,9 +25,9 @@ class UnidadeMedidaRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }

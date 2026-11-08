@@ -63,4 +63,10 @@ class Nfe extends Model
 
         return $this->data_autorizacao->gt(now()->subHours(24));
     }
+
+    /** Motivo da SEFAZ sem o prefixo "Rejeicao:" (a tela já diz que foi rejeitada). */
+    public function motivoParaTela(): string
+    {
+        return trim((string) preg_replace('/^\s*rejei[cç][aã]o\s*:\s*/iu', '', (string) $this->motivo_status));
+    }
 }

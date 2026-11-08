@@ -189,7 +189,6 @@
                 return;
             }
             window.modalConfirmAttached = true;
-            console.debug && console.debug('modal-confirm: init - modal found and attached');
 
             var titleEl = document.getElementById('modal-confirm-title');
             var messageEl = document.getElementById('modal-confirm-message');
@@ -214,7 +213,6 @@
                 var variant = opts.variant || 'primary';
                 okBtn.className = 'btn btn--' + variant;
 
-                console.debug && console.debug('modal-confirm: abrir', opts);
                 modal.hidden = false;
             }
 
@@ -234,20 +232,16 @@
                 var form = pendingForm;
                 var submitter = pendingSubmitter;
                 if (!form) {
-                    console.debug && console.debug('modal-confirm: ok click but no pendingForm');
                     fechar();
                     return;
                 }
 
-                console.debug && console.debug('modal-confirm: ok clicked; submitting form', form, submitter);
                 form.dataset.confirmApproved = '1';
                 fechar();
 
                 if (typeof form.requestSubmit === 'function') {
-                    console.debug && console.debug('modal-confirm: using requestSubmit');
                     form.requestSubmit(submitter || undefined);
                 } else {
-                    console.debug && console.debug('modal-confirm: using form.submit() fallback');
                     if (window.ErpCarregamento) window.ErpCarregamento.anotarEnvio(form, submitter);
                     form.submit();
                 }
@@ -839,6 +833,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var cep = String(this.value || '').replace(/\D/g, '');
             if (cep.length !== 8) return;
             var form = this.closest('form') || document;
+            var liberarCep = window.ErpCarregamento ? window.ErpCarregamento.ocuparCampo(cepEl) : function () {};
             fetch('https://viacep.com.br/ws/' + cep + '/json/')
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
@@ -855,7 +850,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     var ibge = String(d.ibge || '').replace(/\D/g, '');
                     if (ibge.length === 7) set('cod_ibge', ibge);
                 })
-                .catch(function () {});
+                .catch(function () {})
+                .finally(liberarCep);
         });
     });
 

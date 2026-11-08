@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Unidade de Medida')
-@section('page_title', 'Nova Unidade de Medida')
+@section('title', 'Nova unidade de medida')
+@section('page_title', 'Nova unidade de medida')
 
 @section('breadcrumb')
-    <a href="{{ route('unidadeMedida.index') }}">Unidades de Medida</a> / Nova Unidade
+    <a href="{{ route('unidadeMedida.index') }}">Unidades de medida</a> / Nova unidade
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Unidade</span>
+            <span class="card__title">Dados da unidade</span>
         </div>
 
         <form method="POST" action="{{ route('unidadeMedida.store') }}">

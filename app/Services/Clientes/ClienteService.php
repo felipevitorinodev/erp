@@ -3,17 +3,15 @@
 namespace App\Services\Clientes;
 
 use App\Http\Requests\Clientes\ClienteRequest;
-
 use App\Models\Clientes\Cliente;
 use App\Repositories\Clientes\ClienteRepository;
 use Illuminate\Http\Request;
 
 class ClienteService
 {
-    public function __construct
-    (
+    public function __construct(
         protected ClienteRepository $repository
-    ){}
+    ) {}
 
     public function index(Request $request)
     {
@@ -21,21 +19,22 @@ class ClienteService
 
         return view('cliente.index', [
             'clientes' => $clientes,
-            'filtros'  => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 
-    public function create() {
+    public function create()
+    {
         return view('cliente.create');
     }
 
     public function store($request)
     {
-    $this->repository->store($request->validated());
+        $this->repository->store($request->validated());
 
-    return redirect()->route('cliente.index')
-        ->with('success', 'Cliente cadastrado com sucesso.');
-    }   
+        return redirect()->route('cliente.index')
+            ->with('success', 'Cliente cadastrado com sucesso.');
+    }
 
     public function edit(Cliente $cliente)
     {
@@ -44,7 +43,7 @@ class ClienteService
         }
 
         return view('cliente.edit', [
-            'cliente' => $cliente
+            'cliente' => $cliente,
         ]);
     }
 
@@ -70,5 +69,5 @@ class ClienteService
 
         return redirect()->route('cliente.index')
             ->with('success', 'Cliente apagado com sucesso.');
-    }                       
+    }
 }

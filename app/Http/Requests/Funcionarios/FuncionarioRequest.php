@@ -15,36 +15,36 @@ class FuncionarioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'empresa_id'      => 'required|exists:empresa,id',
-            'usuario_id'      => [
+            'empresa_id' => 'required|exists:empresa,id',
+            'usuario_id' => [
                 'nullable',
                 Rule::exists('users', 'id')
                     ->where('empresa_id', auth()->user()->empresa_id)
                     ->whereNull('deleted_at'),
             ],
 
-            'nome'            => 'required|string|max:255',
-            'cpf'             => 'nullable|max:14|cpf',
-            'rg'              => 'nullable|string|max:20',
+            'nome' => 'required|string|max:255',
+            'cpf' => 'nullable|max:14|cpf',
+            'rg' => 'nullable|string|max:20',
             'data_nascimento' => 'nullable|date',
 
-            'email'           => 'nullable|email|max:255',
-            'telefone'        => 'nullable|string|max:20',
-            'celular'         => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'telefone' => 'nullable|string|max:20',
+            'celular' => 'nullable|string|max:20',
 
-            'cargo'           => 'nullable|string|max:100',
-            'departamento'    => 'nullable|string|max:100',
-            'salario'              => 'nullable|numeric|min:0',
-            'percentual_comissao'  => 'nullable|numeric|min:0|max:100',
+            'cargo' => 'nullable|string|max:100',
+            'departamento' => 'nullable|string|max:100',
+            'salario' => 'nullable|numeric|min:0',
+            'percentual_comissao' => 'nullable|numeric|min:0|max:100',
             'comissao_os_percentual' => 'nullable|numeric|min:0|max:100',
-            'comissao_os_base'     => 'required|in:total,servicos',
+            'comissao_os_base' => 'required|in:total,servicos',
 
-            'data_admissao'   => 'nullable|date',
-            'data_demissao'   => 'nullable|date|after_or_equal:data_admissao',
-            'tipo_contrato'   => 'nullable|in:CLT,PJ,Autonomo,Estagio',
+            'data_admissao' => 'nullable|date',
+            'data_demissao' => 'nullable|date|after_or_equal:data_admissao',
+            'tipo_contrato' => 'nullable|in:CLT,PJ,Autonomo,Estagio',
 
-            'ativo'           => 'nullable|boolean',
-            'observacoes'     => 'nullable|string',
+            'ativo' => 'nullable|boolean',
+            'observacoes' => 'nullable|string',
         ];
     }
 
@@ -52,9 +52,9 @@ class FuncionarioRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }
@@ -63,7 +63,7 @@ class FuncionarioRequest extends FormRequest
     {
         $this->merge([
             'comissao_os_percentual' => $this->input('comissao_os_percentual') ?? 0,
-            'comissao_os_base'       => $this->input('comissao_os_base') ?: 'total',
+            'comissao_os_base' => $this->input('comissao_os_base') ?: 'total',
         ]);
     }
 }

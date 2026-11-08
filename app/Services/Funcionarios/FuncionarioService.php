@@ -18,7 +18,7 @@ class FuncionarioService
 
         return view('funcionario.index', [
             'funcionarios' => $funcionarios,
-            'filtros'      => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 

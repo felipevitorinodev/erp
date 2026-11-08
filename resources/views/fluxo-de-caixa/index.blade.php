@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Fluxo de Caixa')
-@section('page_title', 'Fluxo de Caixa')
+@section('title', 'Fluxo de caixa')
+@section('page_title', 'Fluxo de caixa')
 
 @section('page_actions')
     <x-export-dropdown :csv="route('fluxo-de-caixa.csv', request()->query())" />
@@ -41,7 +41,7 @@
                 <th>Data</th>
                 <th class="col-num">Entradas</th>
                 <th class="col-num">Saídas</th>
-                <th class="col-num">Saldo do Dia</th>
+                <th class="col-num">Saldo do dia</th>
             </tr>
         </thead>
         <tbody>
@@ -50,7 +50,7 @@
                     <td data-label="Data">{{ $dia['data']->format('d/m/Y') }}</td>
                     <td data-label="Entradas" class="col-num"><x-moeda :valor="$dia['entradas']" /></td>
                     <td data-label="Saídas" class="col-num"><x-moeda :valor="$dia['saidas']" /></td>
-                    <td data-label="Saldo do Dia" @class(['col-num', 'text--danger' => $dia['saldo_dia'] < 0])>
+                    <td data-label="Saldo do dia" @class(['col-num', 'text--danger' => $dia['saldo_dia'] < 0])>
                         <x-moeda :valor="$dia['saldo_dia']" />
                     </td>
                 </tr>

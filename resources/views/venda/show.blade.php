@@ -30,9 +30,10 @@
             label="Imprimir"
             pdf-rotulo="A4"
             :pdf="route('venda.pdf', $venda)"
-            :extras="[
+            :extras="array_values(array_filter([
                 ['rotulo' => '80 mm', 'url' => route('venda.recibo', $venda)],
-            ]"
+                $nfce?->situacao === 'autorizada' ? ['rotulo' => 'NFC-e (cupom fiscal)', 'url' => route('venda.nfce.danfe', $venda)] : null,
+            ]))"
         />
 
         @if($venda->situacao === 'em_andamento')
@@ -74,40 +75,52 @@
 @section('content')
 
     {{-- Cabeçalho --}}
-    <x-ficha titulo="Dados Gerais">
+    <x-ficha titulo="Dados gerais">
         <x-slot:status>
             <x-badge-situacao tipo="venda" :valor="$venda->situacao" />
         </x-slot:status>
+        @php
+            $notaDoResumo = $nfeDaVenda && in_array($nfeDaVenda->situacao, ['autorizada', 'pendente', 'denegada'], true) ? $nfeDaVenda : ($nfce ?? $nfeDaVenda);
+            $qtdItens = $venda->itens->count();
+        @endphp
         <x-slot:resumo>
             <div>
                 <span>Total</span>
                 <strong><x-moeda :valor="$venda->total" /></strong>
             </div>
             <div>
-                <span>Subtotal</span>
-                <strong><x-moeda :valor="$venda->subtotal" /></strong>
+                <span>Pagamento</span>
+                <strong class="ficha__resumo-texto">{{ $venda->forma_pagamento ?: '—' }}</strong>
             </div>
             <div>
-                <span>Desconto</span>
-                <strong><x-moeda :valor="$venda->desconto" /></strong>
+                <span>Itens</span>
+                <strong>{{ $qtdItens }} {{ $qtdItens === 1 ? 'produto' : 'produtos' }}</strong>
             </div>
             <div>
-                <span>Acréscimo</span>
-                <strong><x-moeda :valor="$venda->acrescimo" /></strong>
+                <span>Nota fiscal</span>
+                <strong class="ficha__resumo-texto">
+                    @if ($notaDoResumo)
+                        {{ (int) $notaDoResumo->modelo === \App\Models\Nfes\Nfe::MODELO_NFCE ? 'NFC-e' : 'NF-e' }}
+                        {{ mb_strtolower(\App\Support\Situacoes::de('nfe', $notaDoResumo->situacao)[0]) }}
+                    @else
+                        Sem nota
+                    @endif
+                </strong>
             </div>
         </x-slot:resumo>
-        <x-ficha-campo label="Número">#{{ $venda->numero }}</x-ficha-campo>
-        <x-ficha-campo label="Data da venda">{{ $venda->data_venda->format('d/m/Y') }}</x-ficha-campo>
-        <x-ficha-campo label="Previsão de entrega">{{ $venda->data_entrega ? $venda->data_entrega->format('d/m/Y') : '—' }}</x-ficha-campo>
-        <x-ficha-campo label="Forma de pagamento">{{ $venda->forma_pagamento ?? '—' }}</x-ficha-campo>
+        <x-ficha-campo label="Data da venda">{{ $venda->data_venda->format('d/m/Y') }}{{ $venda->created_at ? ' às '.$venda->created_at->format('H:i') : '' }}</x-ficha-campo>
         <x-ficha-campo label="Cliente">{{ $venda->cliente->nome ?? '— Consumidor Final —' }}</x-ficha-campo>
         <x-ficha-campo label="Vendedor">{{ $venda->funcionario->nome ?? ($venda->usuario->name ?? '—') }}</x-ficha-campo>
+        @if ($venda->data_entrega)
+            <x-ficha-campo label="Previsão de entrega">{{ $venda->data_entrega->format('d/m/Y') }}</x-ficha-campo>
+        @endif
         @if($venda->observacoes)
             <x-ficha-campo label="Observações" largo class="ficha__item--texto">{{ $venda->observacoes }}</x-ficha-campo>
         @endif
     </x-ficha>
 
-    
+    {{-- Nota fiscal (NFC-e ou NF-e): emitir, consultar, imprimir, cancelar --}}
+    @include('venda._nota-fiscal')
 
     {{-- Itens --}}
     <div class="card" style="margin-top:1rem;">
@@ -121,7 +134,7 @@
                         <tr>
                             <th>Produto</th>
                             <th class="col-num">Qtd.</th>
-                            <th class="col-num">Preço Unit.</th>
+                            <th class="col-num">Preço unit.</th>
                             <th class="col-num">Desconto</th>
                             <th class="col-num">Total</th>
                         </tr>
@@ -173,103 +186,5 @@
             </div>
         </div>
     </div>
-
-    @if (auth()->user()->pode('nfe'))
-    {{-- NF-e --}}
-    <div class="card" style="margin-top:1rem;">
-        <div class="ficha__head">
-            <span class="card__title">NF-e</span>
-            @if ($venda->nfe)
-                @if ($venda->nfe->situacao === 'autorizada')
-                    <x-badge tom="success">Autorizada</x-badge>
-                @elseif ($venda->nfe->situacao === 'rejeitada')
-                    <x-badge tom="error">Rejeitada</x-badge>
-                @elseif ($venda->nfe->situacao === 'denegada')
-                    <x-badge tom="error">Denegada</x-badge>
-                @elseif ($venda->nfe->situacao === 'cancelada')
-                    <x-badge>Cancelada</x-badge>
-                @else
-                    <x-badge tom="warning">Pendente</x-badge>
-                @endif
-            @endif
-        </div>
-        <div class="card__body">
-            @if ($venda->nfe && $venda->nfe->situacao === 'autorizada')
-                <dl class="ficha__grid">
-                    <x-ficha-campo label="Protocolo">{{ $venda->nfe->protocolo ?? '—' }}</x-ficha-campo>
-                    <x-ficha-campo label="Autorização">{{ $venda->nfe->data_autorizacao?->format('d/m/Y H:i') ?? '—' }}</x-ficha-campo>
-                    <x-ficha-campo label="Chave de acesso" largo mono>{{ $venda->nfe->chave_acesso }}</x-ficha-campo>
-                </dl>
-                <div class="filter-actions" style="margin-top:1rem;">
-                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
-                    <a href="{{ route('nfe.danfe', $venda->nfe) }}" target="_blank" class="btn btn--primary btn--sm">DANFE</a>
-                </div>
-            @elseif ($venda->nfe && $venda->nfe->situacao === 'cancelada')
-                <p class="text-muted" style="margin:0 0 0.75rem;">
-                    A NF-e anterior foi cancelada. Você pode emitir uma nova nota para esta venda.
-                </p>
-                <div class="filter-actions">
-                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e cancelada</a>
-                    @if ($venda->situacao === 'confirmada')
-                        <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
-                            @csrf
-                            <button type="submit" class="btn btn--primary btn--sm"
-                                data-confirm="Emitir uma nova NF-e para a venda #{{ $venda->numero }}?"
-                                data-confirm-title="Emitir NF-e"
-                                data-confirm-ok="Emitir">
-                                Emitir nova NF-e
-                            </button>
-                        </form>
-                    @endif
-                </div>
-            @elseif ($venda->nfe && in_array($venda->nfe->situacao, ['rejeitada', 'pendente'], true))
-                @if ($venda->nfe->motivo_status)
-                    <div class="alert alert--error" style="margin-bottom:1rem;">
-                        {{ $venda->nfe->motivo_status }}
-                        @if ($venda->nfe->codigo_status)
-                            <span class="text-muted">(Código {{ $venda->nfe->codigo_status }})</span>
-                        @endif
-                    </div>
-                @endif
-                <div class="filter-actions">
-                    <a href="{{ route('nfe.show', $venda->nfe) }}" class="btn btn--ghost btn--sm">Ver NF-e</a>
-                    @if ($venda->nfe->situacao === 'rejeitada' && $venda->situacao === 'confirmada')
-                        <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
-                            @csrf
-                            <button type="submit" class="btn btn--primary btn--sm"
-                                data-confirm="Emitir uma nova NF-e para a venda #{{ $venda->numero }}?"
-                                data-confirm-title="Emitir NF-e"
-                                data-confirm-ok="Emitir">
-                                Tentar novamente
-                            </button>
-                        </form>
-                    @endif
-                </div>
-            @elseif ($venda->situacao === 'confirmada')
-                <p class="text-muted" style="margin:0 0 0.75rem;">
-                    A NF-e será enviada diretamente para a SEFAZ.
-                </p>
-                <form method="POST" action="{{ route('nfe.emitir', $venda) }}">
-                    @csrf
-                    <button type="submit" class="btn btn--primary"
-                        data-confirm="Emitir NF-e da venda #{{ $venda->numero }} agora?"
-                        data-confirm-title="Emitir NF-e"
-                        data-confirm-ok="Emitir">
-                        Emitir NF-e
-                    </button>
-                </form>
-            @elseif ($venda->isRascunhoNfe() && auth()->user()->pode('nfe'))
-                <p class="text-muted" style="margin:0 0 0.75rem;">
-                    Esta venda é um rascunho de NF-e: o estoque só será baixado na emissão.
-                </p>
-                <a href="{{ route('nfe.rascunho.edit', $venda) }}" class="btn btn--primary btn--sm">Continuar rascunho da NF-e</a>
-            @else
-                <p class="text-muted" style="margin:0;">
-                    Confirme a venda antes de emitir a NF-e.
-                </p>
-            @endif
-        </div>
-    </div>
-    @endif
 
 @endsection

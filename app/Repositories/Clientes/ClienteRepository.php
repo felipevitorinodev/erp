@@ -31,7 +31,22 @@ class ClienteRepository
     public function store(array $request)
     {
         $request['empresa_id'] = auth()->user()->empresa_id;
+
         return $this->cliente->create($request);
+    }
+
+    /** Cadastro rápido (balcão, NF-e e comandos) com os dados já validados por ClienteRapidoRequest. */
+    public function cadastrarRapido(array $dados): Cliente
+    {
+        return $this->cliente->create([
+            'empresa_id' => auth()->user()->empresa_id,
+            'nome' => trim($dados['nome']),
+            'cpf' => $dados['cpf'] ?? null,
+            'cnpj' => $dados['cnpj'] ?? null,
+            'telefone' => $dados['telefone'] ?? null,
+            'email' => $dados['email'] ?? null,
+            'ativo' => true,
+        ]);
     }
 
     public function edit(Cliente $cliente)
@@ -51,6 +66,7 @@ class ClienteRepository
     public function destroy($id)
     {
         $cliente = $this->cliente->where('empresa_id', auth()->user()->empresa_id)->findOrFail($id);
+
         return $cliente->delete();
     }
 }

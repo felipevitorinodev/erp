@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'NF-e Emitidas')
-@section('page_title', 'NF-e Emitidas')
+@section('title', 'NF-e emitidas')
+@section('page_title', 'NF-e emitidas')
 
 @section('page_actions')
     <a href="{{ route('nfe.inutilizar') }}" class="btn btn--ghost btn--sm">Inutilizar numeração</a>
@@ -41,7 +41,7 @@
                                     <td data-label="Destinatário">{{ $rascunho->cliente->nome ?? 'Consumidor Final' }}</td>
                                     <td data-label="Atualizado">{{ $rascunho->updated_at?->format('d/m/Y H:i') }}</td>
                                     <td data-label="Total" class="col-num">R$ {{ number_format((float) $rascunho->total, 2, ',', '.') }}</td>
-                                    <td data-label="Situação"><span class="badge badge--info">Rascunho</span></td>
+                                    <td data-label="Situação"><span class="badge badge--warning">Rascunho</span></td>
                                     <td class="col-actions" data-label="Ações">
                                         <a href="{{ route('nfe.rascunho.edit', $rascunho) }}" class="btn btn--ghost btn--sm">Continuar</a>
                                     </td>
@@ -56,7 +56,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de NF-e</span>
+            <span class="card__title">Notas emitidas</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -95,7 +95,7 @@
                                     @elseif ($nfe->situacao === 'denegada')
                                         <span class="badge badge--error">Denegada</span>
                                     @elseif ($nfe->situacao === 'cancelada')
-                                        <span class="badge badge--neutral">Cancelada</span>
+                                        <span class="badge badge--error">Cancelada</span>
                                     @else
                                         <span class="badge badge--warning">Pendente</span>
                                     @endif
@@ -127,11 +127,13 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted empty-state">
-                                    Nenhuma NF-e emitida.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="documento-fiscal"
+                                :colspan="7"
+                                titulo="Nenhuma NF-e emitida"
+                                texto="As notas emitidas aparecem aqui com a situação na SEFAZ."
+                                :acao="route('nfe.create')"
+                                acao-texto="+ Nova NF-e"
+                            />
                         @endforelse
                     </tbody>
                 </table>

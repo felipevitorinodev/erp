@@ -93,13 +93,41 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
         $list.show();
     }
 
+    // Passados 200 ms sem resposta: indicador no campo e esqueleto na lista.
+    function mostrarCarregando() {
+        $input.addClass('is-loading').attr('aria-busy', 'true');
+        if (!$input.is(':focus')) return;
+        $list.empty().attr('aria-busy', 'true');
+        if (window.ErpCarregamento) {
+            $list.append(window.ErpCarregamento.itensEsqueleto(4, 'li'));
+        } else {
+            $list.append('<li class="autocomplete-list__empty">Carregando...</li>');
+        }
+        posicionar();
+        $list.show();
+    }
+
+    function mostrarFalha(q) {
+        $list.empty();
+        var $li = $('<li class="carga-falha">Não foi possível buscar. </li>');
+        var $botao = $('<button type="button">Tentar novamente</button>');
+        $botao.on('mousedown', function (e) {
+            e.preventDefault();
+            buscar(q);
+        });
+        $li.append($botao);
+        $list.append($li);
+        posicionar();
+        $list.show();
+    }
+
     function buscar(q) {
         var current = ++requestId;
         window.clearTimeout(loadingTimer);
         $input.removeClass('is-loading').removeAttr('aria-busy');
         loadingTimer = window.setTimeout(function () {
             if (current === requestId) {
-                $input.addClass('is-loading').attr('aria-busy', 'true');
+                mostrarCarregando();
             }
         }, 200);
 
@@ -112,8 +140,14 @@ function initAutocomplete(inputSel, hiddenSel, url, renderItem, onSelect, extraP
                 if (current !== requestId) return;
                 renderLista(data);
             },
+            error: function (xhr, status) {
+                if (current !== requestId || status === 'abort') return;
+                if ($input.is(':focus')) mostrarFalha(q);
+                else fechar();
+            },
             complete: function () {
                 if (current !== requestId) return;
+                $list.removeAttr('aria-busy');
                 window.clearTimeout(loadingTimer);
                 $input.removeClass('is-loading').removeAttr('aria-busy');
             }

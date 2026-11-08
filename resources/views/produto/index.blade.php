@@ -4,7 +4,7 @@
 @section('page_title', 'Produtos')
 
 @section('page_actions')
-    <a href="{{ route('produto.create') }}" class="btn btn--primary btn--sm">+ Novo Produto</a>
+    <a href="{{ route('produto.create') }}" class="btn btn--primary btn--sm">+ Novo produto</a>
 @endsection
 
 @section('content')
@@ -49,7 +49,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Produtos</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -59,7 +59,7 @@
                             <th>Código</th>
                             <th>Nome</th>
                             <th>Grupo</th>
-                            <th class="col-num">Preço Venda</th>
+                            <th class="col-num">Preço de venda</th>
                             <th class="col-num">Estoque</th>
                             <th>Situação</th>
                             <th class="col-actions">Ações</th>
@@ -68,12 +68,17 @@
                     <tbody>
                         @forelse($produtos as $produto)
                             <tr>
-                                <td data-label="Código">{{ $produto->id ?? '—' }}</td>
+                                <td data-label="Código">{{ $produto->codigo ?: '—' }}</td>
                                 <td data-label="Nome">{{ $produto->nome }}</td>
                                 <td data-label="Grupo">{{ $produto->grupos->nome ?? '—' }}</td>
-                                <td data-label="Preço Venda" class="col-num">R$ {{ number_format($produto->preco_venda, 2, ',', '.') }}</td>
-                                <td data-label="Estoque" class="col-num">{{ number_format((float) $produto->estoque_atual, 2, ',', '.') }}
-                                    {{ $produto->unidadeMedida->sigla ?? '' }}</td>
+                                <td data-label="Preço de venda" class="col-num">R$ {{ number_format($produto->preco_venda, 2, ',', '.') }}</td>
+                                @php($estoqueBaixo = $produto->ativo && $produto->controla_estoque && (float) $produto->estoque_atual <= (float) $produto->estoque_minimo)
+                                <td data-label="Estoque" class="col-num {{ $estoqueBaixo ? 'text--danger' : '' }}">{{ number_format((float) $produto->estoque_atual, 2, ',', '.') }}
+                                    {{ $produto->unidadeMedida->sigla ?? '' }}
+                                    @if($estoqueBaixo)
+                                        <span class="aviso-linha">estoque baixo</span>
+                                    @endif
+                                </td>
                                 <td data-label="Situação">
                                     @if($produto->ativo)
                                         <span class="badge badge--success">Ativo</span>
@@ -103,11 +108,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="8" class="empty-state">
-                                    Nenhum produto cadastrado.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="prateleira"
+                                :colspan="8"
+                                titulo="Nenhum produto cadastrado"
+                                texto="Cadastre produtos e serviços para vender no PDV e emitir notas."
+                                :acao="route('produto.create')"
+                                acao-texto="+ Novo produto"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

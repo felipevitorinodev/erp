@@ -13,7 +13,7 @@ class CategoriaFinanceiraRepository
 
         return CategoriaFinanceira::daEmpresa()
             ->when($busca, function ($query) use ($busca) {
-                $query->where('nome', 'like', '%' . $busca . '%');
+                $query->where('nome', 'like', '%'.$busca.'%');
             })
             ->orderBy('tipo')
             ->orderBy('nome')

@@ -29,7 +29,7 @@ return new class extends Migration
 
         $porNome = [];
         foreach ($formas as $forma) {
-            $chave = $forma->empresa_id . '|' . mb_strtolower(trim((string) $forma->nome));
+            $chave = $forma->empresa_id.'|'.mb_strtolower(trim((string) $forma->nome));
             $porNome[$chave] ??= $forma->id;
         }
 
@@ -40,7 +40,7 @@ return new class extends Migration
             ->select(['id', 'empresa_id', 'forma_pagamento'])
             ->chunkById(500, function ($vendas) use ($porNome) {
                 foreach ($vendas as $venda) {
-                    $id = $porNome[$venda->empresa_id . '|' . mb_strtolower(trim((string) $venda->forma_pagamento))] ?? null;
+                    $id = $porNome[$venda->empresa_id.'|'.mb_strtolower(trim((string) $venda->forma_pagamento))] ?? null;
 
                     if ($id) {
                         DB::table('vendas')->where('id', $venda->id)->update(['forma_pagamento_id' => $id]);

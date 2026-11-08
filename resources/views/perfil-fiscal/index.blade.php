@@ -4,7 +4,7 @@
 @section('page_title', 'Perfis fiscais')
 
 @section('page_actions')
-    <a href="{{ route('perfilFiscal.create') }}" class="btn btn--primary btn--sm">+ Novo perfil</a>
+    <a href="{{ route('perfilFiscal.create') }}" class="btn btn--primary btn--sm">+ Novo perfil fiscal</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -90,11 +90,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted empty-state">
-                                    Nenhum perfil fiscal. Enquanto não houver, a nota continua usando o produto e o padrão da empresa.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="documento-fiscal"
+                                :colspan="9"
+                                titulo="Nenhum perfil fiscal cadastrado"
+                                texto="Enquanto não houver, a nota continua usando o produto e o padrão da empresa."
+                                :acao="route('perfilFiscal.create')"
+                                acao-texto="+ Novo perfil fiscal"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

@@ -9,10 +9,11 @@
     var debounceTimer = null;
     var pedidoBusca = 0;
     var timerBusca = null;
-    var toastTimer = null;
     var scannerTimer = null;
     var qtdDestaqueTimer = null;
     var finalizando = false;
+    // Mesma chave em todas as tentativas desta venda: o servidor não lança a venda duas vezes num reenvio.
+    var chaveVenda = null;
     var recebidoAcompanhaTotal = true;
     var buscandoCodigo = false;
     var ultimoProdutoId = null;
@@ -21,6 +22,7 @@
     var catalogo = [];
     var catalogoPronto = false;
     var catalogoTruncado = false;
+    var catalogoFalhou = false;
     var rascunhosTabela = {};
     var tabelaVisiveis = [];
     var tabelaAtiva = 0;
@@ -67,7 +69,6 @@
         linkA4: document.getElementById('pdv-link-a4'),
         linkRecibo: document.getElementById('pdv-link-recibo'),
         clienteHidden: document.getElementById('pdv-hidden-cliente-id'),
-        toast: document.getElementById('pdv-toast'),
         painelExtra: document.getElementById('pdv-painel-extra'),
         telaPequena: document.getElementById('pdv-tela-pequena'),
         larguraAtual: document.getElementById('pdv-largura-atual'),
@@ -89,6 +90,7 @@
         btnAjuda: document.getElementById('pdv-btn-ajuda'),
         sucessoTroco: document.getElementById('pdv-sucesso-troco'),
         sucessoNfce: document.getElementById('pdv-sucesso-nfce'),
+        sucessoNfceDica: document.getElementById('pdv-sucesso-nfce-dica'),
         linkNfce: document.getElementById('pdv-link-nfce'),
         documentoNfce: document.getElementById('pdv-nfce-documento'),
         tabela: document.getElementById('pdv-tabela'),
@@ -238,20 +240,11 @@
         document.querySelectorAll('#toast-stack .toast--error').forEach(function (t) { t.remove(); });
     }
 
-    function mostrarToast(msg) {
-        if (!el.toast) return;
-        // evita ficar preso em stacking context do layout (footer cobrindo)
-        if (el.toast.parentNode !== document.body) {
-            document.body.appendChild(el.toast);
-        }
-        el.toast.textContent = msg;
-        el.toast.hidden = false;
-        el.toast.classList.add('pdv-toast--visivel');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(function () {
-            el.toast.classList.remove('pdv-toast--visivel');
-            setTimeout(function () { el.toast.hidden = true; }, 220);
-        }, 1600);
+    // Confirmações rápidas (item lançado, removido...) usam a mesma pilha de avisos do sistema,
+    // com duração curta e sem empilhar durante a leitura de vários códigos.
+    function mostrarToast(msg, tipo) {
+        if (typeof window.mostrarToast !== 'function') return;
+        window.mostrarToast(msg, tipo || 'info', { duracao: 2000, substituir: true });
     }
 
     function fecharSugestoes() {
@@ -369,7 +362,9 @@
         return true;
     }
 
-    function ocuparBusca(id) {
+    // comLista: busca por nome. Passados 200 ms sem resposta, a lista de sugestões mostra o esqueleto
+    // (e esquece o resultado anterior, para o Enter não adicionar um item que já não está na tela).
+    function ocuparBusca(id, comLista) {
         window.clearTimeout(timerBusca);
         if (!el.inputBusca) return;
         el.inputBusca.classList.remove('is-loading');
@@ -378,6 +373,12 @@
             if (id !== pedidoBusca || !el.inputBusca) return;
             el.inputBusca.classList.add('is-loading');
             el.inputBusca.setAttribute('aria-busy', 'true');
+            if (comLista && el.sugestoes && window.ErpCarregamento && el.inputBusca.value.trim().length >= 2) {
+                sugestoes = [];
+                sugestaoAtiva = -1;
+                el.sugestoes.innerHTML = window.ErpCarregamento.itensEsqueleto(4);
+                el.sugestoes.hidden = false;
+            }
         }, 200);
     }
 
@@ -406,7 +407,7 @@
 
         debounceTimer = setTimeout(function () {
             var id = ++pedidoBusca;
-            ocuparBusca(id);
+            ocuparBusca(id, true);
             fetch(urls.produtosBusca + '?q=' + encodeURIComponent(termo), {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
@@ -1068,7 +1069,7 @@
     function atualizarResumoTabela(totalFiltrado) {
         if (!el.tabelaResumo) return;
         if (!catalogoPronto) {
-            el.tabelaResumo.textContent = 'Carregando produtos…';
+            el.tabelaResumo.textContent = catalogoFalhou ? 'Não foi possível carregar os produtos.' : 'Carregando produtos…';
             return;
         }
         var mostrando = Math.min(totalFiltrado, TABELA_VISIVEIS);
@@ -1095,9 +1096,18 @@
         atualizarResumoTabela(filtrados.length);
 
         if (!catalogoPronto) {
-            el.tabelaBody.innerHTML = '<tr><td colspan="9" class="pdv-tabela__carregando">Carregando produtos…</td></tr>';
+            if (catalogoFalhou) {
+                el.tabelaBody.innerHTML = '<tr><td colspan="9" class="carga-falha">Não foi possível carregar os produtos.' +
+                    '<button type="button" data-recarregar-catalogo>Tentar novamente</button></td></tr>';
+            } else {
+                el.tabelaBody.innerHTML = window.ErpCarregamento
+                    ? window.ErpCarregamento.linhasEsqueleto(9, 8)
+                    : '<tr><td colspan="9" class="pdv-tabela__carregando">Carregando produtos…</td></tr>';
+            }
+            el.tabelaBody.setAttribute('aria-busy', catalogoFalhou ? 'false' : 'true');
             return;
         }
+        el.tabelaBody.removeAttribute('aria-busy');
         if (!tabelaVisiveis.length) {
             el.tabelaBody.innerHTML = '<tr><td colspan="9" class="pdv-tabela__vazio">Nenhum produto encontrado.</td></tr>';
             return;
@@ -1240,6 +1250,7 @@
         if (!catalogoTruncado || textoBusca(termo).trim().length < 2) return;
         tabelaBuscaTimer = setTimeout(function () {
             var id = ++tabelaBuscaId;
+            var liberar = window.ErpCarregamento ? window.ErpCarregamento.ocuparCampo(el.tabelaFiltro) : function () {};
             fetch(urls.produtosBusca + '?simples=1&limit=80&q=' + encodeURIComponent(termo.trim()), {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
@@ -1250,8 +1261,22 @@
                     mesclarCatalogo(Array.isArray(data) ? data : []);
                     renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
                 })
-                .catch(function () {});
+                .catch(function () {})
+                .finally(liberar);
         }, 180);
+    }
+
+    function carregarCatalogoDaTabela() {
+        catalogoFalhou = false;
+        renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
+        carregarCatalogo()
+            .then(function () {
+                if (tabelaAberta()) renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
+            })
+            .catch(function () {
+                catalogoFalhou = true;
+                if (tabelaAberta()) renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
+            });
     }
 
     function abrirTabela() {
@@ -1262,14 +1287,7 @@
         el.tabela.hidden = false;
         syncCamadaDialogo();
         tabelaAtiva = 0;
-        renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
-        carregarCatalogo()
-            .then(function () {
-                if (tabelaAberta()) renderizarTabela(el.tabelaFiltro ? el.tabelaFiltro.value : '');
-            })
-            .catch(function () {
-                if (el.tabelaResumo) el.tabelaResumo.textContent = 'Não foi possível carregar os produtos.';
-            });
+        carregarCatalogoDaTabela();
         setTimeout(function () {
             if (el.tabelaFiltro) {
                 el.tabelaFiltro.focus();
@@ -1345,6 +1363,13 @@
         return parts.join('&');
     }
 
+    function novaChaveVenda() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
     function finalizarVenda() {
         if (finalizando) return;
         if (el.shell && el.shell.classList.contains('pdv-shell--sucesso')) return;
@@ -1394,7 +1419,9 @@
             return;
         }
         var troco = calcularTroco(totais.total);
+        if (!chaveVenda) chaveVenda = novaChaveVenda();
         var payload = {
+            chave_idempotencia: chaveVenda,
             cliente_id: el.clienteHidden && el.clienteHidden.value ? el.clienteHidden.value : '',
             data_venda: config.dataHoje || new Date().toISOString().slice(0, 10),
             situacao: 'confirmada',
@@ -1479,12 +1506,18 @@
                         mostrarErro(msgs.join(' ') || 'Dados inválidos. Verifique os campos.');
                     });
                 }
+                if (response.status === 409) {
+                    var emAndamento = 'Esta venda ainda está sendo registrada. Aguarde alguns segundos e confira a lista de vendas.';
+                    return response.json()
+                        .then(function (data) { mostrarErro((data && data.message) || emAndamento); })
+                        .catch(function () { mostrarErro(emAndamento); });
+                }
                 return response.text().then(function () {
-                    mostrarErro('Não foi possível finalizar a venda. Tente novamente.');
+                    mostrarErro('Não foi possível confirmar a venda. Finalize de novo sem recarregar a página: se ela já tiver sido gravada, não será lançada em duplicidade.');
                 });
             })
             .catch(function () {
-                mostrarErro('Erro de comunicação com o servidor. Tente novamente.');
+                mostrarErro('Erro de comunicação com o servidor. Finalize de novo sem recarregar a página: se a venda já tiver sido gravada, não será lançada em duplicidade.');
             })
             .finally(function () {
                 finalizando = false;
@@ -1534,6 +1567,12 @@
                 el.sucessoNfce.hidden = true;
                 el.sucessoNfce.textContent = '';
             }
+        }
+        if (el.sucessoNfceDica) {
+            // NFC-e que não saiu: a venda está salva e a nota é emitida (ou consultada) em "Ver venda".
+            var dica = data && data.nfce && !data.nfce.ok && data.nfce.dica ? data.nfce.dica : '';
+            el.sucessoNfceDica.hidden = dica === '';
+            el.sucessoNfceDica.textContent = dica;
         }
         if (el.linkNfce) {
             if (data && data.nfce && data.nfce.ok && data.nfce.danfe_url) {
@@ -1941,7 +1980,7 @@
     function cicloFormaPagamento(direcao) {
         var botoes = botoesForma();
         if (!botoes.length) {
-            mostrarToast('Nenhuma forma de pagamento ativa.');
+            mostrarToast('Nenhuma forma de pagamento ativa.', 'warning');
             return;
         }
         var atual = -1;
@@ -2030,6 +2069,10 @@
                 if (linha) sincronizarRascunho(linha);
             });
             el.tabelaBody.addEventListener('click', function (e) {
+                if (e.target.closest && e.target.closest('[data-recarregar-catalogo]')) {
+                    carregarCatalogoDaTabela();
+                    return;
+                }
                 var linha = e.target.closest ? e.target.closest('.pdv-tabela__linha') : null;
                 if (!linha) return;
                 var idx = parseInt(linha.getAttribute('data-index'), 10);

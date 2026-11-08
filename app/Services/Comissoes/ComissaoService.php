@@ -8,6 +8,7 @@ use App\Models\ContasPagar\ContaPagarBaixa;
 use App\Models\Funcionarios\Funcionario;
 use App\Repositories\Comissoes\ComissaoRepository;
 use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -66,6 +67,12 @@ class ComissaoService
         } catch (\Exception $ex) {
             return redirect()->back()->with('error', MensagemPublica::de($ex));
         }
+
+        Auditoria::registrar('comissao.paga', 'comissao', $comissao->id, [
+            'valor' => (float) $comissao->valor,
+            'funcionario_id' => $comissao->funcionario_id,
+            'venda_id' => $comissao->venda_id,
+        ]);
 
         return redirect()->back()
             ->with('success', 'Comissão marcada como paga e conta a pagar registrada.');

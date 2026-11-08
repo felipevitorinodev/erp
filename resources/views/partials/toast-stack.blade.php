@@ -51,9 +51,49 @@
         setTimeout(function () { toast.remove(); }, 300);
     }
 
-    function agendar(toast) {
-        var ms = toast.classList.contains('toast--error') ? 6000 : 4500;
-        setTimeout(function () { fechar(toast); }, ms);
+    // Ícone por tipo, com o traço desenhado na entrada.
+    var TIPOS = ['success', 'error', 'warning', 'info'];
+    var ICONES = {
+        success: '<path d="M7.5 12.5l3 3 6-6.5"/>',
+        error: '<path d="M9 9l6 6M15 9l-6 6"/>',
+        warning: '<path d="M12 7.5v5.5M12 16.5v.01"/>',
+        info: '<path d="M12 11v5.5M12 7.5v.01"/>'
+    };
+
+    function colocarIcone(toast) {
+        if (toast.querySelector('.toast__icone')) return;
+        var tipo = TIPOS.filter(function (t) { return toast.classList.contains('toast--' + t); })[0] || 'info';
+        var icone = document.createElement('span');
+        icone.className = 'toast__icone';
+        icone.setAttribute('aria-hidden', 'true');
+        icone.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><circle class="toast__icone-aro" cx="12" cy="12" r="10"/>' + ICONES[tipo] + '</svg>';
+        toast.insertBefore(icone, toast.firstChild);
+    }
+
+    // Fecha sozinho; com o mouse em cima o tempo pausa (a barra embaixo mostra quanto falta).
+    function agendar(toast, duracao) {
+        var restante = duracao || (toast.classList.contains('toast--error') ? 6000 : 4500);
+        var inicio = 0;
+        var relogio = null;
+        var barra = document.createElement('span');
+        barra.className = 'toast__tempo';
+        barra.style.animationDuration = restante + 'ms';
+        toast.appendChild(barra);
+
+        function contar() {
+            inicio = Date.now();
+            relogio = setTimeout(function () { fechar(toast); }, restante);
+        }
+        toast.addEventListener('mouseenter', function () {
+            clearTimeout(relogio);
+            restante -= Date.now() - inicio;
+            toast.classList.add('is-pausado');
+        });
+        toast.addEventListener('mouseleave', function () {
+            toast.classList.remove('is-pausado');
+            contar();
+        });
+        contar();
     }
 
     function ligarFechar(toast) {
@@ -63,13 +103,15 @@
         btn.addEventListener('click', function () { fechar(toast); });
     }
 
-    window.mostrarToast = function (mensagem, tipo) {
+    // opcoes.duracao (ms) encurta avisos rápidos; opcoes.substituir troca o aviso anterior do mesmo tipo.
+    window.mostrarToast = function (mensagem, tipo, opcoes) {
         var texto = String(mensagem || '').trim();
         if (!texto) return;
         tipo = tipo || 'success';
+        opcoes = opcoes || {};
         var root = stack();
-        if (tipo === 'error') {
-            root.querySelectorAll('.toast--error').forEach(function (t) { t.remove(); });
+        if (tipo === 'error' || opcoes.substituir) {
+            root.querySelectorAll('.toast--' + tipo).forEach(function (t) { t.remove(); });
         }
         var toast = document.createElement('div');
         toast.className = 'toast toast--' + tipo;
@@ -84,12 +126,14 @@
         btn.textContent = '\u00d7';
         toast.appendChild(span);
         toast.appendChild(btn);
+        colocarIcone(toast);
         root.appendChild(toast);
         ligarFechar(toast);
-        agendar(toast);
+        agendar(toast, opcoes.duracao);
     };
 
     stack().querySelectorAll('.toast').forEach(function (toast) {
+        colocarIcone(toast);
         ligarFechar(toast);
         agendar(toast);
     });

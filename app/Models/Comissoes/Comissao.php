@@ -5,8 +5,8 @@ namespace App\Models\Comissoes;
 use App\Models\Empresas\Empresa;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Vendas\Venda;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Comissao extends Model
 {
@@ -26,10 +26,10 @@ class Comissao extends Model
     ];
 
     protected $casts = [
-        'percentual'      => 'decimal:2',
-        'base_calculo'    => 'decimal:2',
-        'valor'           => 'decimal:2',
-        'data_pagamento'  => 'date',
+        'percentual' => 'decimal:2',
+        'base_calculo' => 'decimal:2',
+        'valor' => 'decimal:2',
+        'data_pagamento' => 'date',
     ];
 
     public function empresa()

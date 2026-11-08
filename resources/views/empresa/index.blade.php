@@ -5,7 +5,7 @@
 
 @section('page_actions')
     @if (! auth()->user()->empresa_id)
-        <a href="{{ route('empresa.create') }}" class="btn btn--primary btn--sm">+ Nova Empresa</a>
+        <a href="{{ route('empresa.create') }}" class="btn btn--primary btn--sm">+ Nova empresa</a>
     @endif
 @endsection
 
@@ -31,7 +31,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Empresas</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -39,10 +39,10 @@
                     <thead>
                         <tr>
                             <th>Código</th>
-                            <th>Razão Social</th>
+                            <th>Razão social</th>
                             <th>CNPJ</th>
-                            <th>Inscrição Estadual</th>
-                            <th>Inscrição Municipal</th>
+                            <th>Inscrição estadual</th>
+                            <th>Inscrição municipal</th>
                             <th>Cep</th>
                             <th>Cidade</th>
                             <th>Logradouro</th>
@@ -54,10 +54,10 @@
                         @forelse($empresas as $empresa)
                             <tr>
                                 <td data-label="Código">{{ $empresa->id }}</td>
-                                <td data-label="Razão Social">{{ $empresa->razao_social }}</td>
+                                <td data-label="Razão social">{{ $empresa->razao_social }}</td>
                                 <td data-label="CNPJ">{{ $empresa->cnpj ?: 'Sem CNPJ' }}</td>
-                                <td data-label="Inscrição Estadual">{{ $empresa->ie }}</td>
-                                <td data-label="Inscrição Municipal">{{ $empresa->im }}</td>
+                                <td data-label="Inscrição estadual">{{ $empresa->ie }}</td>
+                                <td data-label="Inscrição municipal">{{ $empresa->im }}</td>
                                 <td data-label="Cep">{{ $empresa->cep }}</td>
                                 <td data-label="Cidade">{{ $empresa->cidade }}</td>
                                 <td data-label="Logradouro">{{ $empresa->logradouro }}</td>
@@ -73,11 +73,13 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="10" class="empty-state">
-                                    Nenhuma empresa cadastrada.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="predio"
+                                :colspan="10"
+                                titulo="Nenhuma empresa cadastrada"
+                                :acao="(! auth()->user()->empresa_id) ? route('empresa.create') : null"
+                                acao-texto="+ Nova empresa"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

@@ -195,21 +195,22 @@ class NfeRepository
         $venda->update(['nfe_tpag' => null]);
     }
 
+    /** NF-e e NFC-e juntas: a tela mostra o modelo de cada pedido. */
     public function inutilizacoes(int $empresaId): Collection
     {
         return NfeInutilizacao::query()
             ->where('empresa_id', $empresaId)
-            ->where('modelo', Nfe::MODELO_NFE)
+            ->whereIn('modelo', [Nfe::MODELO_NFE, Nfe::MODELO_NFCE])
             ->orderByDesc('id')
             ->limit(20)
             ->get();
     }
 
-    public function faixaOcupada(int $empresaId, int $ambiente, string $serie, int $inicio, int $fim): bool
+    public function faixaOcupada(int $empresaId, int $ambiente, string $serie, int $inicio, int $fim, int $modelo = Nfe::MODELO_NFE): bool
     {
         return Nfe::withTrashed()
             ->where('empresa_id', $empresaId)
-            ->where('modelo', Nfe::MODELO_NFE)
+            ->where('modelo', $modelo)
             ->where('ambiente', $ambiente)
             ->where('serie', $serie)
             ->whereBetween('numero', [

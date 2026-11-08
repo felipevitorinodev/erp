@@ -6,6 +6,7 @@ use App\Http\Requests\ContasPagar\ContaPagarRequest;
 use App\Models\ContasPagar\ContaPagar;
 use App\Repositories\CategoriasFinanceiras\CategoriaFinanceiraRepository;
 use App\Repositories\ContasPagar\ContaPagarRepository;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
@@ -38,15 +39,21 @@ class ContaPagarService
 
     public function store(ContaPagarRequest $request)
     {
+        $conta = $this->lancar($request);
+
+        return redirect()->route('conta-pagar.show', $conta)
+            ->with('success', 'Conta a pagar cadastrada com sucesso.');
+    }
+
+    /** Lança a conta já validada. A tela e os comandos usam o mesmo caminho. */
+    public function lancar(ContaPagarRequest $request): ContaPagar
+    {
         $dados = $this->montarDados($request);
         $dados['empresa_id'] = auth()->user()->empresa_id;
         $dados['valor_pago'] = 0;
         $dados['situacao'] = 'aberta';
 
-        $conta = $this->repository->store($dados);
-
-        return redirect()->route('conta-pagar.show', $conta)
-            ->with('success', 'Conta a pagar cadastrada com sucesso.');
+        return $this->repository->store($dados);
     }
 
     public function show(ContaPagar $contaPagar)
@@ -154,6 +161,12 @@ class ContaPagarService
                 ->withInput();
         }
 
+        Auditoria::registrar('conta_pagar.pagamento', 'conta_pagar', $contaPagar->id, [
+            'valor' => $valorInformado,
+            'data_pagamento' => $request->data_pagamento,
+            'saldo_anterior' => round($saldo, 2),
+        ]);
+
         return redirect()->route('conta-pagar.show', $contaPagar)
             ->with('success', 'Pagamento registrado com sucesso.');
     }
@@ -179,6 +192,11 @@ class ContaPagarService
                 ->with('error', MensagemPublica::de($ex));
         }
 
+        Auditoria::registrar('conta_pagar.cancelada', 'conta_pagar', $contaPagar->id, [
+            'valor' => (float) $contaPagar->valor,
+            'entrada_estoque_id' => $contaPagar->entrada_estoque_id,
+        ]);
+
         return redirect()->route('conta-pagar.show', $contaPagar)
             ->with('success', 'Conta a pagar cancelada.');
     }
@@ -198,6 +216,11 @@ class ContaPagarService
         }
 
         $this->repository->destroy($contaPagar->id);
+
+        Auditoria::registrar('conta_pagar.excluida', 'conta_pagar', $contaPagar->id, [
+            'valor' => (float) $contaPagar->valor,
+            'situacao' => $contaPagar->situacao,
+        ]);
 
         return redirect()->route('conta-pagar.index')
             ->with('success', 'Conta a pagar excluída com sucesso.');

@@ -28,28 +28,28 @@ class FluxoCaixaController extends Controller
             $perPage,
             $page,
             [
-                'path'  => $request->url(),
+                'path' => $request->url(),
                 'query' => $request->query(),
             ]
         );
 
         return view('fluxo-de-caixa.index', [
-            'dias'           => $diasPaginados,
+            'dias' => $diasPaginados,
             'total_entradas' => $dados['total_entradas'],
-            'total_saidas'   => $dados['total_saidas'],
-            'saldo_periodo'  => $dados['total_entradas'] - $dados['total_saidas'],
-            'filtros'        => $dados['filtros'],
+            'total_saidas' => $dados['total_saidas'],
+            'saldo_periodo' => $dados['total_entradas'] - $dados['total_saidas'],
+            'filtros' => $dados['filtros'],
         ]);
     }
 
     public function csv(Request $request): StreamedResponse
     {
         $dados = $this->montarPeriodo($request);
-        $filename = 'fluxo-caixa-' . $dados['filtros']['data_inicio'] . '_' . $dados['filtros']['data_fim'] . '.csv';
+        $filename = 'fluxo-caixa-'.$dados['filtros']['data_inicio'].'_'.$dados['filtros']['data_fim'].'.csv';
 
         return response()->streamDownload(function () use ($dados) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($out, ['Data', 'Entradas', 'Saídas', 'Saldo do Dia'], ';');
 
             foreach ($dados['dias'] as $dia) {
@@ -81,7 +81,7 @@ class FluxoCaixaController extends Controller
 
         $request->validate([
             'data_inicio' => 'nullable|date',
-            'data_fim'    => 'nullable|date',
+            'data_fim' => 'nullable|date',
         ]);
 
         $dataInicio = $request->filled('data_inicio')
@@ -118,9 +118,9 @@ class FluxoCaixaController extends Controller
             $saidas = (float) ($saidasRaw[$chave] ?? 0);
 
             $dias[] = [
-                'data'      => $cursor->copy(),
-                'entradas'  => $entradasDia,
-                'saidas'    => $saidas,
+                'data' => $cursor->copy(),
+                'entradas' => $entradasDia,
+                'saidas' => $saidas,
                 'saldo_dia' => $entradasDia - $saidas,
             ];
 
@@ -130,18 +130,18 @@ class FluxoCaixaController extends Controller
         }
 
         return [
-            'dias'           => $dias,
+            'dias' => $dias,
             'total_entradas' => $totalEntradas,
-            'total_saidas'   => $totalSaidas,
-            'filtros'        => [
+            'total_saidas' => $totalSaidas,
+            'filtros' => [
                 'data_inicio' => $dataInicio->toDateString(),
-                'data_fim'    => $dataFim->toDateString(),
+                'data_fim' => $dataFim->toDateString(),
             ],
         ];
     }
 
     /**
-     * @param class-string<ContaReceberBaixa|ContaPagarBaixa> $modelo
+     * @param  class-string<ContaReceberBaixa|ContaPagarBaixa>  $modelo
      * @return array<string, float>
      */
     private function baixasPorDia(string $modelo, int $empresaId, Carbon $dataInicio, Carbon $dataFim): array

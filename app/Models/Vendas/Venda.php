@@ -11,8 +11,8 @@ use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfes\Nfe;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Usuarios\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Venda extends Model
@@ -48,15 +48,15 @@ class Venda extends Model
     ];
 
     protected $casts = [
-        'data_venda'    => 'date',
-        'data_entrega'  => 'date',
-        'subtotal'      => 'decimal:2',
-        'desconto'      => 'decimal:2',
-        'acrescimo'     => 'decimal:2',
-        'total'         => 'decimal:2',
-        'mod_frete'     => 'integer',
-        'ind_final'     => 'integer',
-        'nfe_rascunho'  => 'boolean',
+        'data_venda' => 'date',
+        'data_entrega' => 'date',
+        'subtotal' => 'decimal:2',
+        'desconto' => 'decimal:2',
+        'acrescimo' => 'decimal:2',
+        'total' => 'decimal:2',
+        'mod_frete' => 'integer',
+        'ind_final' => 'integer',
+        'nfe_rascunho' => 'boolean',
     ];
 
     public function isRascunhoNfe(): bool

@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Categoria Financeira')
-@section('page_title', 'Editar Categoria Financeira')
+@section('title', 'Editar categoria financeira')
+@section('page_title', 'Editar categoria financeira')
 
 @section('breadcrumb')
-    <a href="{{ route('categoria-financeira.index') }}">Categorias Financeiras</a> / Editar
+    <a href="{{ route('categoria-financeira.index') }}">Categorias financeiras</a> / Editar
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Categoria</span>
+            <span class="card__title">Dados da categoria</span>
         </div>
 
         <form method="POST" action="{{ route('categoria-financeira.update', $categoriaFinanceira) }}">

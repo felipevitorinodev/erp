@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Conta a Pagar')
-@section('page_title', 'Nova Conta a Pagar')
+@section('title', 'Nova conta a pagar')
+@section('page_title', 'Nova conta a pagar')
 
 @section('breadcrumb')
-    <a href="{{ route('conta-pagar.index') }}">Contas a Pagar</a> / Nova
+    <a href="{{ route('conta-pagar.index') }}">Contas a pagar</a> / Nova
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Conta</span>
+            <span class="card__title">Dados da conta</span>
         </div>
 
         <form method="POST" action="{{ route('conta-pagar.store') }}">

@@ -18,7 +18,7 @@ class OrcamentoRequest extends FormRequest
         return [
             'cliente_id' => 'nullable|exists:clientes,id',
             'data_orcamento' => 'required|date',
-            'itens'      => 'required|array|min:1',
+            'itens' => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable',
             'itens.*.quantidade' => 'required|numeric|min:0.001',
             'itens.*.preco_unitario' => 'required|numeric|min:0',
@@ -29,7 +29,7 @@ class OrcamentoRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            if (!$this->filled('cliente_id')) {
+            if (! $this->filled('cliente_id')) {
                 return;
             }
 
@@ -37,7 +37,7 @@ class OrcamentoRequest extends FormRequest
                 ->where('empresa_id', auth()->user()->empresa_id)
                 ->exists();
 
-            if (!$ok) {
+            if (! $ok) {
                 $validator->errors()->add('cliente_id', 'Cliente inválido para esta empresa.');
             }
         });
@@ -47,31 +47,35 @@ class OrcamentoRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'itens.required' => 'Adicione pelo menos um item.',
-            'itens.min'      => 'Adicione pelo menos um item.',
+            'itens.min' => 'Adicione pelo menos um item.',
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'cliente_id'     => 'cliente',
+            'cliente_id' => 'cliente',
             'data_orcamento' => 'data do orçamento',
-            'itens'          => 'itens',
+            'itens' => 'itens',
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $items = $this->input('itens', []);
-        if (!is_array($items)) return;
+        if (! is_array($items)) {
+            return;
+        }
 
         foreach ($items as $k => $it) {
             foreach (['quantidade', 'preco_unitario', 'desconto'] as $field) {
-                if (!isset($it[$field])) continue;
+                if (! isset($it[$field])) {
+                    continue;
+                }
                 $val = (string) $it[$field];
                 $val = trim($val);
                 $val = str_replace(' ', '', $val);

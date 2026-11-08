@@ -8,9 +8,11 @@ use App\Impressao\CupomPdf;
 use App\Models\ContasReceber\ContaReceber;
 use App\Repositories\CategoriasFinanceiras\CategoriaFinanceiraRepository;
 use App\Repositories\ContasReceber\ContaReceberRepository;
+use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ContaReceberService
 {
@@ -40,21 +42,30 @@ class ContaReceberService
 
     public function store(ContaReceberRequest $request)
     {
+        $conta = $this->lancar($request);
+
+        return redirect()->route('conta-receber.show', $conta)
+            ->with('success', 'Conta a receber cadastrada com sucesso.');
+    }
+
+    /**
+     * Lança a conta já validada. A tela e os comandos usam o mesmo caminho.
+     *
+     * @throws ValidationException quando a venda informada já tem conta a receber
+     */
+    public function lancar(ContaReceberRequest $request): ContaReceber
+    {
         $dados = $this->montarDados($request);
 
         if ($dados['venda_id'] && ContaReceber::where('venda_id', $dados['venda_id'])->where('situacao', '!=', 'cancelada')->exists()) {
-            return back()
-                ->withErrors(['venda_id' => 'Esta venda já possui conta a receber.'])
-                ->withInput();
+            throw ValidationException::withMessages(['venda_id' => 'Esta venda já possui conta a receber.']);
         }
+
         $dados['empresa_id'] = auth()->user()->empresa_id;
         $dados['valor_pago'] = 0;
         $dados['situacao'] = 'aberta';
 
-        $conta = $this->repository->store($dados);
-
-        return redirect()->route('conta-receber.show', $conta)
-            ->with('success', 'Conta a receber cadastrada com sucesso.');
+        return $this->repository->store($dados);
     }
 
     public function show(ContaReceber $contaReceber)
@@ -172,6 +183,12 @@ class ContaReceberService
                 ->withInput();
         }
 
+        Auditoria::registrar('conta_receber.recebimento', 'conta_receber', $contaReceber->id, [
+            'valor' => $valorInformado,
+            'data_pagamento' => $request->data_pagamento,
+            'saldo_anterior' => round($saldo, 2),
+        ]);
+
         return redirect()->route('conta-receber.show', $contaReceber)
             ->with('success', 'Recebimento registrado com sucesso.');
     }
@@ -197,6 +214,11 @@ class ContaReceberService
                 ->with('error', MensagemPublica::de($ex));
         }
 
+        Auditoria::registrar('conta_receber.cancelada', 'conta_receber', $contaReceber->id, [
+            'valor' => (float) $contaReceber->valor,
+            'venda_id' => $contaReceber->venda_id,
+        ]);
+
         return redirect()->route('conta-receber.show', $contaReceber)
             ->with('success', 'Conta a receber cancelada.');
     }
@@ -216,6 +238,11 @@ class ContaReceberService
         }
 
         $this->repository->destroy($contaReceber->id);
+
+        Auditoria::registrar('conta_receber.excluida', 'conta_receber', $contaReceber->id, [
+            'valor' => (float) $contaReceber->valor,
+            'situacao' => $contaReceber->situacao,
+        ]);
 
         return redirect()->route('conta-receber.index')
             ->with('success', 'Conta a receber excluída com sucesso.');

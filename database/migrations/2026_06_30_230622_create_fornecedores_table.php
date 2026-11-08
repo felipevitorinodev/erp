@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-     public function up()
+    public function up()
     {
         Schema::create('fornecedores', function (Blueprint $table) {
             $table->id('id');
@@ -14,20 +14,20 @@ return new class extends Migration
                 ->constrained('empresa')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
- 
+
             $table->string('nome');
             $table->string('nome_fantasia')->nullable();
- 
+
             $table->string('cpf', 14)->nullable();
             $table->string('cnpj', 18)->nullable();
- 
+
             $table->string('inscricao_estadual', 20)->nullable();
             $table->string('inscricao_municipal', 20)->nullable();
- 
+
             $table->string('email')->nullable();
             $table->string('telefone', 20)->nullable();
             $table->string('celular', 20)->nullable();
- 
+
             $table->string('cep', 9)->nullable();
             $table->string('logradouro')->nullable();
             $table->string('numero', 20)->nullable();
@@ -35,15 +35,15 @@ return new class extends Migration
             $table->string('bairro')->nullable();
             $table->string('cidade', 100)->nullable();
             $table->string('estado', 2)->nullable();
- 
+
             $table->text('observacoes')->nullable();
             $table->boolean('ativo')->default(true);
- 
+
             $table->timestamps();
             $table->softDeletes();
         });
     }
- 
+
     public function down()
     {
         Schema::dropIfExists('fornecedores');

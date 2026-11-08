@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Nova Categoria Financeira')
-@section('page_title', 'Nova Categoria Financeira')
+@section('title', 'Nova categoria financeira')
+@section('page_title', 'Nova categoria financeira')
 
 @section('breadcrumb')
-    <a href="{{ route('categoria-financeira.index') }}">Categorias Financeiras</a> / Nova
+    <a href="{{ route('categoria-financeira.index') }}">Categorias financeiras</a> / Nova
 @endsection
 
 @section('content')
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Categoria</span>
+            <span class="card__title">Dados da categoria</span>
         </div>
 
         <form method="POST" action="{{ route('categoria-financeira.store') }}">

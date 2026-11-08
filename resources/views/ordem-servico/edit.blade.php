@@ -4,7 +4,7 @@
 @section('page_title', 'Editar OS #' . $os->numero)
 
 @section('breadcrumb')
-    <a href="{{ route('ordem-servico.index') }}">Ordens de Serviço</a> /
+    <a href="{{ route('ordem-servico.index') }}">Ordens de serviço</a> /
     <a href="{{ route('ordem-servico.show', $os) }}">#{{ $os->numero }}</a> /
     Editar
 @endsection

@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Entrada #' . $entrada->numero)
-@section('page_title', 'Editar Entrada #' . $entrada->numero)
+@section('title', 'Editar entrada #' . $entrada->numero)
+@section('page_title', 'Editar entrada #' . $entrada->numero)
 
 @section('breadcrumb')
-    <a href="{{ route('entrada-estoque.index') }}">Entradas de Estoque</a> /
+    <a href="{{ route('entrada-estoque.index') }}">Entradas de estoque</a> /
     <a href="{{ route('entrada-estoque.show', $entrada) }}">#{{ $entrada->numero }}</a> /
     Editar
 @endsection
@@ -13,7 +13,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Dados da Entrada</span>
+            <span class="card__title">Dados da entrada</span>
         </div>
 
         <form method="POST" action="{{ route('entrada-estoque.update', $entrada) }}">

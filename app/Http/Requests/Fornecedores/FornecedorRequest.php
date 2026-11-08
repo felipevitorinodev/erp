@@ -14,32 +14,32 @@ class FornecedorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'empresa_id'           => 'required|exists:empresa,id',
+            'empresa_id' => 'required|exists:empresa,id',
 
-            'nome'                 => 'required|string|max:255',
-            'nome_fantasia'        => 'nullable|string|max:255',
+            'nome' => 'required|string|max:255',
+            'nome_fantasia' => 'nullable|string|max:255',
 
             'tipo_pessoa' => 'required|in:PF,PJ',
-            'cpf'  => 'required_if:tipo_pessoa,PF|nullable|max:14|cpf',
+            'cpf' => 'required_if:tipo_pessoa,PF|nullable|max:14|cpf',
             'cnpj' => 'required_if:tipo_pessoa,PJ|nullable|max:18|cnpj',
 
-            'inscricao_estadual'   => 'nullable|string|max:20',
-            'inscricao_municipal'  => 'nullable|string|max:20',
+            'inscricao_estadual' => 'nullable|string|max:20',
+            'inscricao_municipal' => 'nullable|string|max:20',
 
-            'email'                => 'nullable|email|max:255',
-            'telefone'             => 'nullable|string|max:20',
-            'celular'              => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'telefone' => 'nullable|string|max:20',
+            'celular' => 'nullable|string|max:20',
 
-            'cep'                  => 'nullable|string|max:9',
-            'logradouro'           => 'nullable|string|max:255',
-            'numero'               => 'nullable|string|max:20',
-            'complemento'          => 'nullable|string|max:255',
-            'bairro'               => 'nullable|string|max:255',
-            'cidade'               => 'nullable|string|max:100',
-            'estado'               => 'nullable|string|size:2',
+            'cep' => 'nullable|string|max:9',
+            'logradouro' => 'nullable|string|max:255',
+            'numero' => 'nullable|string|max:20',
+            'complemento' => 'nullable|string|max:255',
+            'bairro' => 'nullable|string|max:255',
+            'cidade' => 'nullable|string|max:100',
+            'estado' => 'nullable|string|size:2',
 
-            'observacoes'          => 'nullable|string',
-            'ativo'                => 'nullable|boolean',
+            'observacoes' => 'nullable|string',
+            'ativo' => 'nullable|boolean',
         ];
     }
 
@@ -47,9 +47,9 @@ class FornecedorRequest extends FormRequest
     {
         return [
             'required' => 'O campo :attribute é obrigatório.',
-            'date'     => 'O campo :attribute deve ser uma data válida.',
-            'numeric'  => 'O campo :attribute deve ser numérico.',
-            'min'      => 'O campo :attribute deve ter no mínimo :min.',
+            'date' => 'O campo :attribute deve ser uma data válida.',
+            'numeric' => 'O campo :attribute deve ser numérico.',
+            'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
         ];
     }

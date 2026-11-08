@@ -11,8 +11,9 @@ class Fornecedor extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
     protected $table = 'fornecedores';
- 
+
     protected $fillable = [
         'empresa_id',
         'nome',
@@ -34,11 +35,11 @@ class Fornecedor extends Model
         'observacoes',
         'ativo',
     ];
- 
+
     protected $casts = [
         'ativo' => 'boolean',
     ];
- 
+
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);

@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Ajuste de Estoque')
-@section('page_title', 'Ajuste de Estoque')
+@section('title', 'Ajuste de estoque')
+@section('page_title', 'Ajuste de estoque')
 
 @section('breadcrumb')
-    <a href="{{ route('estoque.historico') }}">Histórico de Estoque</a> / Ajuste
+    <a href="{{ route('estoque.historico') }}">Histórico de estoque</a> / Ajuste
 @endsection
 
 @section('page_actions')
@@ -74,7 +74,7 @@
             </div>
             <div class="card__footer">
                 <a href="{{ route('estoque.historico') }}" class="btn btn--ghost">Cancelar</a>
-                <button type="submit" class="btn btn--primary">Registrar Ajuste</button>
+                <button type="submit" class="btn btn--primary">Registrar ajuste</button>
             </div>
         </form>
     </div>

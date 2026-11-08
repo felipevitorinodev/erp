@@ -19,7 +19,7 @@ class FornecedorService
 
         return view('fornecedor.index', [
             'fornecedores' => $fornecedores,
-            'filtros'      => $request->only(['busca']),
+            'filtros' => $request->only(['busca']),
         ]);
     }
 
@@ -43,7 +43,7 @@ class FornecedorService
         }
 
         return view('fornecedor.edit', [
-            'fornecedor' => $fornecedor
+            'fornecedor' => $fornecedor,
         ]);
     }
 

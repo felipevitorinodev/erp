@@ -5,7 +5,7 @@
 
 @section('page_actions')
     <div class="page-actions">
-        <a href="{{ route('usuario.create') }}" class="btn btn--primary btn--sm">+ Novo Usuário</a>
+        <a href="{{ route('usuario.create') }}" class="btn btn--primary btn--sm">+ Novo usuário</a>
     </div>
 @endsection
 
@@ -31,7 +31,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -57,7 +57,7 @@
                                     @if($usuario->ativo)
                                         <span class="badge badge--success">Ativo</span>
                                     @else
-                                        <span class="badge badge--error">Inativo</span>
+                                        <span class="badge badge--neutral">Inativo</span>
                                     @endif
                                 </td>
                                 <td class="col-actions" data-label="Ações">
@@ -87,11 +87,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="5" class="empty-state">
-                                    Nenhum usuário cadastrado.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="cracha"
+                                :colspan="5"
+                                titulo="Nenhum usuário cadastrado"
+                                texto="Cada pessoa que usa o sistema deve ter o próprio acesso."
+                                :acao="route('usuario.create')"
+                                acao-texto="+ Novo usuário"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>

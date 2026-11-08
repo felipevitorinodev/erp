@@ -4,7 +4,7 @@
 @section('page_title', 'Clientes')
 
 @section('page_actions')
-    <a href="{{ route('cliente.create') }}" class="btn btn--primary btn--sm">+ Novo Cliente</a>
+    <a href="{{ route('cliente.create') }}" class="btn btn--primary btn--sm">+ Novo cliente</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
     <div class="card">
         <div class="card__header">
-            <span class="card__title">Listagem de Clientes</span>
+            <span class="card__title">Resultados</span>
         </div>
         <div class="card__body" style="padding: 0;">
             <div class="table-wrap">
@@ -38,7 +38,7 @@
                         <tr>
                             <th style="width:60px;">Código</th>
                             <th>Nome</th>
-                            <th>Nome Fantasia</th>
+                            <th>Nome fantasia</th>
                             <th>CPF / CNPJ</th>
                             <th>Telefone</th>
                             <th>Cidade / UF</th>
@@ -50,7 +50,7 @@
                             <tr>
                                 <td data-label="Código" class="text-muted">{{ $cliente->id }}</td>
                                 <td data-label="Nome">{{ $cliente->nome }}</td>
-                                <td data-label="Nome Fantasia">{{ $cliente->nome_fantasia ?? '—' }}</td>
+                                <td data-label="Nome fantasia">{{ $cliente->nome_fantasia ?? '—' }}</td>
                                 <td data-label="CPF / CNPJ">{{ $cliente->cpf ?: ($cliente->cnpj ?: '—') }}</td>
                                 <td data-label="Telefone">{{ $cliente->telefone ?? $cliente->celular ?? '—' }}</td>
                                 <td data-label="Cidade / UF">
@@ -82,11 +82,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="empty-state">
-                                    Nenhum cliente cadastrado.
-                                </td>
-                            </tr>
+                            <x-tabela-vazia ilustracao="pessoas"
+                                :colspan="7"
+                                titulo="Nenhum cliente cadastrado"
+                                texto="Cadastre os clientes para usar em vendas, orçamentos e notas fiscais."
+                                :acao="route('cliente.create')"
+                                acao-texto="+ Novo cliente"
+                                filtravel
+                            />
                         @endforelse
                     </tbody>
                 </table>
