@@ -2,16 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Nfes\Nfe;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
 use App\Services\Nfes\NfeBuilderService;
+use App\Services\Nfes\NfePendenciasService;
+use App\Services\Nfes\NfeSenderService;
+use App\Services\Nfes\NfeVinculoFiscal;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use NFePHP\NFe\Common\Standardize;
 use Tests\TestCase;
 
 class NfeEmissaoTest extends TestCase
@@ -59,10 +65,28 @@ class NfeEmissaoTest extends TestCase
         ]);
     }
 
+    /** NF-e (modelo 55) exige destinatário com CPF/CNPJ e endereço; sem isso a SEFAZ rejeita (237/726). */
+    private function clienteIdentificado(Empresa $empresa): Cliente
+    {
+        return Cliente::create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Cliente Teste',
+            'cpf' => '52998224725',
+            'logradouro' => 'Rua Teste',
+            'numero' => '10',
+            'bairro' => 'Centro',
+            'cidade' => $empresa->cidade,
+            'estado' => $empresa->uf,
+            'cep' => $empresa->cep,
+            'ativo' => true,
+        ]);
+    }
+
     private function vendaConfirmada(Empresa $empresa): Venda
     {
         return Venda::create([
             'empresa_id' => $empresa->id,
+            'cliente_id' => $this->clienteIdentificado($empresa)->id,
             'numero' => '000001',
             'data_venda' => now()->toDateString(),
             'subtotal' => 10,
@@ -345,7 +369,7 @@ class NfeEmissaoTest extends TestCase
         ]);
         $item->setRelation('produto', null);
         $venda->setRelation('itens', collect([$item]));
-        $venda->setRelation('cliente', null);
+        $venda->setRelation('cliente', $this->clienteIdentificado($empresa));
 
         $xml = (new NfeBuilderService($empresa))->buildAndSign($venda);
         $dom = simplexml_load_string($xml);
@@ -357,6 +381,233 @@ class NfeEmissaoTest extends TestCase
         $this->assertSame('17.00', (string) $tot->vNF);
         $this->assertSame('17.00', (string) $dom->xpath('//n:detPag/n:vPag')[0]);
         $this->assertSame('9', (string) $dom->xpath('//n:transp/n:modFrete')[0]);
+    }
+
+    /** Achados da homologação SEFAZ (PB/SVRS) de 13/11/2026: 696, 237 e 726. */
+    public function test_cnpj_sem_ie_sai_como_consumidor_final_e_com_ie_como_contribuinte(): void
+    {
+        $empresa = $this->empresaComCertificado();
+
+        $semIe = $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cnpj' => '11444777000161']));
+        $this->assertSame('9', (string) $semIe->xpath('//n:dest/n:indIEDest')[0]);
+        $this->assertSame('1', (string) $semIe->xpath('//n:ide/n:indFinal')[0]);
+
+        $comIe = $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cnpj' => '11444777000161', 'inscricao_estadual' => '110042490114']));
+        $this->assertSame('1', (string) $comIe->xpath('//n:dest/n:indIEDest')[0]);
+        $this->assertSame('0', (string) $comIe->xpath('//n:ide/n:indFinal')[0]);
+    }
+
+    public function test_nao_contribuinte_marcado_como_nao_consumidor_final_e_recusado(): void
+    {
+        $empresa = $this->empresaComCertificado();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('696');
+
+        $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cpf' => '52998224725']), 0);
+    }
+
+    public function test_numero_vazio_no_endereco_do_cliente_sai_como_sn(): void
+    {
+        $empresa = $this->empresaComCertificado();
+
+        $xml = $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cpf' => '52998224725', 'numero' => '']));
+
+        $this->assertSame('S/N', (string) $xml->xpath('//n:enderDest/n:nro')[0]);
+    }
+
+    public function test_venda_sem_cliente_nao_reserva_numero_de_nfe(): void
+    {
+        $empresa = $this->empresa();
+        $venda = $this->vendaConfirmada($empresa);
+        $venda->update(['cliente_id' => null]);
+
+        $this->actingAs($this->admin($empresa))
+            ->post(route('nfe.emitir', $venda))
+            ->assertSessionHas('error', fn ($erro) => str_contains($erro, '237'));
+
+        $this->assertSame(0, Nfe::count());
+        $this->assertSame(6, $empresa->fresh()->nfe_sequencia);
+    }
+
+    public function test_cliente_sem_endereco_nao_reserva_numero_de_nfe(): void
+    {
+        $empresa = $this->empresa();
+        $venda = $this->vendaConfirmada($empresa);
+        $venda->cliente->update(['logradouro' => null, 'bairro' => null]);
+
+        $this->actingAs($this->admin($empresa))
+            ->post(route('nfe.emitir', $venda))
+            ->assertSessionHas('error', fn ($erro) => str_contains($erro, '726'));
+
+        $this->assertSame(0, Nfe::count());
+    }
+
+    public function test_retorno_com_varios_protocolos_usa_o_da_chave_da_nota(): void
+    {
+        $chave1 = '35261111222333000181550010000000011000000011';
+        $chave2 = '35261111222333000181550010000000021000000022';
+        $prot = fn (string $chave, string $nProt) => '<protNFe versao="4.00"><infProt><tpAmb>2</tpAmb><verAplic>T</verAplic>'
+            .'<chNFe>'.$chave.'</chNFe><dhRecbto>2026-11-13T10:00:00-03:00</dhRecbto><nProt>'.$nProt.'</nProt>'
+            .'<digVal>AAAA</digVal><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>';
+        $retorno = '<retConsReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>2</tpAmb><verAplic>T</verAplic>'
+            .'<nRec>351000000000001</nRec><cStat>104</cStat><xMotivo>Lote processado</xMotivo><cUF>35</cUF>'
+            .'<dhRecbto>2026-11-13T10:00:00-03:00</dhRecbto>'.$prot($chave1, '111').$prot($chave2, '222').'</retConsReciNFe>';
+        $std = (new Standardize($retorno))->toStd();
+
+        $sender = (new \ReflectionClass(NfeSenderService::class))->newInstanceWithoutConstructor();
+        $extrair = new \ReflectionMethod($sender, 'extrairInfProt');
+
+        $this->assertSame('222', (string) $extrair->invoke($sender, $std, $chave2)->nProt);
+        $this->assertSame('111', (string) $extrair->invoke($sender, $std, $chave1)->nProt);
+        $this->assertNull($extrair->invoke($sender, $std, str_repeat('9', 44)));
+    }
+
+    public function test_ie_isento_sai_como_nao_contribuinte_sem_a_tag_ie(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $isento = $this->clienteEmMemoria(['cnpj' => '11444777000161', 'inscricao_estadual' => 'isento']);
+
+        // indIEDest 2 (contribuinte isento) volta com 805 na SEFAZ-PB (homologação, 14/11/2026): sai como 9, sem a tag IE.
+        $xml = $this->xmlDaVenda($empresa, $isento);
+        $this->assertSame('9', (string) $xml->xpath('//n:dest/n:indIEDest')[0]);
+        $this->assertSame([], $xml->xpath('//n:dest/n:IE'));
+        $this->assertSame('1', (string) $xml->xpath('//n:ide/n:indFinal')[0]);
+    }
+
+    public function test_cfop_e_csosn_de_st_precisam_combinar(): void
+    {
+        $this->assertNull(NfeBuilderService::pendenciaCfopCsosn('5405', '500'));
+        $this->assertNull(NfeBuilderService::pendenciaCfopCsosn('5102', '102'));
+        $this->assertStringContainsString('386', (string) NfeBuilderService::pendenciaCfopCsosn('5102', '500'));
+        $this->assertStringContainsString('386', (string) NfeBuilderService::pendenciaCfopCsosn('5405', '102'));
+
+        $empresa = $this->empresaComCertificado();
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('386');
+        $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cpf' => '52998224725']), null, ['csosn' => '500']);
+    }
+
+    public function test_crt_2_nao_emite_com_csosn(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $empresa->update(['crt' => 2]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('591');
+
+        $this->xmlDaVenda($empresa->fresh(), $this->clienteEmMemoria(['cpf' => '52998224725']));
+    }
+
+    public function test_cst_99_vai_zerado_e_csosn_500_sem_st_retido_passam_no_schema(): void
+    {
+        $empresa = $this->empresaComCertificado();
+
+        $xml = $this->xmlDaVenda($empresa, $this->clienteEmMemoria(['cpf' => '52998224725']), null, [
+            'csosn' => '500',
+            'cfop' => '5405',
+            'cst_pis' => '99',
+            'cst_cofins' => '49',
+        ]);
+
+        $this->assertSame('500', (string) $xml->xpath('//n:ICMSSN500/n:CSOSN')[0]);
+        $this->assertSame([], $xml->xpath('//n:ICMSSN500/n:vICMSSTRet'));
+        $this->assertSame('99', (string) $xml->xpath('//n:PISOutr/n:CST')[0]);
+        $this->assertSame('0.00', (string) $xml->xpath('//n:PISOutr/n:vBC')[0]);
+        $this->assertSame('0.0000', (string) $xml->xpath('//n:PISOutr/n:pPIS')[0]);
+        $this->assertSame('0.00', (string) $xml->xpath('//n:PISOutr/n:vPIS')[0]);
+        $this->assertSame('49', (string) $xml->xpath('//n:COFINSOutr/n:CST')[0]);
+        $this->assertSame('0.00', (string) $xml->xpath('//n:COFINSOutr/n:vCOFINS')[0]);
+        $this->assertSame('0.00', (string) $xml->xpath('//n:ICMSTot/n:vPIS')[0]);
+    }
+
+    public function test_reserva_fiscal_segue_a_orientacao_da_sefaz_pb(): void
+    {
+        $empresa = new Empresa(['uf' => 'PB']);
+        $vinculo = new NfeVinculoFiscal($empresa, collect());
+        $item = new VendaItem;
+
+        $this->assertSame('102', $vinculo->csosn($item, null)['valor']);
+        $this->assertSame('99', $vinculo->cst($item, null, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao')['valor']);
+    }
+
+    public function test_data_de_emissao_com_30_dias_ou_mais_e_recusada_antes_de_reservar_numero(): void
+    {
+        $empresa = $this->empresa();
+        $pendencias = app(NfePendenciasService::class);
+
+        $venda = new Venda(['data_venda' => now()->subDays(30)->toDateString()]);
+        $this->assertTrue(collect($pendencias->pendenciasDeData($venda, $empresa))->contains(fn ($p) => str_contains($p, '228')));
+
+        $venda = new Venda(['data_venda' => now()->subDays(29)->toDateString()]);
+        $this->assertSame([], $pendencias->pendenciasDeData($venda, $empresa));
+    }
+
+    public function test_prazo_de_cancelamento_da_nfce_na_paraiba_e_de_30_minutos(): void
+    {
+        $nota = function (int $modelo, string $uf, Carbon $autorizacao): Nfe {
+            $nfe = new Nfe(['modelo' => $modelo, 'situacao' => 'autorizada', 'data_autorizacao' => $autorizacao]);
+            $nfe->setRelation('empresa', new Empresa(['uf' => $uf]));
+
+            return $nfe;
+        };
+
+        $this->assertTrue($nota(Nfe::MODELO_NFCE, 'PB', now()->subMinutes(29))->podeCancelar());
+        $this->assertFalse($nota(Nfe::MODELO_NFCE, 'PB', now()->subMinutes(31))->podeCancelar());
+        $this->assertSame('30 minutos', $nota(Nfe::MODELO_NFCE, 'PB', now())->prazoCancelamentoTexto());
+        $this->assertTrue($nota(Nfe::MODELO_NFE, 'PB', now()->subHours(23))->podeCancelar());
+        $this->assertTrue($nota(Nfe::MODELO_NFCE, 'SP', now()->subHours(23))->podeCancelar());
+        $this->assertFalse($nota(Nfe::MODELO_NFE, 'PB', now()->subHours(25))->podeCancelar());
+    }
+
+    private function clienteEmMemoria(array $dados): Cliente
+    {
+        return new Cliente(array_merge([
+            'nome' => 'Cliente Teste',
+            'logradouro' => 'Rua Teste',
+            'numero' => '10',
+            'bairro' => 'Centro',
+            'cidade' => 'São Paulo',
+            'estado' => 'SP',
+            'cep' => '01001000',
+        ], $dados));
+    }
+
+    private function xmlDaVenda(Empresa $empresa, Cliente $cliente, ?int $indFinal = null, array $fiscalDoItem = []): \SimpleXMLElement
+    {
+        $venda = new Venda([
+            'empresa_id' => $empresa->id,
+            'numero' => '000001',
+            'data_venda' => now()->toDateString(),
+            'subtotal' => 10,
+            'total' => 10,
+            'forma_pagamento' => 'Dinheiro',
+            'situacao' => 'confirmada',
+            'nfe_numero' => '000000001',
+            'ind_final' => $indFinal,
+        ]);
+        $item = new VendaItem(array_merge([
+            'produto_nome' => 'Produto',
+            'produto_codigo' => 'P1',
+            'ncm' => '61091000',
+            'cfop' => '5102',
+            'unidade' => 'UN',
+            'csosn' => '102',
+            'cst_pis' => '07',
+            'cst_cofins' => '07',
+            'quantidade' => 1,
+            'preco_unitario' => 10,
+            'desconto' => 0,
+            'total' => 10,
+        ], $fiscalDoItem));
+        $item->setRelation('produto', null);
+        $venda->setRelation('itens', collect([$item]));
+        $venda->setRelation('cliente', $cliente);
+
+        $xml = simplexml_load_string((new NfeBuilderService($empresa))->buildAndSign($venda));
+        $xml->registerXPathNamespace('n', 'http://www.portalfiscal.inf.br/nfe');
+
+        return $xml;
     }
 
     private function empresaComCertificado(): Empresa

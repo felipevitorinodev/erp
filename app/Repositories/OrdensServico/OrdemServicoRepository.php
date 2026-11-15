@@ -2,9 +2,12 @@
 
 namespace App\Repositories\OrdensServico;
 
+use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\OrdensServico\OrdemServicoItem;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +26,7 @@ class OrdemServicoRepository
                     $q->where('numero', 'like', "%{$busca}%")
                         ->orWhere('equipamento', 'like', "%{$busca}%")
                         ->orWhere('numero_serie', 'like', "%{$busca}%")
-                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                        ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, (int) auth()->user()->empresa_id, $busca));
                 });
             }
             if ($request->filled('situacao')) {
@@ -40,16 +43,17 @@ class OrdemServicoRepository
             }
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['servicos', 'cadastros']));
     }
 
     public function proximoNumero(int $empresaId): string
     {
         Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
+        // numero_seq: coluna gerada e indexada (empresa_id, numero_seq); o MAX lê só o fim do índice.
         $ultimo = OrdemServico::withTrashed()
             ->where('empresa_id', $empresaId)
-            ->max(DB::raw('CAST(numero AS UNSIGNED)'));
+            ->max('numero_seq');
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 
         return str_pad($proximo, 6, '0', STR_PAD_LEFT);

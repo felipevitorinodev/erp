@@ -9,13 +9,7 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Perfis de acesso</span>
-        </div>
-        <div class="card__body" style="padding:0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Perfis de acesso">
                     <thead>
                         <tr>
                             <th>Perfil</th>
@@ -33,7 +27,7 @@
                                 }
                             @endphp
                             <tr>
-                                <td data-label="Perfil">
+                                <td data-label="Perfil" class="col-titulo">
                                     {{ $perfil->nome }}
                                     @if($perfil->sistema)
                                         <span class="badge badge--neutral">Padrão</span>
@@ -41,11 +35,7 @@
                                 </td>
                                 <td data-label="Usuários">{{ $total }}</td>
                                 <td data-label="Situação">
-                                    @if($perfil->ativo)
-                                        <span class="badge badge--success">Ativo</span>
-                                    @else
-                                        <span class="badge badge--neutral">Inativo</span>
-                                    @endif
+                                    <x-badge-situacao tipo="ativo" :valor="(bool) $perfil->ativo" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
                                     <x-acoes>
@@ -83,9 +73,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

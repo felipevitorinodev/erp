@@ -431,6 +431,69 @@
     window.applyTableCardLabels = aplicarLabels;
 })();
 
+// Listagens: clicar na linha abre o registro (o mesmo que o botão Ver; sem Ver, o Editar).
+// Cliques em links, botões e campos da própria linha seguem normais; texto selecionado não abre.
+(function () {
+    document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0) return;
+        var tr = e.target.closest ? e.target.closest('table.table--cards > tbody > tr') : null;
+        if (!tr) return;
+        if (e.target.closest('a, button, input, select, textarea, label, summary, [data-sem-clique-linha]')) return;
+        var selecao = window.getSelection ? String(window.getSelection()) : '';
+        if (selecao.trim() !== '') return;
+
+        var alvo = tr.querySelector('a.js-ver') || tr.querySelector('.acoes a[aria-label="Editar"]');
+        if (!alvo) return;
+
+        if (e.ctrlKey || e.metaKey) {
+            window.open(alvo.href, '_blank', 'noopener');
+            return;
+        }
+        alvo.click();
+    });
+})();
+
+// Filtros das listagens no celular: o botão "Filtros" mostra/esconde os campos além da busca.
+// Sem campo de busca e com poucos campos (ex.: só o período), os campos já aparecem abertos.
+(function () {
+    document.querySelectorAll('[data-filtros]').forEach(function (bloco) {
+        var botao = bloco.querySelector('[data-filtros-alternar]');
+        var form = bloco.querySelector('form');
+        if (!botao || !form) return;
+
+        var campos = form.querySelectorAll(':scope > .form-group:not(.filtros__acoes)');
+        var temPrincipal = !!form.querySelector(':scope > .filtros__principal');
+        var extras = Array.prototype.filter.call(campos, function (c) {
+            return !c.classList.contains('filtros__principal');
+        });
+
+        function marcar(aberto) {
+            bloco.classList.toggle('filtros--aberto', aberto);
+            botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        }
+
+        if (extras.length === 0) {
+            botao.remove();
+            return;
+        }
+        if (!temPrincipal && extras.length <= 2) {
+            marcar(true);
+            botao.remove();
+            return;
+        }
+
+        marcar(false);
+        botao.addEventListener('click', function () {
+            var aberto = !bloco.classList.contains('filtros--aberto');
+            marcar(aberto);
+            if (aberto) {
+                var primeiro = extras[0].querySelector('input, select');
+                if (primeiro) primeiro.focus({ preventScroll: true });
+            }
+        });
+    });
+})();
+
 // Teclado numérico custom (mobile) — mostra um teclado simples com 0-9 e vírgula
 (function () {
     var keypad = null;
@@ -1026,6 +1089,284 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeAllExportDropdowns();
+    });
+})();
+
+/* Telas de detalhe no celular: ações destrutivas ou raras (Recusar, Cancelar, Excluir — botões
+   danger/warning) saem da barra e vão para o menu "Mais ações" (⋮). No desktop voltam ao lugar. */
+(function () {
+    var barra = document.querySelector('.page-bar__actions .page-actions');
+    if (!barra || !window.matchMedia) return;
+
+    var itens = Array.prototype.filter.call(barra.children, function (el) {
+        return el.matches('.btn--danger, .btn--warning') || el.querySelector('.btn--danger, .btn--warning');
+    });
+    if (itens.length < 2) return;
+
+    var marcas = itens.map(function (el) {
+        var marca = document.createComment('acao');
+        el.parentNode.insertBefore(marca, el);
+        return marca;
+    });
+
+    var mais = document.createElement('div');
+    mais.className = 'export-dropdown page-actions__mais';
+    mais.setAttribute('data-export-dropdown', '');
+    mais.innerHTML =
+        '<button type="button" class="btn btn--ghost btn--sm export-dropdown__toggle page-actions__mais-botao"' +
+        ' aria-expanded="false" aria-haspopup="true" data-export-toggle title="Mais ações">' +
+        '<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"' +
+        ' stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1">' +
+        '</circle><circle cx="12" cy="19" r="1"></circle></svg><span>Mais</span></button>' +
+        '<div class="export-dropdown__menu page-actions__menu" role="menu" hidden></div>';
+    var menu = mais.querySelector('.page-actions__menu');
+    var celular = window.matchMedia('(max-width: 640px)');
+
+    function aplicar() {
+        if (celular.matches) {
+            itens.forEach(function (el) { menu.appendChild(el); });
+            barra.appendChild(mais);
+        } else {
+            itens.forEach(function (el, i) { marcas[i].parentNode.insertBefore(el, marcas[i].nextSibling); });
+            if (mais.parentNode) mais.parentNode.removeChild(mais);
+        }
+    }
+
+    aplicar();
+    if (celular.addEventListener) celular.addEventListener('change', aplicar);
+})();
+
+/* Busca rápida do cabeçalho (x-busca-rapida): telas do menu lateral (já filtradas por permissão)
+   + ações de criação. Procura sem acento e por palavras soltas ("pagar conta" acha "Contas a pagar"). */
+(function () {
+    // app.js carrega antes do @stack('modals'): a caixa só existe depois do DOM pronto.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarBusca);
+    else iniciarBusca();
+
+    function iniciarBusca() {
+    var caixa = document.getElementById('busca-rapida');
+    var campo = document.getElementById('busca-rapida-campo');
+    var lista = document.getElementById('busca-rapida-lista');
+    if (!caixa || !campo || !lista) return;
+
+    function normalizar(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    var itens = [];
+    document.querySelectorAll('#menu-lateral a.sidebar__link').forEach(function (a) {
+        var grupo = a.closest('.sidebar__group');
+        var rotuloGrupo = grupo ? grupo.querySelector('.sidebar__group-toggle .sidebar__group-label') : null;
+        var nome = (a.textContent || '').replace(/\s+/g, ' ').trim();
+        var nomeGrupo = rotuloGrupo ? rotuloGrupo.textContent.replace(/\s+/g, ' ').trim() : '';
+        if (!nome) return;
+        itens.push({ rotulo: nome, url: a.href, grupo: nomeGrupo && nomeGrupo !== nome ? nomeGrupo : 'Tela', termos: '' });
+    });
+    try {
+        JSON.parse((document.getElementById('busca-rapida-acoes') || {}).textContent || '[]').forEach(function (a) {
+            itens.push(a);
+        });
+    } catch (e) { /* lista de ações opcional */ }
+    itens.forEach(function (it) {
+        it.chave = normalizar(it.rotulo);
+        it.tudo = normalizar(it.rotulo + ' ' + it.grupo + ' ' + (it.termos || ''));
+    });
+
+    var resultado = [];
+    var ativo = 0;
+    var origemFoco = null;
+
+    function filtrar(texto) {
+        var q = normalizar(texto);
+        if (!q) return itens.slice(0, 12);
+        var palavras = q.split(/\s+/);
+        return itens
+            .filter(function (it) { return palavras.every(function (p) { return it.tudo.indexOf(p) !== -1; }); })
+            .map(function (it) {
+                var nota = it.chave.indexOf(q) === 0 ? 0 : (it.chave.indexOf(q) !== -1 ? 1 : 2);
+                return { it: it, nota: nota };
+            })
+            .sort(function (a, b) { return a.nota - b.nota; })
+            .slice(0, 12)
+            .map(function (x) { return x.it; });
+    }
+
+    function desenhar() {
+        resultado = filtrar(campo.value);
+        ativo = Math.min(ativo, Math.max(resultado.length - 1, 0));
+        lista.innerHTML = '';
+        if (!resultado.length) {
+            var vazio = document.createElement('li');
+            vazio.className = 'busca-rapida__vazio';
+            vazio.textContent = 'Nada encontrado para "' + campo.value.trim() + '".';
+            lista.appendChild(vazio);
+            campo.removeAttribute('aria-activedescendant');
+            return;
+        }
+        resultado.forEach(function (it, i) {
+            var li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.id = 'busca-rapida-op-' + i;
+            li.className = 'busca-rapida__item' + (i === ativo ? ' is-ativo' : '');
+            li.setAttribute('aria-selected', i === ativo ? 'true' : 'false');
+            var a = document.createElement('a');
+            a.href = it.url;
+            a.tabIndex = -1;
+            var nome = document.createElement('span');
+            nome.className = 'busca-rapida__nome';
+            nome.textContent = it.rotulo;
+            var grupo = document.createElement('span');
+            grupo.className = 'busca-rapida__grupo';
+            grupo.textContent = it.grupo;
+            a.appendChild(nome);
+            a.appendChild(grupo);
+            li.appendChild(a);
+            li.addEventListener('mousemove', function () {
+                if (ativo !== i) { ativo = i; marcar(); }
+            });
+            lista.appendChild(li);
+        });
+        marcar();
+    }
+
+    function marcar() {
+        Array.prototype.forEach.call(lista.querySelectorAll('.busca-rapida__item'), function (li, i) {
+            li.classList.toggle('is-ativo', i === ativo);
+            li.setAttribute('aria-selected', i === ativo ? 'true' : 'false');
+            if (i === ativo) {
+                campo.setAttribute('aria-activedescendant', li.id);
+                if (li.scrollIntoView) li.scrollIntoView({ block: 'nearest' });
+            }
+        });
+    }
+
+    function abrir() {
+        if (!caixa.hidden) return;
+        origemFoco = document.activeElement;
+        caixa.hidden = false;
+        document.body.classList.add('busca-rapida-aberta');
+        campo.value = '';
+        ativo = 0;
+        desenhar();
+        campo.focus();
+    }
+
+    function fechar() {
+        if (caixa.hidden) return;
+        caixa.hidden = true;
+        document.body.classList.remove('busca-rapida-aberta');
+        if (origemFoco && origemFoco.focus) origemFoco.focus();
+    }
+
+    function ir(novaAba) {
+        var it = resultado[ativo];
+        if (!it) return;
+        if (novaAba) { window.open(it.url, '_blank'); return; }
+        window.location.href = it.url;
+    }
+
+    document.querySelectorAll('[data-busca-abrir]').forEach(function (b) { b.addEventListener('click', abrir); });
+    caixa.querySelectorAll('[data-busca-fechar]').forEach(function (b) { b.addEventListener('click', fechar); });
+    caixa.addEventListener('mousedown', function (e) { if (e.target === caixa) fechar(); });
+    campo.addEventListener('input', function () { ativo = 0; desenhar(); });
+    campo.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!resultado.length) return;
+            ativo = (ativo + (e.key === 'ArrowDown' ? 1 : -1) + resultado.length) % resultado.length;
+            marcar();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            ir(e.ctrlKey || e.metaKey);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            fechar();
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+        }
+    });
+
+    function digitando(el) {
+        if (!el) return false;
+        var tag = el.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    }
+
+    function outroModalAberto() {
+        return !!document.querySelector('.modal-overlay:not([hidden]), #modal-ver:not([hidden]), .comandos:not([hidden])');
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (!caixa.hidden || e.defaultPrevented || outroModalAberto()) return;
+        if (document.getElementById('pdv-shell')) return; // PDV: "/" é a busca de produtos
+        var barra = e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !digitando(document.activeElement);
+        var ctrlK = (e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')
+            && !document.querySelector('[data-comandos-abrir]');
+        if (barra || ctrlK) {
+            e.preventDefault();
+            abrir();
+        }
+    });
+    }
+})();
+
+/* Faixas que rolam de lado (abas de situação, módulos dos relatórios): a aba ativa aparece
+   mesmo sendo das últimas, e um esmaecido na borda avisa que há mais opções. */
+(function () {
+    function preparar(faixa) {
+        var ativa = faixa.querySelector('.is-ativa, .is-on');
+        if (ativa && faixa.scrollWidth > faixa.clientWidth) {
+            faixa.scrollLeft = ativa.offsetLeft - (faixa.clientWidth - ativa.offsetWidth) / 2;
+        }
+        function marcar() {
+            var sobra = faixa.scrollWidth - faixa.clientWidth - faixa.scrollLeft;
+            faixa.classList.toggle('tem-mais-direita', sobra > 4);
+            faixa.classList.toggle('tem-mais-esquerda', faixa.scrollLeft > 4);
+        }
+        marcar();
+        faixa.addEventListener('scroll', marcar, { passive: true });
+        window.addEventListener('resize', marcar);
+    }
+
+    function iniciar() {
+        document.querySelectorAll('.abas-filtro, .rp-chips').forEach(preparar);
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+    else iniciar();
+})();
+
+/* Ctrl+S (Cmd+S) salva o formulário em edição: clica no botão principal de envio, passando pelas
+   mesmas validações e confirmações do clique. Fora do PDV e da NF-e (fluxo fiscal próprio). */
+(function () {
+    function visivel(el) {
+        return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+
+    function botaoSalvar() {
+        if (document.getElementById('pdv-shell') || document.getElementById('form-nfe')) return null;
+        var candidatos = Array.prototype.filter.call(
+            document.querySelectorAll('.main button[type="submit"].btn--primary'),
+            function (b) {
+                var form = b.form;
+                return form && (form.method || '').toLowerCase() === 'post' && !b.disabled && visivel(b)
+                    && !b.closest('[data-sem-atalho-salvar], .modal-overlay, #modal-ver, .filtros')
+                    && !b.hasAttribute('data-acao');
+            }
+        );
+        if (candidatos.length === 1) return candidatos[0];
+        var foco = document.activeElement;
+        var doFoco = candidatos.filter(function (b) { return foco && b.form && b.form.contains(foco); });
+        return doFoco.length === 1 ? doFoco[0] : null;
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || (e.key !== 's' && e.key !== 'S')) return;
+        if (document.querySelector('.modal-overlay:not([hidden]), #modal-ver:not([hidden])')) return;
+        var botao = botaoSalvar();
+        if (!botao) return;
+        e.preventDefault();
+        botao.click();
     });
 })();
 

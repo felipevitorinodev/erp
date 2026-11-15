@@ -10,52 +10,28 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('entrada-estoque.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+    <x-filtros :action="route('entrada-estoque.index')" :manter="['situacao']">
+                <div class="form-group filtros__principal form-group--span-2">
+                    <label class="form-label" for="campo-busca">Busca</label>
+                    <input id="campo-busca" type="search" enterkeyhint="search" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
                         placeholder="Número ou fornecedor">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Situação</label>
-                    <select name="situacao" class="form-control">
-                        <option value="">— Todas —</option>
-                        @foreach(['rascunho' => 'Rascunho', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'] as $valor => $label)
-                            <option value="{{ $valor }}" {{ ($filtros['situacao'] ?? '') === $valor ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Data (início)</label>
-                    <input type="date" name="data_inicio" class="form-control"
+                    <label class="form-label" for="campo-data_inicio">Data (início)</label>
+                    <input id="campo-data_inicio" type="date" name="data_inicio" class="form-control"
                         value="{{ $filtros['data_inicio'] ?? '' }}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Data (fim)</label>
-                    <input type="date" name="data_fim" class="form-control"
+                    <label class="form-label" for="campo-data_fim">Data (fim)</label>
+                    <input id="campo-data_fim" type="date" name="data_fim" class="form-control"
                         value="{{ $filtros['data_fim'] ?? '' }}">
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('entrada-estoque.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Resultados" :paginator="$entradas">
+        <x-slot:abas>
+            <x-filtro-abas :opcoes="['rascunho' => 'Rascunhos', 'confirmada' => 'Confirmadas', 'cancelada' => 'Canceladas']" />
+        </x-slot:abas>
                     <thead>
                         <tr>
                             <th>Número</th>
@@ -120,13 +96,7 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $entradas->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
     {{-- Modal de Importação XML --}}
     <div class="modal-overlay" id="modal-importar-xml" hidden>
@@ -164,101 +134,9 @@
 
 @endsection
 
-@push('styles')
-<style>
-.upload-area {
-    position: relative;
-    border: 2px dashed var(--color-border);
-    border-radius: 8px;
-    padding: 2rem 1rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: var(--color-bg);
-}
-.upload-area:hover,
-.upload-area--drag {
-    border-color: var(--color-primary);
-    background: rgba(var(--color-primary-rgb, 37, 99, 235), 0.04);
-}
-.upload-area__icon {
-    color: var(--color-text-muted);
-    margin-bottom: 0.75rem;
-}
-.upload-area--drag .upload-area__icon,
-.upload-area:hover .upload-area__icon {
-    color: var(--color-primary);
-}
-.upload-area__text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-.upload-area__title {
-    font-weight: 500;
-    color: var(--color-text);
-    font-size: 0.95rem;
-}
-.upload-area__subtitle {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-}
-.upload-area__input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-.upload-area__selected {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-success-bg, #ecfdf5);
-    border-radius: 6px;
-    font-size: 0.85rem;
-}
-.upload-area__selected[hidden] {
-    display: none;
-}
-.upload-area__filename {
-    color: var(--color-success, #059669);
-    font-weight: 500;
-    word-break: break-all;
-}
-.upload-area__remove {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-size: 1.25rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 0.25rem;
-}
-.upload-area__remove:hover {
-    color: var(--color-danger);
-}
-.upload-area--has-file .upload-area__icon,
-.upload-area--has-file .upload-area__text {
-    display: none;
-}
-@media (max-width: 600px) {
-    .upload-area {
-        padding: 1.5rem 1rem;
-    }
-    .upload-area__icon {
-        width: 104px;
-    }
-    .upload-area__title {
-        font-size: 0.9rem;
-    }
-}
-</style>
-@endpush
+@pushOnce('styles', 'css-entrada-estoque')
+    <link rel="stylesheet" href="{{ asset('css/entrada-estoque.css') }}?v={{ filemtime(public_path('css/entrada-estoque.css')) }}">
+@endPushOnce
 
 @push('scripts')
 <script>

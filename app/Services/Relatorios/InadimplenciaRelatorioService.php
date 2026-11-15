@@ -9,6 +9,7 @@ use App\Relatorios\FaixaAtraso;
 use App\Relatorios\PdfRelatorio;
 use App\Repositories\Relatorios\InadimplenciaRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\LeituraEmLotes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,8 +30,9 @@ class InadimplenciaRelatorioService implements ConsultaRelatorio
         $empresaId = $this->empresaId();
         $consulta = $this->repository->consulta($this->tipo, $empresaId, $filtros);
         $totais = $this->repository->totais($consulta);
+        // O total da paginação é o qtd que os totais por faixa já contaram: sem um segundo COUNT(*).
         $contas = $this->repository->ordenar(clone $consulta, $filtros)
-            ->paginate(20)
+            ->paginate(20, ['*'], 'page', null, $totais['qtd'])
             ->withQueryString();
 
         return view('relatorios.consulta', array_merge(
@@ -80,7 +82,7 @@ class InadimplenciaRelatorioService implements ConsultaRelatorio
         $consulta = $this->repository->consulta($this->tipo, $this->empresaId(), $filtros);
         $totais = $this->repository->totais(clone $consulta);
         $relacao = $this->tipo === 'pagar' ? 'fornecedor' : 'cliente';
-        $contas = $this->repository->ordenar(clone $consulta, $filtros)->paginate(20);
+        $contas = $this->repository->ordenar(clone $consulta, $filtros)->paginate(20, ['*'], 'page', null, $totais['qtd']);
 
         return [
             'total' => $contas->total(),
@@ -117,7 +119,7 @@ class InadimplenciaRelatorioService implements ConsultaRelatorio
         return CsvRelatorio::stream(
             'relatorio-inadimplencia-'.$this->tipo.'-'.date('Y-m-d').'.csv',
             ['Vencimento', $rotulo, 'Descrição', 'Valor', 'Pago', 'Saldo', 'Dias', 'Faixa', 'Situação'],
-            $query->lazy(500)->map(function ($conta) use ($relacao) {
+            LeituraEmLotes::porChave($query)->map(function ($conta) use ($relacao) {
                 $dias = FaixaAtraso::dias($conta->data_vencimento);
                 $saldo = round((float) $conta->valor - (float) $conta->valor_pago, 2);
 

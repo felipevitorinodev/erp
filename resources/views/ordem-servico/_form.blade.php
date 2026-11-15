@@ -96,20 +96,20 @@
 
         <div class="form-grid form-grid--col-3" style="margin-top:1rem;">
             <div class="form-group">
-                <label class="form-label">Defeito relatado</label>
-                <textarea name="defeito_relatado" rows="4" maxlength="5000" style="resize:vertical;"
+                <label class="form-label" for="campo-defeito_relatado">Defeito relatado</label>
+                <textarea name="defeito_relatado" id="campo-defeito_relatado" rows="4" maxlength="5000"
                     class="form-control @error('defeito_relatado') is-invalid @enderror"
                     placeholder="O que o cliente informou">{{ old('defeito_relatado', $os->defeito_relatado ?? '') }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Diagnóstico</label>
-                <textarea name="diagnostico" rows="4" maxlength="5000" style="resize:vertical;"
+                <label class="form-label" for="campo-diagnostico">Diagnóstico</label>
+                <textarea name="diagnostico" id="campo-diagnostico" rows="4" maxlength="5000"
                     class="form-control @error('diagnostico') is-invalid @enderror"
                     placeholder="O que o técnico encontrou">{{ old('diagnostico', $os->diagnostico ?? '') }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Serviço executado / laudo</label>
-                <textarea name="servico_executado" rows="4" maxlength="5000" style="resize:vertical;"
+                <label class="form-label" for="campo-servico_executado">Serviço executado / laudo</label>
+                <textarea name="servico_executado" id="campo-servico_executado" rows="4" maxlength="5000"
                     class="form-control @error('servico_executado') is-invalid @enderror"
                     placeholder="O que foi feito">{{ old('servico_executado', $os->servico_executado ?? '') }}</textarea>
             </div>
@@ -238,8 +238,8 @@
             </div>
         </div>
         <div class="form-group" style="margin-top:1rem;">
-            <label class="form-label">Observações</label>
-            <textarea name="observacoes" class="form-control" rows="2" style="resize:vertical;"
+            <label class="form-label" for="campo-observacoes">Observações</label>
+            <textarea name="observacoes" id="campo-observacoes" class="form-control" rows="2"
                 maxlength="5000">{{ old('observacoes', $os->observacoes ?? '') }}</textarea>
         </div>
     </div>

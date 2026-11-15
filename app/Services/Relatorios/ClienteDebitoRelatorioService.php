@@ -148,18 +148,14 @@ class ClienteDebitoRelatorioService implements ConsultaRelatorio
      */
     private function linhas(int $empresaId, array $filtros): array
     {
-        $brutas = $this->repository->linhas($this->repository->consulta($empresaId, $filtros));
-        $ids = array_values(array_filter(array_column($brutas, 'cliente_id')));
-        $nomes = $ids === []
-            ? collect()
-            : Cliente::withTrashed()->where('empresa_id', $empresaId)->whereIn('id', $ids)->pluck('nome', 'id');
+        $brutas = $this->repository->linhas($this->repository->consulta($empresaId, $filtros), $empresaId);
 
         $linhas = [];
         foreach ($brutas as $linha) {
             $linhas[] = [
                 'cliente_id' => $linha['cliente_id'],
                 'nome' => $linha['cliente_id']
-                    ? (string) ($nomes[$linha['cliente_id']] ?? 'Cliente #'.$linha['cliente_id'])
+                    ? ($linha['nome'] ?? 'Cliente #'.$linha['cliente_id'])
                     : 'Sem cliente',
                 'qtd' => $linha['qtd'],
                 'saldo' => $linha['saldo'],

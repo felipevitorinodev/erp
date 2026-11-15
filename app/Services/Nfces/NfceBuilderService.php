@@ -43,8 +43,11 @@ class NfceBuilderService extends NfeBuilderService
                 : null;
             $this->ncmDoItem($obj, $produto);
             $this->eanDoItem($obj);
-            $this->cfopDoItem($obj, $produto);
-            $this->csosnDoItem($obj, $produto);
+            $cfop = $this->cfopDoItem($obj, $produto);
+            $csosn = $this->csosnDoItem($obj, $produto);
+            if (($par = self::pendenciaCfopCsosn($cfop, $csosn)) !== null) {
+                throw new RuntimeException('Item "'.($obj->produto_nome ?? $obj->nome ?? '').'": '.$par);
+            }
             $this->cstResolvido($obj, $produto, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao', 'PIS');
             $this->cstResolvido($obj, $produto, 'cst_cofins', 'cst_cofins', 'cst_cofins', 'nfe_cst_cofins_padrao', 'COFINS');
         }

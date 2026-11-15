@@ -172,10 +172,10 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Consumidor final</label>
+                        <label class="form-label" for="ind_final">Consumidor final</label>
                         @php $indFinal = (string) old('ind_final', $rascunho?->ind_final); @endphp
                         <select name="ind_final" id="ind_final" class="form-control">
-                            <option value="">Automático (CPF = sim, CNPJ = não)</option>
+                            <option value="">Automático (CNPJ com IE = não; demais = sim)</option>
                             <option value="1" @selected($indFinal === '1')>Sim</option>
                             <option value="0" @selected($indFinal === '0')>Não</option>
                         </select>
@@ -466,11 +466,14 @@
                                 <option value="103">103 — Isenção</option>
                                 <option value="300">300 — Imune</option>
                                 <option value="400">400 — Não tributada</option>
+                                <option value="500">500 — ICMS cobrado antes por ST</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-cst-pis">CST PIS</label>
                             <select id="item-cst-pis" class="form-control">
+                                <option value="99">99 — Outras operações (Simples Nacional)</option>
+                                <option value="49">49 — Outras operações de saída</option>
                                 <option value="07">07 — Operação isenta</option>
                                 <option value="04">04 — Operação tributável monofásica</option>
                                 <option value="05">05 — Operação tributável ST</option>
@@ -482,6 +485,8 @@
                         <div class="form-group">
                             <label class="form-label form-label--required" for="item-cst-cofins">CST COFINS</label>
                             <select id="item-cst-cofins" class="form-control">
+                                <option value="99">99 — Outras operações (Simples Nacional)</option>
+                                <option value="49">49 — Outras operações de saída</option>
                                 <option value="07">07 — Operação isenta</option>
                                 <option value="04">04 — Operação tributável monofásica</option>
                                 <option value="05">05 — Operação tributável ST</option>
@@ -492,7 +497,7 @@
                         </div>
                     </div>
                     <p class="text-muted" style="margin:0.75rem 0 0;font-size:12px;">
-                        Os dados vêm do cadastro do produto. Simples Nacional e MEI: CSOSN 102, 103, 300 ou 400, e PIS/COFINS sem destaque (CST 04 a 09; o caso mais comum é 07).
+                        Os dados vêm do cadastro do produto. Simples Nacional e MEI: CSOSN 102, 103, 300, 400 ou 500, e PIS/COFINS sem destaque (CST 99 com valor zero, como orienta a SEFAZ-PB, ou 04 a 09 e 49).
                     </p>
                 </div>
             </details>
@@ -533,9 +538,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var podeEmitir = @json($podeEmitir);
     var defaults = {
         cfop: @json($empresa->nfe_cfop_padrao ?? '5102'),
-        csosn: @json($empresa->nfe_csosn_padrao ?? '400'),
-        cstPis: @json($empresa->nfe_cst_pis_padrao ?? '07'),
-        cstCofins: @json($empresa->nfe_cst_cofins_padrao ?? '07')
+        csosn: @json($empresa->nfe_csosn_padrao ?? '102'),
+        cstPis: @json($empresa->nfe_cst_pis_padrao ?? '99'),
+        cstCofins: @json($empresa->nfe_cst_cofins_padrao ?? '99')
     };
     var urls = {
         produtos: @json(route('api.produtos.busca')),
@@ -548,8 +553,8 @@ document.addEventListener('DOMContentLoaded', function () {
         cests: @json(route('api.cests.busca'))
     };
     var CFOPS = @json(\App\Models\Fiscal\Cfop::query()->pluck('descricao', 'codigo'));
-    var CSOSN_OK = ['102', '103', '300', '400'];
-    var CST_OK = ['04', '05', '06', '07', '08', '09'];
+    var CSOSN_OK = @json(\App\Services\Nfes\NfeBuilderService::CSOSN_SEM_CALCULO);
+    var CST_OK = @json(\App\Services\Nfes\NfeBuilderService::CST_ACEITOS);
 
     var passo = 1;
     var itens = (@json($itensIniciais) || []).map(function (it) {
@@ -694,9 +699,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (digits(it.ncm).length !== 8) p.push('NCM com 8 dígitos');
         var cfop = digits(it.cfop);
         if (cfop.length !== 4 || cfop.charAt(0) !== '5') p.push('CFOP da série 5');
-        if (CSOSN_OK.indexOf(digits(it.csosn)) < 0) p.push('CSOSN 102/103/300/400');
-        if (CST_OK.indexOf(String(it.cst_pis || '').padStart(2, '0')) < 0) p.push('CST PIS 04 a 09');
-        if (CST_OK.indexOf(String(it.cst_cofins || '').padStart(2, '0')) < 0) p.push('CST COFINS 04 a 09');
+        if (CSOSN_OK.indexOf(digits(it.csosn)) < 0) p.push('CSOSN 102/103/300/400/500');
+        if (CST_OK.indexOf(String(it.cst_pis || '').padStart(2, '0')) < 0) p.push('CST PIS 04 a 09, 49 ou 99');
+        if (CST_OK.indexOf(String(it.cst_cofins || '').padStart(2, '0')) < 0) p.push('CST COFINS 04 a 09, 49 ou 99');
         if (!(it.quantidade > 0)) p.push('quantidade');
         return p;
     }

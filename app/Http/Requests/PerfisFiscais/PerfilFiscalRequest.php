@@ -6,6 +6,7 @@ use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Services\Nfes\NfeBuilderService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class PerfilFiscalRequest extends FormRequest
 {
@@ -34,8 +35,8 @@ class PerfilFiscalRequest extends FormRequest
             'ncm' => ['nullable', 'digits:8'],
             'cfop' => ['required', 'digits:4', 'regex:/^5\d{3}$/', Rule::exists('cfops', 'codigo')],
             'csosn' => ['required', Rule::in(NfeBuilderService::CSOSN_SEM_CALCULO)],
-            'cst_pis' => ['required', Rule::in(NfeBuilderService::CST_SEM_INCIDENCIA)],
-            'cst_cofins' => ['required', Rule::in(NfeBuilderService::CST_SEM_INCIDENCIA)],
+            'cst_pis' => ['required', Rule::in(NfeBuilderService::CST_ACEITOS)],
+            'cst_cofins' => ['required', Rule::in(NfeBuilderService::CST_ACEITOS)],
             'ativo' => ['nullable', 'boolean'],
         ];
     }
@@ -50,9 +51,26 @@ class PerfilFiscalRequest extends FormRequest
             'uf_destino.regex' => 'A UF de destino deve ter 2 letras.',
             'cfop.regex' => 'Nesta versão o CFOP precisa ser da série 5 (operação interna).',
             'cfop.exists' => 'Escolha um CFOP da tabela de operações internas.',
-            'csosn.in' => 'Nesta versão o CSOSN aceito é 102, 103, 300 ou 400.',
-            'cst_pis.in' => 'Nesta versão o CST de PIS aceito é de 04 a 09.',
-            'cst_cofins.in' => 'Nesta versão o CST de COFINS aceito é de 04 a 09.',
+            'csosn.in' => 'Nesta versão o CSOSN aceito é 102, 103, 300, 400 ou 500.',
+            'cst_pis.in' => 'Nesta versão o CST de PIS aceito é de 04 a 09, 49 ou 99.',
+            'cst_cofins.in' => 'Nesta versão o CST de COFINS aceito é de 04 a 09, 49 ou 99.',
+        ];
+    }
+
+    /** CFOP e CSOSN de ST precisam combinar: a SEFAZ rejeita o par trocado (386). */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                if ($validator->errors()->hasAny(['cfop', 'csosn'])) {
+                    return;
+                }
+
+                $par = NfeBuilderService::pendenciaCfopCsosn((string) $this->input('cfop'), (string) $this->input('csosn'));
+                if ($par !== null) {
+                    $validator->errors()->add('csosn', $par);
+                }
+            },
         ];
     }
 

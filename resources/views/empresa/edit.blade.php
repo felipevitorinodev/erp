@@ -348,7 +348,7 @@
                             <label class="form-label form-label--required">CSOSN padrão</label>
                             <input type="text" name="nfe_csosn_padrao" maxlength="3" inputmode="numeric"
                                 class="form-control @error('nfe_csosn_padrao') is-invalid @enderror"
-                                value="{{ old('nfe_csosn_padrao', $empresa->nfe_csosn_padrao ?? '400') }}">
+                                value="{{ old('nfe_csosn_padrao', $empresa->nfe_csosn_padrao ?? '102') }}">
                             @error('nfe_csosn_padrao')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -358,7 +358,7 @@
                             <label class="form-label form-label--required">CST PIS padrão</label>
                             <input type="text" name="nfe_cst_pis_padrao" maxlength="2" inputmode="numeric"
                                 class="form-control @error('nfe_cst_pis_padrao') is-invalid @enderror"
-                                value="{{ old('nfe_cst_pis_padrao', $empresa->nfe_cst_pis_padrao ?? '07') }}">
+                                value="{{ old('nfe_cst_pis_padrao', $empresa->nfe_cst_pis_padrao ?? '99') }}">
                             @error('nfe_cst_pis_padrao')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror
@@ -368,7 +368,7 @@
                             <label class="form-label form-label--required">CST COFINS padrão</label>
                             <input type="text" name="nfe_cst_cofins_padrao" maxlength="2" inputmode="numeric"
                                 class="form-control @error('nfe_cst_cofins_padrao') is-invalid @enderror"
-                                value="{{ old('nfe_cst_cofins_padrao', $empresa->nfe_cst_cofins_padrao ?? '07') }}">
+                                value="{{ old('nfe_cst_cofins_padrao', $empresa->nfe_cst_cofins_padrao ?? '99') }}">
                             @error('nfe_cst_cofins_padrao')
                                 <span class="form-error">{{ $message }}</span>
                             @enderror

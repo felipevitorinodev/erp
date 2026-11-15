@@ -5,7 +5,7 @@
 
 @section('content')
 
-    <x-filtros :action="route('comissao.index')">
+    <x-filtros :action="route('comissao.index')" :manter="['situacao']">
         <x-filtro-campo
             label="Vendedor"
             name="funcionario_id"
@@ -13,13 +13,6 @@
             :value="$filtros['funcionario_id'] ?? ''"
             :options="$funcionarios->pluck('nome', 'id')"
             vazio="— Todos —"
-        />
-        <x-filtro-campo
-            label="Situação"
-            name="situacao"
-            type="select"
-            :value="$filtros['situacao'] ?? ''"
-            :options="['pendente' => 'Pendente', 'paga' => 'Paga']"
         />
         <x-filtro-periodo
             :inicio="$filtros['data_inicio'] ?? ''"
@@ -46,6 +39,9 @@
     </x-relatorio-kpis>
 
     <x-tabela-card titulo="Resultados" :paginator="$comissoes">
+        <x-slot:abas>
+            <x-filtro-abas :opcoes="['pendente' => 'Pendentes', 'paga' => 'Pagas']" />
+        </x-slot:abas>
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -64,7 +60,7 @@
                         @forelse($comissoes as $comissao)
                             <tr>
                                 <td data-label="Nº" class="text-muted">{{ $comissao->id }}</td>
-                                <td data-label="Vendedor">{{ $comissao->funcionario->nome ?? '—' }}</td>
+                                <td data-label="Vendedor" class="col-titulo">{{ $comissao->funcionario->nome ?? '—' }}</td>
                                 <td data-label="Venda">
                                     @if($comissao->venda)
                                         <a href="{{ route('venda.show', $comissao->venda) }}">#{{ $comissao->venda->numero }}</a>

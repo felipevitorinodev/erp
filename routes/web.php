@@ -25,11 +25,7 @@ use App\Http\Controllers\UnidadesMedida\UnidadeMedidaController;
 use App\Http\Controllers\Usuarios\PerfilController;
 use App\Http\Controllers\Usuarios\UsuarioController;
 use App\Http\Controllers\Vendas\VendaController;
-use App\Models\ContasPagar\ContaPagar;
-use App\Models\ContasReceber\ContaReceber;
-use App\Models\Produtos\Produto;
-use App\Models\Vendas\Venda;
-use Illuminate\Support\Facades\DB;
+use App\Services\Painel\PainelService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -42,163 +38,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/', function () {
-        $usuario = auth()->user();
-        $empresaId = $usuario->empresa_id ?? 0;
-        $hoje = now()->toDateString();
-        $em7Dias = now()->addDays(7)->toDateString();
-        $podeRelatorios = $usuario->pode('relatorios');
-        $podeFinanceiro = $usuario->pode('financeiro');
-
-        $vendasHoje = 0;
-        $faturamentoHoje = 0.0;
-        if ($podeRelatorios) {
-            $resumoVendasHoje = Venda::where('empresa_id', $empresaId)
-                ->whereDataEntre('data_venda', $hoje, $hoje)
-                ->toBase()
-                ->selectRaw("COUNT(*) as quantidade, COALESCE(SUM(CASE WHEN situacao = 'confirmada' THEN total END), 0) as faturamento")
-                ->first();
-
-            $vendasHoje = (int) $resumoVendasHoje->quantidade;
-            $faturamentoHoje = (float) $resumoVendasHoje->faturamento;
-        }
-
-        $contasReceberVencidas = 0;
-        $contasPagarVencidas = 0;
-        $estoqueCritico = 0;
-        if ($podeRelatorios) {
-            $contasReceberVencidas = ContaReceber::where('empresa_id', $empresaId)
-                ->where('data_vencimento', '<', $hoje)
-                ->whereIn('situacao', ['aberta', 'parcial'])
-                ->count();
-
-            $contasPagarVencidas = ContaPagar::where('empresa_id', $empresaId)
-                ->where('data_vencimento', '<', $hoje)
-                ->whereIn('situacao', ['aberta', 'parcial'])
-                ->count();
-
-            $estoqueCritico = Produto::where('empresa_id', $empresaId)
-                ->where('controla_estoque', true)
-                ->where('ativo', true)
-                ->whereColumn('estoque_atual', '<=', 'estoque_minimo')
-                ->count();
-        }
-
-        $aReceber7Dias = 0.0;
-        if ($podeFinanceiro) {
-            $aReceber7Dias = (float) ContaReceber::where('empresa_id', $empresaId)
-                ->whereDataEntre('data_vencimento', $hoje, $em7Dias)
-                ->whereIn('situacao', ['aberta', 'parcial'])
-                ->sum(DB::raw('valor - COALESCE(valor_pago, 0)'));
-        }
-
-        $inicioMes = now()->startOfMonth();
-        $fimMes = $inicioMes->copy()->endOfMonth();
-        $inicioMesSql = $inicioMes->toDateString();
-        $fimMesSql = $fimMes->toDateString();
-
-        $faturamentoMes = null;
-        if ($podeRelatorios) {
-            $linhas = Venda::where('empresa_id', $empresaId)
-                ->where('situacao', 'confirmada')
-                ->whereDataEntre('data_venda', $inicioMesSql, $fimMesSql)
-                ->toBase()
-                ->selectRaw('DATE(data_venda) as dia, COUNT(*) as qtd, COALESCE(SUM(total), 0) as total')
-                ->groupByRaw('DATE(data_venda)')
-                ->get();
-
-            $porDia = [];
-            foreach ($linhas as $linha) {
-                $porDia[substr((string) $linha->dia, 0, 10)] = $linha;
-            }
-
-            $dias = [];
-            $totalMes = 0.0;
-            $qtdMes = 0;
-            $maximo = 0.0;
-            $cursor = $inicioMes->copy();
-            while ($cursor->lte($fimMes)) {
-                $chave = $cursor->toDateString();
-                $linha = $porDia[$chave] ?? null;
-                $total = round((float) ($linha->total ?? 0), 2);
-                $qtd = (int) ($linha->qtd ?? 0);
-                $totalMes += $total;
-                $qtdMes += $qtd;
-                $maximo = max($maximo, $total);
-                $dias[] = [
-                    'n' => $cursor->day,
-                    'total' => $total,
-                    'qtd' => $qtd,
-                    'hoje' => $chave === $hoje,
-                    'futuro' => $chave > $hoje,
-                    'eixo' => false,
-                ];
-                $cursor->addDay();
-            }
-
-            foreach ($dias as $i => &$dia) {
-                $dia['altura'] = $maximo > 0 ? round($dia['total'] / $maximo * 100, 1) : 0;
-                $dia['eixo'] = $dia['n'] === 1 || $dia['n'] % 5 === 0 || $dia['hoje'];
-            }
-            unset($dia);
-            foreach ($dias as $i => $dia) {
-                if (! $dia['hoje']) {
-                    continue;
-                }
-                foreach ([-1, 1] as $vizinho) {
-                    $j = $i + $vizinho;
-                    if (isset($dias[$j]) && ! $dias[$j]['hoje']) {
-                        $dias[$j]['eixo'] = false;
-                    }
-                }
-            }
-
-            $faturamentoMes = [
-                'dias' => $dias,
-                'total' => round($totalMes, 2),
-                'qtd' => $qtdMes,
-                'ticket' => $qtdMes > 0 ? round($totalMes / $qtdMes, 2) : 0.0,
-                'inicio' => $inicioMesSql,
-                'fim' => $fimMesSql,
-            ];
-        }
-
-        $contasMes = null;
-        if ($podeFinanceiro) {
-            $resumoConta = function (string $model) use ($empresaId, $inicioMesSql, $fimMesSql): array {
-                $linha = $model::where('empresa_id', $empresaId)
-                    ->whereDataEntre('data_vencimento', $inicioMesSql, $fimMesSql)
-                    ->where('situacao', '!=', 'cancelada')
-                    ->toBase()
-                    ->selectRaw('COALESCE(SUM(COALESCE(valor_pago, 0)), 0) as pago')
-                    ->selectRaw("COALESCE(SUM(CASE WHEN situacao IN ('aberta', 'parcial') THEN valor - COALESCE(valor_pago, 0) ELSE 0 END), 0) as aberto")
-                    ->first();
-
-                return [
-                    'pago' => round((float) ($linha->pago ?? 0), 2),
-                    'aberto' => round((float) ($linha->aberto ?? 0), 2),
-                ];
-            };
-
-            $contasMes = [
-                'receber' => $resumoConta(ContaReceber::class),
-                'pagar' => $resumoConta(ContaPagar::class),
-                'inicio' => $inicioMesSql,
-                'fim' => $fimMesSql,
-            ];
-        }
-
-        return view('welcome', [
-            'vendasHoje' => $vendasHoje,
-            'faturamentoHoje' => $faturamentoHoje,
-            'contasReceberVencidas' => $contasReceberVencidas,
-            'contasPagarVencidas' => $contasPagarVencidas,
-            'aReceber7Dias' => $aReceber7Dias,
-            'estoqueCritico' => $estoqueCritico,
-            'faturamentoMes' => $faturamentoMes,
-            'contasMes' => $contasMes,
-        ]);
-    });
+    // Tela inicial: agregados do dia/mês calculados no PainelService e guardados no cache entre telas.
+    Route::get('/', fn (PainelService $painel) => view('welcome', $painel->dados(auth()->user())));
 
     Route::prefix('empresa')->middleware('permissao:configuracoes')->group(function () {
         Route::get('/', [EmpresaController::class, 'index'])->name('empresa.index');
@@ -342,6 +183,8 @@ Route::middleware('auth')->group(function () {
         Route::post('{venda}/emitir', [NfeController::class, 'emitir'])->name('nfe.emitir');
         Route::get('{nfe}/ver', [NfeController::class, 'show'])->name('nfe.show');
         Route::post('{nfe}/cancelar', [NfeController::class, 'cancelar'])->name('nfe.cancelar');
+        Route::post('{nfe}/carta-correcao', [NfeController::class, 'cartaCorrecao'])->name('nfe.carta-correcao');
+        Route::get('{nfe}/carta-correcao/{carta}', [NfeController::class, 'cartaCorrecaoArquivo'])->whereNumber('carta')->name('nfe.carta-correcao.arquivo');
         Route::post('{nfe}/limpar-codigos', [NfeController::class, 'limparCodigos'])->name('nfe.limpar-codigos');
         Route::get('{nfe}/danfe', [NfeController::class, 'danfe'])->name('nfe.danfe');
         Route::post('{nfe}/consultar', [NfeController::class, 'consultar'])->name('nfe.consultar');

@@ -5,13 +5,14 @@ namespace App\Repositories\Relatorios;
 use App\Models\Vendas\Venda;
 use App\Relatorios\DiaSemana;
 use App\Relatorios\Periodo;
+use App\Support\IndiceBanco;
 use Illuminate\Database\Eloquent\Builder;
 
 class DiaSemanaRelatorioRepository
 {
     public function consulta(int $empresaId, Periodo $periodo): Builder
     {
-        return Venda::query()
+        return IndiceBanco::usar(Venda::query(), 'vendas', 'vendas_relatorio_index')
             ->where('empresa_id', $empresaId)
             ->where('situacao', 'confirmada')
             ->whereDataEntre('data_venda', $periodo->inicio, $periodo->fim);

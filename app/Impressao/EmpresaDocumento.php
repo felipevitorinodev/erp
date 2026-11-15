@@ -17,8 +17,7 @@ class EmpresaDocumento
 
     public static function atual(): self
     {
-        $id = auth()->user()?->empresa_id;
-        $empresa = $id ? Empresa::query()->find($id) : null;
+        $empresa = Empresa::atual();
 
         return self::de($empresa);
     }

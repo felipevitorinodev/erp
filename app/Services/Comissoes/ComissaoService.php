@@ -23,8 +23,8 @@ class ComissaoService
 
     public function index(Request $request)
     {
-        $comissoes = $this->repository->index($request);
         $totais = $this->repository->totais($request);
+        $comissoes = $this->repository->index($request, $totais['qtd'] ?? null);
 
         $funcionarios = Funcionario::where('empresa_id', auth()->user()->empresa_id)
             ->where('ativo', true)

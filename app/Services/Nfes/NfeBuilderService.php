@@ -7,7 +7,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Repositories\Nfes\NfeRepository;
-use Carbon\Carbon;
+use App\Services\Nfces\NfceBuilderService;
 use NFePHP\Common\Certificate;
 use NFePHP\Common\Keys;
 use NFePHP\Common\TimeZoneByUF;
@@ -22,9 +22,27 @@ class NfeBuilderService
 {
     protected const SCHEME = 'PL_010_V1.30';
 
-    public const CSOSN_SEM_CALCULO = ['102', '103', '300', '400'];
+    /**
+     * CSOSN que o XML leva sem valores de ICMS. O 500 (ICMS-ST cobrado antes) vai sem o grupo do ST retido,
+     * que é opcional no leiaute. 101 (crédito) e 201/202/203/900 (ST/cálculo) ainda não são emitidos.
+     */
+    public const CSOSN_SEM_CALCULO = ['102', '103', '300', '400', '500'];
 
+    /** PIS/COFINS sem incidência (grupo PISNT/COFINSNT). */
     public const CST_SEM_INCIDENCIA = ['04', '05', '06', '07', '08', '09'];
+
+    /**
+     * PIS/COFINS no grupo "Outr" com base, alíquota e valor zerados. A SEFAZ-PB orienta o Simples Nacional
+     * a informar CST 99 com alíquota 0% e valor 0,00 (o imposto é recolhido no DAS).
+     */
+    public const CST_OUTRAS_ZERADAS = ['49', '99'];
+
+    public const CST_ACEITOS = [...self::CST_SEM_INCIDENCIA, ...self::CST_OUTRAS_ZERADAS];
+
+    /** CFOP de venda de mercadoria com ICMS-ST já retido (contribuinte substituído; 5656/5667 são combustíveis). */
+    public const CFOP_SUBSTITUIDO = ['5405', '5656', '5667'];
+
+    public const MENSAGEM_NAO_CONTRIBUINTE = 'O destinatário não tem inscrição estadual (não contribuinte): marque "Consumidor final" como Sim. A SEFAZ rejeita essa combinação (código 696).';
 
     protected Tools $tools;
 
@@ -105,6 +123,11 @@ class NfeBuilderService
             throw new RuntimeException('Regime Normal ainda não é emitido. Use Simples Nacional ou MEI, que emitem com CSOSN sem destaque de imposto.');
         }
 
+        // CSOSN só vale para CRT 1 e 4; com CRT 2 (excesso de sublimite) o ICMS vai por CST do regime normal (rejeição 591).
+        if ((int) $this->empresa->crt === 2) {
+            throw new RuntimeException('Simples Nacional com excesso de sublimite (CRT 2) informa o ICMS com CST do Regime Normal, que esta versão ainda não emite. A SEFAZ rejeitaria a nota com CSOSN (código 591).');
+        }
+
         if ($this->somenteDigitos($this->empresa->cod_ibge) === '' || strlen($this->somenteDigitos($this->empresa->cod_ibge)) !== 7) {
             throw new RuntimeException('Informe o código IBGE do município na empresa antes de emitir nota fiscal.');
         }
@@ -152,19 +175,22 @@ class NfeBuilderService
 
     protected function montarIdentificacao(Make $make, Venda $venda, string $numero): void
     {
-        $cliente = $venda->cliente;
-        $cnpjDestino = $cliente ? $this->somenteDigitos($cliente->cnpj) : '';
         $cUf = $this->codigoUf((string) $this->empresa->uf);
         $cNf = $this->codigoNumerico($numero);
 
         $make->taginfNFe($this->dados(['versao' => '4.00']));
+        $indIEDest = self::indIEDest($venda->cliente);
         $indFinal = $venda->ind_final;
         if ($indFinal === null) {
-            $indFinal = strlen($cnpjDestino) === 14 ? 0 : 1;
+            // Só o contribuinte com IE sai como "não consumidor final" no automático.
+            $indFinal = $indIEDest === 1 ? 0 : 1;
+        } elseif ((int) $indFinal === 0 && $indIEDest === 9) {
+            // Não contribuinte (indIEDest 9) é sempre consumidor final: a SEFAZ rejeita o contrário (696).
+            throw new RuntimeException(self::MENSAGEM_NAO_CONTRIBUINTE);
         }
 
         $fuso = $this->fuso($cUf);
-        $dhEmi = (new NfeDatas())->emissao($venda->data_venda, $fuso);
+        $dhEmi = (new NfeDatas)->emissao($venda->data_venda, $fuso);
         $ide = [
             'cUF' => $cUf,
             'cNF' => $cNf,
@@ -185,7 +211,7 @@ class NfeBuilderService
             'procEmi' => 0,
             'verProc' => '1.0.0',
         ];
-        $saida = (new NfeDatas())->saida($venda->data_saida, $dhEmi);
+        $saida = (new NfeDatas)->saida($venda->data_saida, $dhEmi);
         if ($saida !== null) {
             $ide['dhSaiEnt'] = $saida;
         }
@@ -225,40 +251,26 @@ class NfeBuilderService
     {
         $cliente = $venda->cliente;
 
-        if ($cliente === null || $this->ehConsumidorSemDocumento($cliente)) {
-            $make->tagdest($this->dados([
-                'CPF' => '00000000000',
-                'xNome' => 'CONSUMIDOR FINAL',
-                'indIEDest' => 9,
-            ]));
-
-            if ($cliente !== null) {
-                $this->montarEnderecoDestinatario($make, $cliente);
-            }
-
-            return;
+        // A NF-e (modelo 55) exige destinatário identificado: CPF zerado volta com rejeição 237.
+        if (($mensagem = self::pendenciaDocumentoDestinatario($cliente)) !== null) {
+            throw new RuntimeException($mensagem);
         }
 
         $cnpj = $this->somenteDigitos($cliente->cnpj);
         $cpf = $this->somenteDigitos($cliente->cpf);
-        $ie = strtoupper(trim((string) $cliente->inscricao_estadual));
-        $temIe = $ie !== '' && $ie !== 'ISENTO';
+        $indIEDest = self::indIEDest($cliente);
 
+        // A tag IE só vai com indIEDest = 1; no 9 ela fica de fora.
         $dados = [
             'xNome' => $this->limitar($cliente->nome, 60),
-            'indIEDest' => strlen($cnpj) === 14 && $temIe ? 1 : 9,
-            'IE' => $temIe ? $this->somenteDigitos($ie) : null,
+            'indIEDest' => $indIEDest,
+            'IE' => $indIEDest === 1 ? $this->somenteDigitos($cliente->inscricao_estadual) : null,
         ];
 
         if (strlen($cnpj) === 14) {
             $dados['CNPJ'] = $cnpj;
-        } elseif (strlen($cpf) === 11) {
-            $dados['CPF'] = $cpf;
-            $dados['indIEDest'] = 9;
         } else {
-            $dados['CPF'] = '00000000000';
-            $dados['xNome'] = 'CONSUMIDOR FINAL';
-            $dados['indIEDest'] = 9;
+            $dados['CPF'] = $cpf;
         }
 
         $make->tagdest($this->dados($dados));
@@ -267,14 +279,15 @@ class NfeBuilderService
 
     protected function montarEnderecoDestinatario(Make $make, Cliente $cliente): void
     {
+        // A NF-e (modelo 55) sem enderDest volta com rejeição 726.
+        if (($mensagem = self::pendenciaEnderecoDestinatario($cliente)) !== null) {
+            throw new RuntimeException($mensagem);
+        }
+
         $logradouro = trim((string) $cliente->logradouro);
-        $numero = trim((string) $cliente->numero);
+        $numero = trim((string) $cliente->numero) ?: 'S/N';
         $bairro = trim((string) $cliente->bairro);
         $cidade = trim((string) $cliente->cidade);
-
-        if ($logradouro === '' || $numero === '' || $bairro === '' || $cidade === '') {
-            return;
-        }
 
         $ufCliente = strtoupper(trim((string) $cliente->estado));
         $ufEmpresa = strtoupper((string) $this->empresa->uf);
@@ -284,7 +297,7 @@ class NfeBuilderService
         }
 
         if (mb_strtolower($cidade) !== mb_strtolower(trim((string) $this->empresa->cidade))) {
-            throw new RuntimeException('O cliente está em outro município e o cadastro não tem o código IBGE dele. Use um cliente da mesma cidade da empresa ou deixe o endereço em branco.');
+            throw new RuntimeException('O cliente está em outro município e o cadastro não tem o código IBGE dele. Esta versão só emite NF-e para a cidade da empresa.');
         }
 
         $make->tagenderDest($this->dados([
@@ -319,6 +332,9 @@ class NfeBuilderService
             $produto = $item->produto;
             $cfop = $this->cfopDoItem($item, $produto);
             $csosn = $this->csosnDoItem($item, $produto);
+            if (($par = self::pendenciaCfopCsosn($cfop, $csosn)) !== null) {
+                throw new RuntimeException('Item "'.$item->produto_nome.'": '.$par);
+            }
             $cstPis = $this->cstResolvido($item, $produto, 'cst_pis', 'cst_pis', 'cst_pis', 'nfe_cst_pis_padrao', 'PIS');
             $cstCofins = $this->cstResolvido($item, $produto, 'cst_cofins', 'cst_cofins', 'cst_cofins', 'nfe_cst_cofins_padrao', 'COFINS');
             $unidade = $item->unidade ?: ($produto?->unidadeMedida?->sigla ?: 'UN');
@@ -373,14 +389,8 @@ class NfeBuilderService
                 'orig' => $this->origemDoItem($item, $produto),
                 'CSOSN' => $csosn,
             ]));
-            $make->tagPIS($this->dados([
-                'item' => $nItem,
-                'CST' => $cstPis,
-            ]));
-            $make->tagCOFINS($this->dados([
-                'item' => $nItem,
-                'CST' => $cstCofins,
-            ]));
+            $make->tagPIS($this->dados($this->grupoPisCofins($nItem, $cstPis, 'PIS')));
+            $make->tagCOFINS($this->dados($this->grupoPisCofins($nItem, $cstCofins, 'COFINS')));
         }
 
         $vOutro = round((float) $venda->acrescimo, 2);
@@ -533,7 +543,7 @@ class NfeBuilderService
         $csosn = $this->somenteDigitos($this->vinculo->csosn($item, $produto)['valor']);
 
         if (! in_array($csosn, self::CSOSN_SEM_CALCULO, true)) {
-            throw new RuntimeException('O CSOSN '.$csosn.' exige crédito ou substituição tributária. Esta emissão aceita 102, 103, 300 ou 400.');
+            throw new RuntimeException('O CSOSN '.$csosn.' exige crédito ou cálculo de substituição tributária. Esta emissão aceita 102, 103, 300, 400 ou 500.');
         }
 
         return $csosn;
@@ -558,11 +568,30 @@ class NfeBuilderService
     {
         $cst = $this->vinculo->cst($item, $produto, $campoItem, $campoProduto, $campoPerfil, $campoEmpresa)['valor'];
 
-        if (! in_array($cst, self::CST_SEM_INCIDENCIA, true)) {
-            throw new RuntimeException('O CST de '.$imposto.' informado exige base de cálculo. Esta emissão aceita apenas os CST 04 a 09.');
+        if (! in_array($cst, self::CST_ACEITOS, true)) {
+            throw new RuntimeException('O CST de '.$imposto.' informado exige base de cálculo. Esta emissão aceita os CST 04 a 09, 49 ou 99 (sem valor de imposto).');
         }
 
         return $cst;
+    }
+
+    /**
+     * CST 04 a 09 vão só com o código (PISNT/COFINSNT). CST 49 e 99 vão no grupo "Outr" com base,
+     * alíquota e valor zerados, como a SEFAZ-PB orienta para o Simples Nacional.
+     *
+     * @return array<string, mixed>
+     */
+    protected function grupoPisCofins(int $nItem, string $cst, string $imposto): array
+    {
+        $grupo = ['item' => $nItem, 'CST' => $cst];
+
+        if (in_array($cst, self::CST_OUTRAS_ZERADAS, true)) {
+            $grupo['vBC'] = '0.00';
+            $grupo['p'.$imposto] = '0.0000';
+            $grupo['v'.$imposto] = '0.00';
+        }
+
+        return $grupo;
     }
 
     protected function ncmDoItem($item, ?Produto $produto): string
@@ -626,14 +655,83 @@ class NfeBuilderService
         };
     }
 
-    protected function ehConsumidorSemDocumento(?Cliente $cliente): bool
+    /**
+     * Documento do destinatário que a SEFAZ recusaria na NF-e (modelo 55). null quando está ok.
+     * Vale o CNPJ quando os dois estão preenchidos, como em montarDestinatario().
+     */
+    public static function pendenciaDocumentoDestinatario(?Cliente $cliente): ?string
     {
-        if ($cliente === null) {
-            return true;
+        $cnpj = preg_replace('/\D/', '', (string) $cliente?->cnpj) ?? '';
+        $cpf = preg_replace('/\D/', '', (string) $cliente?->cpf) ?? '';
+
+        if ($cliente === null || ($cnpj === '' && $cpf === '')) {
+            return 'A NF-e exige destinatário com CPF ou CNPJ (sem documento a SEFAZ rejeita com o código 237). Selecione um cliente com documento ou emita NFC-e para consumidor não identificado.';
         }
 
-        return $this->somenteDigitos($cliente->cnpj) === ''
-            && $this->somenteDigitos($cliente->cpf) === '';
+        $documento = $cnpj !== '' ? $cnpj : $cpf;
+        $tipo = $cnpj !== '' ? 'CNPJ' : 'CPF';
+
+        if (strlen($documento) !== ($tipo === 'CNPJ' ? 14 : 11) || ! NfceBuilderService::documentoValido($documento)) {
+            return 'O '.$tipo.' do cliente "'.$cliente->nome.'" é inválido. Corrija o cadastro do cliente antes de emitir a NF-e.';
+        }
+
+        return null;
+    }
+
+    /** Endereço mínimo do destinatário da NF-e. Número em branco sai como "S/N". null quando está ok. */
+    public static function pendenciaEnderecoDestinatario(?Cliente $cliente): ?string
+    {
+        $faltando = [];
+        foreach (['logradouro' => 'logradouro', 'bairro' => 'bairro', 'cidade' => 'cidade'] as $campo => $rotulo) {
+            if (trim((string) $cliente?->{$campo}) === '') {
+                $faltando[] = $rotulo;
+            }
+        }
+
+        if ($faltando === []) {
+            return null;
+        }
+
+        return 'Complete o endereço do cliente "'.($cliente->nome ?? '').'" ('.implode(', ', $faltando).'): a SEFAZ rejeita NF-e sem endereço do destinatário (código 726).';
+    }
+
+    /** Contribuinte com IE (indIEDest = 1). */
+    public static function destinatarioContribuinte(?Cliente $cliente): bool
+    {
+        return self::indIEDest($cliente) === 1;
+    }
+
+    /**
+     * Indicador da IE do destinatário da NF-e: 1 = CNPJ com IE; 9 = não contribuinte (CPF, CNPJ sem IE ou com IE "ISENTO").
+     * O MOC prevê 2 para contribuinte isento, mas a UF do destinatário pode recusar: a SEFAZ-PB devolveu 805
+     * ("não permite Contribuinte Isento") em homologação em 14/11/2026. O 9 ("pode ou não possuir IE") é aceito.
+     * A NFC-e usa sempre 9 (NfceBuilderService).
+     */
+    public static function indIEDest(?Cliente $cliente): int
+    {
+        $cnpj = preg_replace('/\D/', '', (string) $cliente?->cnpj) ?? '';
+        $ie = strtoupper(trim((string) $cliente?->inscricao_estadual));
+
+        return strlen($cnpj) === 14 && $ie !== '' && $ie !== 'ISENTO' ? 1 : 9;
+    }
+
+    /**
+     * CFOP e CSOSN precisam combinar (rejeição 386, vista na NFC-e em homologação): CSOSN 500 (ST já retido)
+     * vende com CFOP de substituído (5405) e o CFOP 5405 só vale com CSOSN 500. null quando está ok.
+     */
+    public static function pendenciaCfopCsosn(string $cfop, string $csosn): ?string
+    {
+        $substituido = in_array($cfop, self::CFOP_SUBSTITUIDO, true);
+
+        if ($csosn === '500' && ! $substituido) {
+            return 'CSOSN 500 (ICMS-ST já retido) pede CFOP 5405, de mercadoria com substituição tributária. Com o CFOP '.$cfop.' a SEFAZ rejeita (código 386).';
+        }
+
+        if ($substituido && $csosn !== '500') {
+            return 'O CFOP '.$cfop.' é de mercadoria com ICMS-ST já retido e pede CSOSN 500. Com o CSOSN '.$csosn.' a SEFAZ rejeita (código 386).';
+        }
+
+        return null;
     }
 
     protected function somenteDigitos(mixed $valor): string

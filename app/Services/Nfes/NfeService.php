@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use NFePHP\Common\Certificate;
 use NFePHP\Common\Keys;
+use NFePHP\DA\NFe\Daevento;
 use NFePHP\DA\NFe\Danfe;
 use RuntimeException;
 use Throwable;
@@ -302,6 +303,7 @@ class NfeService
 
         return view('nfe.show', [
             'nfe' => $nfe,
+            'cartas' => $this->repository->cartasCorrecao($nfe),
         ]);
     }
 
@@ -322,9 +324,13 @@ class NfeService
                 return 'Apenas vendas confirmadas podem ter NF-e emitida.';
             }
 
-            $datas = $this->pendenciasService->pendenciasDeData($venda, $empresa);
-            if ($datas !== []) {
-                return $datas[0];
+            // O que a SEFAZ recusaria com certeza é barrado antes de reservar número (evita buraco na numeração).
+            $pendencias = [
+                ...$this->pendenciasService->pendenciasDeData($venda, $empresa),
+                ...$this->pendenciasService->pendenciasDeDestinatario($venda),
+            ];
+            if ($pendencias !== []) {
+                return $pendencias[0];
             }
 
             $nfes = $this->repository->notasDaVenda((int) $venda->empresa_id, (int) $venda->id);
@@ -342,12 +348,13 @@ class NfeService
             $ultima = $nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFE);
 
             // Nota rejeitada não consome o número na SEFAZ: reaproveita para não abrir buraco na numeração.
-            // 539 = o número já foi usado por outra chave na SEFAZ, então não pode ser reaproveitado.
+            // 539 = o número já foi usado por outra chave na SEFAZ; número inutilizado também não volta.
             if ($ultima
                 && $ultima->situacao === 'rejeitada'
                 && (int) $ultima->ambiente === $ambiente
                 && $ultima->serie === $serie
-                && $ultima->codigo_status !== '539') {
+                && $ultima->codigo_status !== '539'
+                && ! $this->repository->numeroInutilizado((int) $empresa->id, Nfe::MODELO_NFE, $ambiente, $serie, (int) $ultima->numero)) {
                 $this->repository->reabrirRejeitada($ultima);
                 $this->repository->definirNumeroDaVenda($venda, (string) $ultima->numero);
 
@@ -508,6 +515,172 @@ class NfeService
         );
     }
 
+    /**
+     * Carta de Correção (CC-e, evento 110110). Regras do MOC: só NF-e autorizada (580), até 20 por nota (594),
+     * texto de 15 a 1000 caracteres; a mais recente substitui as anteriores. Não corrige valores, impostos,
+     * quantidade, remetente/destinatário nem datas (condição de uso enviada pela biblioteca).
+     */
+    public function cartaCorrecao(Nfe $nfe, string $correcao)
+    {
+        $this->autorizarNfe($nfe);
+
+        $semCarta = 'Só NF-e autorizada recebe carta de correção. A SEFAZ recusa nota cancelada ou denegada (código 580).';
+        if (! $nfe->aceitaCartaCorrecao()) {
+            return back()->with('error', $semCarta);
+        }
+
+        $empresa = $this->repository->empresa((int) $nfe->empresa_id);
+
+        try {
+            $sender = new NfeSenderService($empresa);
+        } catch (RuntimeException $e) {
+            return back()->with('error', MensagemPublica::de($e));
+        }
+
+        return DB::transaction(function () use ($nfe, $correcao, $sender, $semCarta) {
+            $nota = $this->repository->travarNfe((int) $nfe->id);
+            if (! $nota->aceitaCartaCorrecao()) {
+                return back()->with('error', $semCarta);
+            }
+
+            $sequencia = $this->repository->proximaSequenciaCce((int) $nota->id);
+            if ($sequencia > Nfe::CCE_MAXIMO) {
+                return back()->with('error', 'Esta NF-e já tem '.Nfe::CCE_MAXIMO.' cartas de correção, o máximo que a SEFAZ aceita (código 594).');
+            }
+
+            $resultado = $sender->cartaCorrecao((string) $nota->chave_acesso, $correcao, $sequencia, (int) $nota->ambiente);
+
+            if (($resultado['status'] ?? '') === 'registrada') {
+                $this->repository->gravarCartaCorrecao([
+                    'empresa_id' => $nota->empresa_id,
+                    'nfe_id' => $nota->id,
+                    'sequencia' => $sequencia,
+                    'correcao' => $resultado['correcao'] ?? $correcao,
+                    'protocolo' => $resultado['protocolo'] ?? null,
+                    'codigo_status' => $resultado['codigo'] ?? '135',
+                    'motivo_status' => mb_substr((string) ($resultado['motivo'] ?? 'Evento registrado'), 0, 255),
+                    'data_registro' => $this->dataDoRetorno($resultado['data_registro'] ?? ''),
+                    'xml' => $resultado['xml_evento'] ?? null,
+                    'usuario_id' => auth()->id(),
+                ]);
+
+                return redirect()
+                    ->route('nfe.show', $nota)
+                    ->with('success', 'Carta de correção nº '.$sequencia.' registrada na SEFAZ.');
+            }
+
+            if (($resultado['codigo'] ?? '') === '573') {
+                $trazidas = $this->trazerCartasRegistradas($nota, $sender);
+
+                return back()->withInput()->with(
+                    'error',
+                    'A SEFAZ já tinha a carta de correção nº '.$sequencia.' desta nota (código 573)'
+                    .($trazidas > 0 ? '; o registro foi trazido para cá' : '')
+                    .'. Envie de novo: a correção sai com o próximo número e substitui as anteriores.'
+                );
+            }
+
+            return back()->withInput()->with(
+                'error',
+                'Carta de correção recusada: '.($resultado['motivo'] ?? 'erro desconhecido')
+                .(filled($resultado['codigo'] ?? null) ? ' Código: '.$resultado['codigo'] : '')
+            );
+        });
+    }
+
+    /** XML (procEventoNFe) ou PDF da carta de correção. */
+    public function arquivoCartaCorrecao(Nfe $nfe, int $cartaId, bool $pdf)
+    {
+        $this->autorizarNfe($nfe);
+
+        $carta = $this->repository->cartaCorrecaoDaNota($nfe, $cartaId);
+        if ($carta === null) {
+            abort(404);
+        }
+
+        if (blank($carta->xml)) {
+            return back()->with('error', 'XML da carta de correção não disponível.');
+        }
+
+        $nome = ($nfe->chave_acesso ?: $nfe->numero).'-cce-'.$carta->sequencia;
+
+        if (! $pdf) {
+            return response($carta->xml, 200, [
+                'Content-Type' => 'application/xml',
+                'Content-Disposition' => 'attachment; filename="'.$nome.'-procEventoNFe.xml"',
+            ]);
+        }
+
+        $empresa = $this->repository->empresa((int) $nfe->empresa_id);
+        // O sped-da zera o error_reporting ao montar o PDF; devolve o nível ao fim.
+        $nivel = error_reporting();
+
+        try {
+            $conteudo = (new Daevento($carta->xml, [
+                'razao' => (string) $empresa->razao_social,
+                'logradouro' => (string) $empresa->logradouro,
+                'numero' => (string) $empresa->numero,
+                'complemento' => (string) $empresa->complemento,
+                'bairro' => (string) $empresa->bairro,
+                'CEP' => preg_replace('/\D/', '', (string) $empresa->cep),
+                'municipio' => (string) $empresa->cidade,
+                'UF' => (string) $empresa->uf,
+                'telefone' => (string) $empresa->telefone,
+                'email' => (string) $empresa->email,
+            ]))->render();
+        } catch (Throwable $e) {
+            Log::error('Falha ao gerar PDF da carta de correção', [
+                'nfe_id' => $nfe->id,
+                'exception' => MensagemPublica::de($e),
+            ]);
+
+            return back()->with('error', 'Não foi possível gerar o PDF da carta de correção.');
+        } finally {
+            error_reporting($nivel);
+        }
+
+        return response($conteudo, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$nome.'.pdf"',
+        ]);
+    }
+
+    private function trazerCartasRegistradas(Nfe $nfe, NfeSenderService $sender): int
+    {
+        $trazidas = 0;
+
+        foreach ($sender->cartasRegistradas((string) $nfe->chave_acesso, (int) $nfe->ambiente) as $carta) {
+            if ($carta['sequencia'] < 1) {
+                continue;
+            }
+
+            $gravada = $this->repository->gravarCartaCorrecao([
+                'empresa_id' => $nfe->empresa_id,
+                'nfe_id' => $nfe->id,
+                'sequencia' => $carta['sequencia'],
+                'correcao' => $carta['correcao'],
+                'protocolo' => $carta['protocolo'],
+                'codigo_status' => $carta['codigo'],
+                'motivo_status' => mb_substr($carta['motivo'], 0, 255),
+                'data_registro' => $this->dataDoRetorno($carta['data_registro']),
+                'xml' => $carta['xml'],
+            ]);
+
+            $trazidas += $gravada->wasRecentlyCreated ? 1 : 0;
+        }
+
+        return $trazidas;
+    }
+
+    private function dataDoRetorno(string $data): Carbon
+    {
+        try {
+            return $data !== '' ? Carbon::parse($data)->setTimezone(config('app.timezone')) : now();
+        } catch (Throwable) {
+            return now();
+        }
+    }
+
     public function danfe(Nfe $nfe)
     {
         $this->autorizarNfe($nfe);
@@ -522,7 +695,10 @@ class NfeService
     private function pdfDaNota(Nfe $nfe)
     {
         try {
-            $pdf = (new Danfe($nfe->xml_autorizado))->render();
+            $danfe = new Danfe($nfe->xml_autorizado);
+            // O cancelamento é um evento separado: o XML autorizado continua com cStat 100, então a marca vem daqui.
+            $danfe->setCancelFlag($nfe->situacao === 'cancelada');
+            $pdf = $danfe->render();
         } catch (Throwable $e) {
             Log::error('Falha ao gerar DANFE', [
                 'nfe_id' => $nfe->id,
@@ -728,8 +904,12 @@ class NfeService
         }
 
         if ($this->repository->faixaOcupada((int) $empresa->id, $ambiente, $serie, $inicio, $fim, $modelo)) {
-            return back()->withInput()->with('error', 'Essa faixa tem uma '.$nomeModelo.' já gravada nesta série e ambiente. Se a nota foi rejeitada, emita de novo pela venda: o mesmo número é usado. Número rejeitado com código 539 não entra na inutilização por aqui.');
+            return back()->withInput()->with('error', 'Essa faixa tem '.$nomeModelo.' autorizada, cancelada, pendente ou rejeitada com código 539 nesta série e ambiente. Só número que nunca foi usado na SEFAZ pode ser inutilizado.');
         }
+
+        // Rejeitada não usou o número. Se a venda ainda vai ser emitida, o melhor é emitir de novo (reaproveita o número);
+        // inutilizado, a reemissão sai com número novo.
+        $rejeitadas = $this->repository->rejeitadasNaFaixa((int) $empresa->id, $ambiente, $serie, $inicio, $fim, $modelo);
 
         try {
             $tools = $modelo === Nfe::MODELO_NFCE ? (new NfceBuilderService($empresa))->tools() : null;
@@ -766,7 +946,8 @@ class NfeService
         $voltar = redirect()->route('nfe.inutilizar', $modelo === Nfe::MODELO_NFCE ? ['modelo' => $modelo] : []);
 
         if ($resultado['status'] === 'autorizada') {
-            return $voltar->with('success', 'Faixa de '.$nomeModelo.' inutilizada. Protocolo '.$resultado['protocolo'].'.');
+            return $voltar->with('success', 'Faixa de '.$nomeModelo.' inutilizada. Protocolo '.$resultado['protocolo'].'.'
+                .($rejeitadas > 0 ? ' A faixa tinha '.$rejeitadas.' nota(s) rejeitada(s): se a venda for emitida de novo, sai com outro número.' : ''));
         }
 
         return $voltar->with('error', $resultado['motivo']);

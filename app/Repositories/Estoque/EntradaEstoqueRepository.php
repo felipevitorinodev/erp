@@ -7,8 +7,11 @@ use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
 use App\Models\Estoque\EntradaEstoqueItem;
 use App\Models\Estoque\MovimentacaoEstoque;
+use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
 use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +27,7 @@ class EntradaEstoqueRepository
             $busca = $request->busca;
             $query->where(function ($q) use ($busca) {
                 $q->where('numero', 'like', "%{$busca}%")
-                    ->orWhereHas('fornecedor', fn ($f) => $f->where('nome', 'like', "%{$busca}%"));
+                    ->orWhereIn('fornecedor_id', BuscaPorNome::ids(Fornecedor::class, (int) auth()->user()->empresa_id, $busca));
             });
         }
 
@@ -40,7 +43,7 @@ class EntradaEstoqueRepository
             $query->whereDataAte('data_entrada', $request->data_fim);
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['estoque', 'cadastros']));
     }
 
     public function store(array $dados, array $itens): EntradaEstoque

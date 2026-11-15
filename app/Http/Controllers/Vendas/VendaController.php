@@ -18,7 +18,7 @@ class VendaController extends Controller
 
     public function pdv(Request $request)
     {
-        $empresa = Empresa::query()->find(auth()->user()->empresa_id);
+        $empresa = Empresa::atual();
 
         return view('venda.pdv', [
             'formasPagamento' => FormaPagamento::where('empresa_id', auth()->user()->empresa_id)

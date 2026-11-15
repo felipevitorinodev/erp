@@ -16,6 +16,13 @@ use Throwable;
  */
 class NfeDatas
 {
+    /**
+     * NF-e (modelo 55) com dhEmi há mais de 30 dias volta com rejeição 228 (MOC, regra B09-20).
+     * Entre 7 e 30 dias a SEFAZ autoriza com cStat 150 ("autorização fora de prazo", NT 2025.001).
+     * Como dia passado sai às 12:00, 30 dias de calendário já podem passar das 720 horas: bloqueia a partir de 30.
+     */
+    public const ATRASO_MAXIMO_DIAS = 30;
+
     public function fusoDaUf(?string $uf): string
     {
         try {
@@ -35,6 +42,19 @@ class NfeDatas
         $dia = Carbon::parse($dataVenda->format('Y-m-d'), $fuso)->startOfDay();
 
         return $dia->gt($hoje);
+    }
+
+    /** Dias de calendário entre a data da nota e hoje, no fuso da UF. 0 para hoje, data futura ou vazia. */
+    public function diasDeAtraso(?CarbonInterface $dataVenda, string $fuso): int
+    {
+        if ($dataVenda === null) {
+            return 0;
+        }
+
+        $hoje = Carbon::now($fuso)->startOfDay();
+        $dia = Carbon::parse($dataVenda->format('Y-m-d'), $fuso)->startOfDay();
+
+        return $dia->lt($hoje) ? (int) $dia->diffInDays($hoje) : 0;
     }
 
     public function emissao(?CarbonInterface $dataVenda, string $fuso): Carbon

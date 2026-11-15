@@ -11,11 +11,9 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('estoque.historico') }}" class="form-grid form-grid--col-3">
-                <div class="form-group">
-                    <label class="form-label">Produto</label>
+    <x-filtros :action="route('estoque.historico')" principal="produto_id">
+                <div class="form-group filtros__principal">
+                    <label class="form-label" for="input-produto">Produto</label>
                     <div class="autocomplete-wrap">
                         <input type="text" id="input-produto" class="form-control"
                             value="{{ $produtoSelecionado->nome ?? '' }}"
@@ -25,8 +23,8 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-control">
+                    <label class="form-label" for="campo-tipo">Tipo</label>
+                    <select id="campo-tipo" name="tipo" class="form-control">
                         <option value="">— Todos —</option>
                         @foreach(['entrada' => 'Entrada', 'saida' => 'Saída', 'ajuste' => 'Ajuste'] as $valor => $label)
                             <option value="{{ $valor }}" {{ ($filtros['tipo'] ?? '') === $valor ? 'selected' : '' }}>{{ $label }}</option>
@@ -34,30 +32,16 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Data início</label>
-                    <input type="date" name="data_inicio" class="form-control" value="{{ $filtros['data_inicio'] ?? '' }}">
+                    <label class="form-label" for="campo-data_inicio">Data início</label>
+                    <input id="campo-data_inicio" type="date" name="data_inicio" class="form-control" value="{{ $filtros['data_inicio'] ?? '' }}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Data fim</label>
-                    <input type="date" name="data_fim" class="form-control" value="{{ $filtros['data_fim'] ?? '' }}">
+                    <label class="form-label" for="campo-data_fim">Data fim</label>
+                    <input id="campo-data_fim" type="date" name="data_fim" class="form-control" value="{{ $filtros['data_fim'] ?? '' }}">
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('estoque.historico') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Movimentações</span>
-        </div>
-        <div class="card__body" style="padding:0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Movimentações" :paginator="$movimentacoes">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -101,13 +85,7 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $movimentacoes->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection
 

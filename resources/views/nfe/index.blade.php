@@ -10,18 +10,18 @@
 
 @section('content')
 
-    <div class="alert alert--warning" style="margin-bottom:1rem;">
+    <div class="alert alert--warning">
         Emissão atual: venda interna no Simples Nacional e no MEI, sem destaque de imposto. Fora disso, a nota é recusada.
         Com a SEFAZ indisponível, a emissão trava e o número não é consumido. Não há contingência SVC/EPEC.
     </div>
 
     @if ($rascunhos->isNotEmpty())
-        <div class="card" style="margin-bottom:1rem;">
+        <div class="card">
             <div class="card__header">
                 <span class="card__title">Rascunhos <span class="badge badge--neutral">{{ $rascunhos->count() }}</span></span>
                 <small class="text-muted">Ainda não emitidos: sem número de NF-e e sem movimentar estoque.</small>
             </div>
-            <div class="card__body" style="padding: 0;">
+            <div class="card__body card__body--flush">
                 <div class="table-wrap">
                     <table class="table table--cards">
                         <thead>
@@ -54,13 +54,7 @@
         </div>
     @endif
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Notas emitidas</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Notas emitidas" :paginator="$nfes">
                     <thead>
                         <tr>
                             <th style="width:90px;">Número</th>
@@ -136,12 +130,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $nfes->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

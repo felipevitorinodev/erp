@@ -107,24 +107,14 @@ class ProdutoRepository
     {
         Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
+        // codigo_seq: coluna gerada (só códigos numéricos) indexada com a empresa; o MAX lê só o fim do índice.
         $ultimo = Produto::withTrashed()
             ->where('empresa_id', $empresaId)
-            ->whereRaw($this->codigoSoDigitos())
-            ->max(DB::raw('CAST(codigo AS UNSIGNED)'));
+            ->max('codigo_seq');
 
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 
         return str_pad((string) $proximo, 6, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Código formado só por dígitos. O SQLite (testes) não tem REGEXP.
-     */
-    private function codigoSoDigitos(): string
-    {
-        return DB::connection()->getDriverName() === 'sqlite'
-            ? "codigo <> '' AND codigo NOT GLOB '*[^0-9]*'"
-            : "codigo REGEXP '^[0-9]+$'";
     }
 
     public function destroy($id)

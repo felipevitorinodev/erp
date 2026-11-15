@@ -99,7 +99,7 @@
         <div class="card__header">
             <span class="card__title">Itens</span>
         </div>
-        <div class="card__body" style="padding:0;">
+        <div class="card__body card__body--flush">
             <div class="table-wrap">
                 <table class="table table--cards">
                     <thead>

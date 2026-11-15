@@ -9,31 +9,15 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('cliente.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+    <x-filtros :action="route('cliente.index')">
+                <div class="form-group filtros__principal form-group--span-2">
+                    <label class="form-label" for="campo-busca">Busca</label>
+                    <input id="campo-busca" type="search" enterkeyhint="search" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
                         placeholder="Nome, CPF ou CNPJ">
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('cliente.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Resultados" :paginator="$clientes">
                     <thead>
                         <tr>
                             <th style="width:60px;">Código</th>
@@ -49,7 +33,7 @@
                         @forelse($clientes as $cliente)
                             <tr>
                                 <td data-label="Código" class="text-muted">{{ $cliente->id }}</td>
-                                <td data-label="Nome">{{ $cliente->nome }}</td>
+                                <td data-label="Nome" class="col-titulo">{{ $cliente->nome }}</td>
                                 <td data-label="Nome fantasia">{{ $cliente->nome_fantasia ?? '—' }}</td>
                                 <td data-label="CPF / CNPJ">{{ $cliente->cpf ?: ($cliente->cnpj ?: '—') }}</td>
                                 <td data-label="Telefone">{{ $cliente->telefone ?? $cliente->celular ?? '—' }}</td>
@@ -92,12 +76,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $clientes->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

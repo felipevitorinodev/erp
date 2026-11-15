@@ -7,6 +7,7 @@ use App\Relatorios\CsvRelatorio;
 use App\Relatorios\PdfRelatorio;
 use App\Repositories\Relatorios\EstoqueRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\LeituraEmLotes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -94,7 +95,7 @@ class EstoqueRelatorioService implements ConsultaRelatorio
         return CsvRelatorio::stream(
             'relatorio-estoque-'.date('Y-m-d').'.csv',
             ['Código', 'Produto', 'Grupo', 'Estoque', 'Mínimo', 'Unidade'],
-            $query->lazy(500)->map(fn ($produto) => [
+            LeituraEmLotes::porChave($query)->map(fn ($produto) => [
                 $produto->codigo,
                 $produto->nome,
                 $produto->grupos->nome ?? '—',

@@ -102,6 +102,127 @@ class NfeSenderService
     }
 
     /**
+     * Carta de Correção (evento 110110). 135/136 = registrada; o xCondUso fixo vem da biblioteca.
+     * 573 (duplicidade) quer dizer que a SEFAZ já tem esse nSeqEvento: use cartasRegistradas() para trazer.
+     *
+     * @return array{status: string, codigo?: string, motivo: string, protocolo?: string, data_registro?: string, correcao?: string, xml_evento?: string}
+     */
+    public function cartaCorrecao(string $chave, string $correcao, int $sequencia, int $ambiente): array
+    {
+        try {
+            $this->tools->setEnvironment($ambiente);
+            $response = $this->tools->sefazCCe($chave, $correcao, $sequencia);
+            $std = (new Standardize($response))->toStd();
+
+            $infEvento = data_get($std, 'retEvento.infEvento');
+            if (is_array($infEvento)) {
+                $infEvento = $infEvento[0] ?? null;
+            }
+
+            $cStat = (string) (data_get($infEvento, 'cStat') ?? data_get($std, 'cStat') ?? '');
+            $xMotivo = (string) (data_get($infEvento, 'xMotivo') ?? data_get($std, 'xMotivo') ?? 'Retorno sem motivo.');
+
+            if (! in_array($cStat, ['135', '136'], true)) {
+                return [
+                    'status' => 'erro',
+                    'codigo' => $cStat,
+                    'motivo' => $xMotivo,
+                ];
+            }
+
+            try {
+                $xmlEvento = Complements::toAuthorize($this->tools->lastRequest, $response);
+            } catch (Throwable $e) {
+                Log::error('SEFAZ response inesperado', [
+                    'empresa_id' => $this->empresa->id,
+                    'exception' => mb_substr($e->getMessage(), 0, 200),
+                ]);
+                $xmlEvento = $response;
+            }
+
+            return [
+                'status' => 'registrada',
+                'codigo' => $cStat,
+                'motivo' => $xMotivo,
+                'protocolo' => (string) data_get($infEvento, 'nProt', ''),
+                'data_registro' => (string) data_get($infEvento, 'dhRegEvento', ''),
+                'correcao' => self::textoDaCorrecao($this->tools->lastRequest) ?? $correcao,
+                'xml_evento' => $xmlEvento,
+            ];
+        } catch (Throwable $e) {
+            Log::error('SEFAZ response inesperado', [
+                'empresa_id' => $this->empresa->id,
+                'exception' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+
+            return [
+                'status' => 'erro',
+                'motivo' => $this->mensagemAmigavel($e->getMessage()),
+            ];
+        }
+    }
+
+    /**
+     * Cartas de Correção que a SEFAZ tem para a chave (consulta da NF-e traz os procEventoNFe).
+     * Usado quando o envio volta com 573: o registro existe lá, mas a resposta não chegou aqui.
+     *
+     * @return list<array{sequencia: int, correcao: string, protocolo: string, codigo: string, motivo: string, data_registro: string, xml: string}>
+     */
+    public function cartasRegistradas(string $chave, int $ambiente): array
+    {
+        try {
+            $this->tools->setEnvironment($ambiente);
+            $response = $this->tools->sefazConsultaChave($chave);
+        } catch (Throwable $e) {
+            Log::error('SEFAZ response inesperado', [
+                'empresa_id' => $this->empresa->id,
+                'exception' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+
+            return [];
+        }
+
+        $dom = new \DOMDocument;
+        if (@$dom->loadXML($response) === false) {
+            return [];
+        }
+
+        $cartas = [];
+        foreach ($dom->getElementsByTagName('procEventoNFe') as $proc) {
+            $evento = $proc->getElementsByTagName('infEvento')->item(0);
+            $retorno = $proc->getElementsByTagName('retEvento')->item(0)?->getElementsByTagName('infEvento')->item(0);
+            $texto = fn (?\DOMElement $no, string $tag) => trim((string) $no?->getElementsByTagName($tag)->item(0)?->nodeValue);
+
+            if ($texto($evento, 'tpEvento') !== '110110' || ! in_array($texto($retorno, 'cStat'), ['135', '136'], true)) {
+                continue;
+            }
+
+            $documento = new \DOMDocument('1.0', 'UTF-8');
+            $documento->appendChild($documento->importNode($proc, true));
+
+            $cartas[] = [
+                'sequencia' => (int) $texto($evento, 'nSeqEvento'),
+                'correcao' => $texto($evento, 'xCorrecao'),
+                'protocolo' => $texto($retorno, 'nProt'),
+                'codigo' => $texto($retorno, 'cStat'),
+                'motivo' => $texto($retorno, 'xMotivo'),
+                'data_registro' => $texto($retorno, 'dhRegEvento'),
+                'xml' => (string) $documento->saveXML(),
+            ];
+        }
+
+        return $cartas;
+    }
+
+    /** xCorrecao como foi enviado (a biblioteca troca caracteres não aceitos e corta em 1000). */
+    private static function textoDaCorrecao(string $request): ?string
+    {
+        return preg_match('/<xCorrecao>(.*?)<\/xCorrecao>/s', $request, $m) === 1
+            ? html_entity_decode($m[1], ENT_QUOTES | ENT_XML1, 'UTF-8')
+            : null;
+    }
+
+    /**
      * Consulta a situação de uma NF-e pela chave, para resolver notas que ficaram pendentes
      * (timeout, lote em processamento, falha ao anexar protocolo, duplicidade).
      */
@@ -149,7 +270,7 @@ class NfeSenderService
             ];
         }
 
-        if ($this->extrairInfProt($std) === null) {
+        if ($this->extrairInfProt($std, $chave) === null) {
             return [
                 'status' => 'erro',
                 'codigo' => $cStat,
@@ -241,7 +362,7 @@ class NfeSenderService
         string $cStatLote,
         string $xMotivoLote
     ): array {
-        $infProt = $this->extrairInfProt($std);
+        $infProt = $this->extrairInfProt($std, $this->chaveDoXml($signedXml));
 
         if ($infProt === null) {
             if (in_array($cStatLote, ['100', '150'], true)) {
@@ -338,7 +459,7 @@ class NfeSenderService
             $xmlAutorizado = Complements::toAuthorize($signedXml, $response);
             $chave = Keys::extractAccessKey($xmlAutorizado) ?: Keys::extractAccessKey($signedXml);
             $std = $this->padronizar($response);
-            $infProt = $std ? $this->extrairInfProt($std) : null;
+            $infProt = $std ? $this->extrairInfProt($std, $this->chaveDoXml($signedXml)) : null;
 
             if ((string) ($infProt->nProt ?? '') === '') {
                 return [
@@ -361,16 +482,32 @@ class NfeSenderService
         }
     }
 
-    private function extrairInfProt(object $std): ?object
+    /**
+     * Protocolo desta nota no retorno. Com mais de um protNFe (retorno de recibo de lote), escolhe pela chave:
+     * pegar o primeiro gravaria a chave e o protocolo de outra nota.
+     */
+    private function extrairInfProt(object $std, string $chave = ''): ?object
     {
         $prot = data_get($std, 'protNFe');
+        $protocolos = array_values(array_filter(
+            is_array($prot) ? $prot : [$prot],
+            fn ($item) => is_object($item) && isset($item->infProt) && is_object($item->infProt),
+        ));
 
-        if (is_array($prot)) {
-            $prot = $prot[0] ?? null;
+        if ($chave !== '') {
+            foreach ($protocolos as $item) {
+                if ((string) ($item->infProt->chNFe ?? '') === $chave) {
+                    return $item->infProt;
+                }
+            }
+
+            if (count($protocolos) > 1) {
+                return null;
+            }
         }
 
-        if (is_object($prot) && isset($prot->infProt)) {
-            return $prot->infProt;
+        if ($protocolos !== []) {
+            return $protocolos[0]->infProt;
         }
 
         if (isset($std->infProt) && is_object($std->infProt)) {
@@ -378,6 +515,11 @@ class NfeSenderService
         }
 
         return null;
+    }
+
+    private function chaveDoXml(string $xml): string
+    {
+        return preg_match('/Id="NFe(\d{44})"/', $xml, $m) === 1 ? $m[1] : '';
     }
 
     private function padronizar(string $response): ?object

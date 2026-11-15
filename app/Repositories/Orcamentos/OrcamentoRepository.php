@@ -2,9 +2,12 @@
 
 namespace App\Repositories\Orcamentos;
 
+use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\Orcamentos\OrcamentoItem;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +24,7 @@ class OrcamentoRepository
                 $busca = $request->busca;
                 $query->where(function ($q) use ($busca) {
                     $q->where('numero', 'like', "%{$busca}%")
-                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                        ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, (int) auth()->user()->empresa_id, $busca));
                 });
             }
             if ($request->filled('situacao')) {
@@ -35,7 +38,7 @@ class OrcamentoRepository
             }
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['servicos', 'cadastros']));
     }
 
     public function findOrFail(int $id): Orcamento
@@ -49,9 +52,10 @@ class OrcamentoRepository
     {
         Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
+        // numero_seq: coluna gerada e indexada (empresa_id, numero_seq); o MAX lê só o fim do índice.
         $ultimo = Orcamento::withTrashed()
             ->where('empresa_id', $empresaId)
-            ->max(DB::raw('CAST(numero AS UNSIGNED)'));
+            ->max('numero_seq');
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 
         return str_pad($proximo, 6, '0', STR_PAD_LEFT);

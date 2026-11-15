@@ -3,18 +3,26 @@
 namespace App\Repositories\Relatorios;
 
 use App\Relatorios\Periodo;
+use App\Support\IndiceBanco;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ProdutoMaisVendidoRelatorioRepository
 {
+    private bool $memoriaAjustada = false;
+
     /**
      * @param  array<string, mixed>  $filtros
      */
     public function consulta(int $empresaId, Periodo $periodo, array $filtros): Builder
     {
-        $query = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
+        $this->agruparEmMemoria();
+
+        // Parte das vendas do período (índice de relatório) e junta os itens pelo índice que já traz nome,
+        // código, quantidade e total: a soma não lê nenhuma linha das tabelas.
+        $query = IndiceBanco::usar(DB::table('vendas'), 'vendas', 'vendas_relatorio_index')
+            ->join('venda_itens', 'venda_itens.venda_id', '=', 'vendas.id')
             ->where('vendas.empresa_id', $empresaId)
             ->where('vendas.situacao', 'confirmada')
             ->whereNull('vendas.deleted_at')
@@ -49,6 +57,44 @@ class ProdutoMaisVendidoRelatorioRepository
     }
 
     /**
+     * Página do ranking e totais gerais numa consulta só: o GROUP BY roda uma vez numa tabela derivada
+     * (equivalente a uma CTE) e as funções de janela COUNT(*) OVER () / SUM(...) OVER () levam os totais
+     * de todos os produtos em cada linha da página. Antes eram duas agregações completas (totais + página).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array{linhas: Collection<int, object>, totais: ?array{produtos: int, qtd_total: float, valor_total: float}}
+     */
+    public function paginaComTotais(Builder $query, array $filtros, int $porPagina, int $pagina): array
+    {
+        $ordenar = ($filtros['ordenar'] ?? '') === 'valor' ? 'valor_total' : 'qtd_total';
+
+        $linhas = DB::query()
+            ->fromSub((clone $query)->reorder(), 'mais_vendidos')
+            ->select('mais_vendidos.*')
+            ->selectRaw('COUNT(*) OVER () as janela_produtos')
+            ->selectRaw('SUM(qtd_total) OVER () as janela_qtd')
+            ->selectRaw('SUM(valor_total) OVER () as janela_valor')
+            ->orderByDesc($ordenar)
+            ->orderBy('produto_nome')
+            ->orderBy('produto_codigo')
+            ->offset(max(0, ($pagina - 1) * $porPagina))
+            ->limit($porPagina)
+            ->get();
+
+        $primeira = $linhas->first();
+
+        return [
+            'linhas' => $linhas,
+            // Página além da última não traz linha (nem total): quem chama faz a contagem à parte.
+            'totais' => $primeira === null ? null : [
+                'produtos' => (int) $primeira->janela_produtos,
+                'qtd_total' => round((float) $primeira->janela_qtd, 3),
+                'valor_total' => round((float) $primeira->janela_valor, 2),
+            ],
+        ];
+    }
+
+    /**
      * @return array{produtos: int, qtd_total: float, valor_total: float}
      */
     public function totais(Builder $query): array
@@ -73,8 +119,8 @@ class ProdutoMaisVendidoRelatorioRepository
      */
     public function porGrupo(int $empresaId, Periodo $periodo, array $filtros): array
     {
-        $query = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
+        $query = IndiceBanco::usar(DB::table('vendas'), 'vendas', 'vendas_relatorio_index')
+            ->join('venda_itens', 'venda_itens.venda_id', '=', 'vendas.id')
             ->leftJoin('produtos', 'produtos.id', '=', 'venda_itens.produto_id')
             ->leftJoin('grupos', 'grupos.id', '=', 'produtos.grupo_id')
             ->where('vendas.empresa_id', $empresaId)
@@ -106,5 +152,21 @@ class ProdutoMaisVendidoRelatorioRepository
                 'total' => round((float) $linha->total, 2),
             ])
             ->all();
+    }
+
+    /**
+     * O GROUP BY por nome + código do produto cria uma tabela temporária com dezenas de milhares de grupos.
+     * Com o limite padrão do MySQL (tmp_table_size = 16 MB) ela ia para o disco: 12 s num ano com 50 mil
+     * produtos; em memória, 3 s. Vale só para esta conexão; o teto global (temptable_max_ram) continua valendo.
+     */
+    private function agruparEmMemoria(): void
+    {
+        $conexao = DB::connection();
+        if ($this->memoriaAjustada || ! in_array($conexao->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
+        $conexao->statement('SET SESSION tmp_table_size = 268435456');
+        $this->memoriaAjustada = true;
     }
 }

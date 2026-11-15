@@ -271,7 +271,7 @@ final class RegistrarVenda extends Rotina
             }
         }
 
-        if (Empresa::query()->whereKey($this->empresaId())->value('nfce_emitir_pdv')) {
+        if (Empresa::atual()?->nfce_emitir_pdv) {
             $avisos[] = 'Sem NFC-e: para emitir a nota, use o PDV.';
         }
 

@@ -45,17 +45,21 @@
             </tr>
         </thead>
         <tbody>
+            @php
+                // Classe de cada coluna calculada uma vez (não por célula). A pílula de situação é a mesma
+                // marcação do <x-impressao.situacao>, escrita direto: 1000 linhas seriam milhares de componentes.
+                $classesColuna = [];
+                foreach ($colunas as $indice => $coluna) {
+                    $direita = ($coluna['align'] ?? 'left') === 'right';
+                    $data = preg_match('/data|validade|abertura|vencimento/i', (string) ($coluna['label'] ?? '')) === 1;
+                    $classesColuna[$indice] = trim(($direita ? 'r num' : '').($data ? ' num muted' : ''));
+                }
+            @endphp
             @forelse($linhas as $linha)
                 <tr>
                     @foreach($linha as $indice => $celula)
-                        @php
-                            $rotulo = (string) ($colunas[$indice]['label'] ?? '');
-                            $direita = ($colunas[$indice]['align'] ?? 'left') === 'right';
-                            $data = preg_match('/data|validade|abertura|vencimento/i', $rotulo) === 1;
-                        @endphp
-                        <td class="{{ trim(($direita ? 'r num' : '').($data ? ' num muted' : '')) }}">
-                            <x-impressao.situacao :texto="$celula" />
-                        </td>
+                        @php $pilula = \App\Impressao\SituacaoImpressao::classe((string) $celula); @endphp
+                        <td class="{{ $classesColuna[$indice] ?? '' }}">@if($pilula)<span class="pill {{ $pilula }}">{{ $celula }}</span>@else{{ $celula }}@endif</td>
                     @endforeach
                 </tr>
             @empty

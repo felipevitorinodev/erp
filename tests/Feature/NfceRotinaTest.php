@@ -322,6 +322,36 @@ class NfceRotinaTest extends TestCase
         $this->assertSame('000000001', app(EmpresaService::class)->proximoNumeronNfe($empresa->fresh(), Nfe::MODELO_NFE));
     }
 
+    public function test_numero_rejeitado_pode_ser_inutilizado_e_a_reemissao_usa_outro(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $venda = $this->venda($empresa);
+        $this->actingAs($this->usuario($empresa));
+
+        $this->sefaz->modo = 'rejeitada';
+        $this->post(route('venda.nfce.emitir', $venda));
+        $rejeitada = Nfe::query()->sole();
+        $this->assertSame('rejeitada', $rejeitada->situacao);
+        $this->assertSame('000000001', $rejeitada->numero);
+
+        // Rejeitada não usou o número na SEFAZ: a faixa pode ser inutilizada (salto de numeração).
+        $this->post(route('nfe.inutilizar.store'), [
+            'modelo' => '65',
+            'serie' => '1',
+            'ano' => now()->format('y'),
+            'numero_inicial' => 1,
+            'numero_final' => 1,
+            'justificativa' => 'Venda desistida apos rejeicao da NFC-e',
+        ])->assertSessionHas('success', fn ($msg) => str_contains($msg, '1 nota(s) rejeitada(s)'));
+
+        // A reemissão não volta ao número inutilizado (a SEFAZ recusaria com 206).
+        $this->sefaz->modo = 'autorizada';
+        $this->post(route('venda.nfce.emitir', $venda));
+        $nova = Nfe::query()->where('situacao', 'autorizada')->sole();
+        $this->assertSame('000000002', $nova->numero);
+        $this->assertSame('rejeitada', $rejeitada->fresh()->situacao);
+    }
+
     public function test_conferir_nfce_passa_quando_tudo_esta_certo(): void
     {
         $empresa = $this->empresaComCertificado();

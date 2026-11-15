@@ -7,6 +7,7 @@ use App\Models\ContasPagar\ContaPagarBaixa;
 use App\Models\ContasReceber\ContaReceberBaixa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Vendas\Venda;
+use App\Support\IndiceBanco;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -148,10 +149,14 @@ class FluxoCaixaController extends Controller
     {
         $totais = [];
 
-        $linhas = $modelo::query()
+        // O MySQL transformava o EXISTS em semijunção e começava pelas contas pagas (todas as da empresa, ou de todas
+        // as empresas sem o empresa_id no EXISTS), procurando as baixas de cada uma: 0,7 a 1,2 s em 90 dias.
+        // Partindo das baixas do período (índice empresa + data) e buscando cada conta pela chave: 0,04 s.
+        $tabela = (new $modelo)->getTable();
+        $linhas = IndiceBanco::usar($modelo::query(), $tabela, $tabela.'_empresa_id_data_pagamento_index')
             ->where('empresa_id', $empresaId)
             ->whereDataEntre('data_pagamento', $dataInicio, $dataFim)
-            ->whereHas('conta', fn ($query) => $query->whereIn('situacao', ['paga', 'parcial']))
+            ->whereHas('conta', fn ($query) => $query->where('empresa_id', $empresaId)->whereIn('situacao', ['paga', 'parcial']))
             ->toBase()
             ->selectRaw('data_pagamento as dia, SUM(valor) as total')
             ->groupBy('data_pagamento')
@@ -183,12 +188,12 @@ class FluxoCaixaController extends Controller
         $totais = [];
 
         // Agregado no banco por dia e forma: o número de linhas depende de dias x formas, não de vendas.
-        $grupos = Venda::query()
+        $grupos = IndiceBanco::usar(Venda::query(), 'vendas', 'vendas_relatorio_index')
             ->where('empresa_id', $empresaId)
             ->where('situacao', 'confirmada')
             ->whereDataEntre('data_venda', $dataInicio, $dataFim)
-            ->whereDoesntHave('contasReceber', function ($query) {
-                $query->where('situacao', '!=', 'cancelada');
+            ->whereDoesntHave('contasReceber', function ($query) use ($empresaId) {
+                $query->where('empresa_id', $empresaId)->where('situacao', '!=', 'cancelada');
             })
             ->toBase()
             ->selectRaw('data_venda, forma_pagamento_id, forma_pagamento, SUM(total) as total')

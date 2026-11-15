@@ -243,11 +243,33 @@ class PerfilFiscalTest extends TestCase
         $this->actingAs($admin)->post(route('perfilFiscal.store'), [
             'nome' => 'Fora do escopo',
             'cfop' => '6102',
-            'csosn' => '500',
+            // 500 (ST já retido) é aceito; 202 (ST calculado na nota) ainda não.
+            'csosn' => '202',
             'cst_pis' => '07',
             'cst_cofins' => '07',
             'ativo' => '1',
         ])->assertSessionHasErrors(['cfop', 'csosn']);
+
+        $this->assertSame(0, PerfilFiscal::count());
+    }
+
+    public function test_cadastro_recusa_csosn_500_sem_cfop_de_st(): void
+    {
+        $empresa = $this->empresa();
+        $admin = User::factory()->create([
+            'empresa_id' => $empresa->id,
+            'perfil' => 'admin',
+            'ativo' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('perfilFiscal.store'), [
+            'nome' => 'ST sem CFOP 5405',
+            'cfop' => '5102',
+            'csosn' => '500',
+            'cst_pis' => '99',
+            'cst_cofins' => '99',
+            'ativo' => '1',
+        ])->assertSessionHasErrors(['csosn' => 'CSOSN 500 (ICMS-ST já retido) pede CFOP 5405, de mercadoria com substituição tributária. Com o CFOP 5102 a SEFAZ rejeita (código 386).']);
 
         $this->assertSame(0, PerfilFiscal::count());
     }

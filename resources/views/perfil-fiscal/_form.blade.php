@@ -1,7 +1,7 @@
 @php
     $perfil = $perfil ?? null;
-    $csosnOpcoes = ['102' => '102 — Tributada sem crédito', '103' => '103 — Isenção no Simples', '300' => '300 — Imune', '400' => '400 — Não tributada'];
-    $cstOpcoes = ['04' => '04', '05' => '05', '06' => '06', '07' => '07', '08' => '08', '09' => '09'];
+    $csosnOpcoes = ['102' => '102 — Tributada sem crédito', '103' => '103 — Isenção no Simples', '300' => '300 — Imune', '400' => '400 — Não tributada', '500' => '500 — ICMS cobrado antes por ST (substituído)'];
+    $cstOpcoes = ['99' => '99 — Outras operações (Simples Nacional, valor 0)', '49' => '49 — Outras operações de saída', '04' => '04', '05' => '05', '06' => '06', '07' => '07', '08' => '08', '09' => '09'];
     $catalogoCfop = \App\Models\Fiscal\Cfop::query()->pluck('descricao', 'codigo');
     $cfopCodigo = old('cfop', $perfil->cfop ?? '5102');
     $cfopRotulo = isset($catalogoCfop[$cfopCodigo]) ? $cfopCodigo.' - '.$catalogoCfop[$cfopCodigo] : $cfopCodigo;
@@ -68,7 +68,7 @@
         <label class="form-label form-label--required">CSOSN</label>
         <select name="csosn" class="form-control @error('csosn') is-invalid @enderror">
             @foreach ($csosnOpcoes as $valor => $rotulo)
-                <option value="{{ $valor }}" @selected(old('csosn', $perfil->csosn ?? '400') === $valor)>{{ $rotulo }}</option>
+                <option value="{{ $valor }}" @selected(old('csosn', $perfil->csosn ?? '102') === $valor)>{{ $rotulo }}</option>
             @endforeach
         </select>
         @error('csosn')<span class="form-error">{{ $message }}</span>@enderror
@@ -77,7 +77,7 @@
         <label class="form-label form-label--required">CST PIS</label>
         <select name="cst_pis" class="form-control @error('cst_pis') is-invalid @enderror">
             @foreach ($cstOpcoes as $valor => $rotulo)
-                <option value="{{ $valor }}" @selected(old('cst_pis', $perfil->cst_pis ?? '07') === $valor)>{{ $rotulo }}</option>
+                <option value="{{ $valor }}" @selected(old('cst_pis', $perfil->cst_pis ?? '99') === $valor)>{{ $rotulo }}</option>
             @endforeach
         </select>
         @error('cst_pis')<span class="form-error">{{ $message }}</span>@enderror
@@ -86,7 +86,7 @@
         <label class="form-label form-label--required">CST COFINS</label>
         <select name="cst_cofins" class="form-control @error('cst_cofins') is-invalid @enderror">
             @foreach ($cstOpcoes as $valor => $rotulo)
-                <option value="{{ $valor }}" @selected(old('cst_cofins', $perfil->cst_cofins ?? '07') === $valor)>{{ $rotulo }}</option>
+                <option value="{{ $valor }}" @selected(old('cst_cofins', $perfil->cst_cofins ?? '99') === $valor)>{{ $rotulo }}</option>
             @endforeach
         </select>
         @error('cst_cofins')<span class="form-error">{{ $message }}</span>@enderror

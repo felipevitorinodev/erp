@@ -8,17 +8,22 @@
     'vazio' => '— Todas —',
     'span' => null,
     'checked' => false,
+    'principal' => null,
 ])
 
 @php
     $fieldId = $attributes->get('id') ?: ($name ? 'campo-'.$name : null);
+    // Campo principal (busca): continua visível no celular com os demais filtros recolhidos.
+    $ehPrincipal = $principal ?? ($name === 'busca');
     $control = $attributes->merge(array_filter([
         'class' => 'form-control',
         'id' => $fieldId,
+        'type' => $ehPrincipal && $type === 'text' ? 'search' : null,
+        'enterkeyhint' => $ehPrincipal ? 'search' : null,
     ]));
 @endphp
 
-<div @class(['form-group', 'form-group--span-2' => (int) $span === 2])>
+<div @class(['form-group', 'form-group--span-2' => (int) $span === 2, 'filtros__principal' => $ehPrincipal])>
     @if($type === 'checkbox')
         <label class="form-check" @if($fieldId) for="{{ $fieldId }}" @endif>
             <input type="checkbox" name="{{ $name }}" value="1" @if($fieldId) id="{{ $fieldId }}" @endif @checked($checked)>
@@ -40,7 +45,7 @@
                 @endforeach
             </select>
         @else
-            <input type="{{ $type }}" name="{{ $name }}" value="{{ $value }}"
+            <input @unless($control->has('type')) type="{{ $type }}" @endunless name="{{ $name }}" value="{{ $value }}"
                 placeholder="{{ $placeholder }}" {{ $control }}>
         @endif
     @endif

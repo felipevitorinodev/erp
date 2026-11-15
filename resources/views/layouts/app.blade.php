@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- Prevent mobile zoom to improve usability on small screens -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#163A5F">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Visys') — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
@@ -21,7 +21,7 @@
 
     <header class="header">
         <button type="button" class="header__menu" id="btn-sidebar-toggle" aria-label="Abrir menu"
-            aria-expanded="false">
+            aria-expanded="false" aria-controls="menu-lateral">
             <span class="header__menu-icon" aria-hidden="true"><span></span></span>
         </button>
 
@@ -30,6 +30,8 @@
                 <img src="{{ asset('img/logo-sem-fundo.png') }}" alt="Visys" class="header__logo-img">
             </a>
         </div>
+
+        <x-busca-rapida />
 
         @php
             $user = Auth::user();
@@ -40,11 +42,8 @@
                 'operador' => 'Operador',
                 default => 'Usuário',
             };
-            $empresa = $user->relationLoaded('empresa')
-                ? $user->getRelation('empresa')
-                : ($user->empresa_id
-                    ? \App\Models\Empresas\Empresa::query()->whereKey($user->empresa_id)->first(['nome_fantasia', 'razao_social'])
-                    : null);
+            // Relação carregada uma vez por requisição e reaproveitada pelas telas (Empresa::atual()).
+            $empresa = $user->empresa_id ? \App\Models\Empresas\Empresa::atual() : null;
             $userEmpresa = $empresa?->nome_fantasia ?: ($empresa?->razao_social ?: null);
             $userInitials = collect(preg_split('/\s+/', trim($userName)))
                 ->filter()
@@ -66,11 +65,7 @@
             <form method="POST" action="{{ route('logout') }}" class="header__logout-form">
                 @csrf
                 <button type="submit" class="header__logout" title="Sair do sistema" aria-label="Sair">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="header__logout-icon" aria-hidden="true">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
+                    <x-icon name="log-out" class="header__logout-icon" />
                     <span class="header__logout-text">Sair</span>
                 </button>
             </form>
@@ -81,304 +76,8 @@
 
     <div class="layout">
 
-        <aside class="sidebar sidebar--iniciando">
-            <nav class="sidebar__nav">
-                @php
-                    $usuarioMenu = auth()->user();
-                    $podeVendas = $usuarioMenu->pode('vendas');
-                    $podeOrcamentos = $usuarioMenu->pode('orcamentos');
-                    $podeOrdensServico = $usuarioMenu->pode('ordens_servico');
-                    $podeComissoes = $usuarioMenu->pode('comissoes');
-                    $podeNfe = $usuarioMenu->pode('nfe');
-                    $podeEstoque = $usuarioMenu->pode('estoque');
-                    $podeProdutos = $usuarioMenu->pode('produtos');
-                    $podeFinanceiro = $usuarioMenu->pode('financeiro');
-                    $podeFormas = $usuarioMenu->pode('formas_pagamento');
-                    $podeClientes = $usuarioMenu->pode('clientes');
-                    $podeFornecedores = $usuarioMenu->pode('fornecedores');
-                    $podeFuncionarios = $usuarioMenu->pode('funcionarios');
-                    $podeRelatorios = $usuarioMenu->pode('relatorios');
-                    $mostraRelatorios = \App\Support\CatalogoRelatorios::temAlgum($usuarioMenu);
-                    $podeConfiguracoes = $usuarioMenu->pode('configuracoes');
-                @endphp
-
-                {{-- Início --}}
-                <div class="sidebar__group">
-                    <a href="/" class="sidebar__link {{ request()->is('/') ? 'sidebar__link--active' : '' }}">
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
-                        Início
-                    </a>
-                </div>
-
-                @if ($podeVendas || $podeOrcamentos || $podeOrdensServico || $podeComissoes)
-                {{-- Vendas --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <circle cx="9" cy="21" r="1"></circle>
-                            <circle cx="20" cy="21" r="1"></circle>
-                            <path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.64 16H19a2 2 0 0 0 2-1.61L23 6H6"></path>
-                        </svg>
-                        <span class="sidebar__group-label">Vendas</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        @if ($podeVendas)
-                        <a href="{{ route('pdv.index') }}"
-                            class="sidebar__link {{ request()->routeIs('pdv.*') ? 'sidebar__link--active' : '' }}">
-                            PDV
-                        </a>
-                        <a href="{{ route('venda.index') }}"
-                            class="sidebar__link {{ request()->routeIs('venda.*') ? 'sidebar__link--active' : '' }}">
-                            Vendas
-                        </a>
-                        @endif
-                        @if ($podeOrcamentos)
-                            <a href="{{ route('orcamento.index') }}"
-                                class="sidebar__link {{ request()->routeIs('orcamento.*') ? 'sidebar__link--active' : '' }}">
-                                Orçamentos
-                            </a>
-                        @endif
-                        @if ($podeOrdensServico)
-                            <a href="{{ route('ordem-servico.index') }}"
-                                class="sidebar__link {{ request()->routeIs('ordem-servico.*') ? 'sidebar__link--active' : '' }}">
-                                Ordens de serviço
-                            </a>
-                        @endif
-                        @if ($podeComissoes)
-                            <a href="{{ route('comissao.index') }}"
-                                class="sidebar__link {{ request()->routeIs('comissao.*') ? 'sidebar__link--active' : '' }}">
-                                Comissões
-                            </a>
-                        @endif
-                    </div>
-                </div>
-                @endif
-
-                @if ($podeNfe)
-                {{-- Nota Fiscal --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                        <span class="sidebar__group-label">Nota fiscal</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('nfe.index') }}"
-                            class="sidebar__link {{ request()->routeIs('nfe.*') ? 'sidebar__link--active' : '' }}">
-                            NF-e
-                        </a>
-                        <a href="{{ route('perfilFiscal.index') }}"
-                            class="sidebar__link {{ request()->routeIs('perfilFiscal.*') ? 'sidebar__link--active' : '' }}">
-                            Perfis fiscais
-                        </a>
-                    </div>
-                </div>
-
-                @endif
-
-                @if ($podeProdutos)
-                {{-- Produtos --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                        </svg>
-                        <span class="sidebar__group-label">Produtos</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('produto.index') }}"
-                            class="sidebar__link {{ request()->routeIs('produto.*') ? 'sidebar__link--active' : '' }}">
-                            Produtos
-                        </a>
-                        <a href="{{ route('unidadeMedida.index') }}"
-                            class="sidebar__link {{ request()->routeIs('unidadeMedida.*') ? 'sidebar__link--active' : '' }}">
-                            Unidades
-                        </a>
-                        <a href="{{ route('grupo.index') }}"
-                            class="sidebar__link {{ request()->routeIs('grupo.*') ? 'sidebar__link--active' : '' }}">
-                            Grupos
-                        </a>
-                    </div>
-                </div>
-
-                @endif
-
-                @if ($podeEstoque)
-                {{-- Estoque --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path
-                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                            </path>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                        </svg>
-                        <span class="sidebar__group-label">Estoque</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        <a href="{{ route('entrada-estoque.index') }}"
-                            class="sidebar__link {{ request()->routeIs('entrada-estoque.*') ? 'sidebar__link--active' : '' }}">
-                            Entradas
-                        </a>
-                        <a href="{{ route('estoque.ajuste.create') }}"
-                            class="sidebar__link {{ request()->routeIs('estoque.ajuste.*') ? 'sidebar__link--active' : '' }}">
-                            Ajuste manual
-                        </a>
-                        @if ($podeRelatorios)
-                        <a href="{{ route('relatorio.estoque') }}"
-                            class="sidebar__link {{ request()->routeIs('relatorio.estoque*') ? 'sidebar__link--active' : '' }}">
-                            Posição atual
-                        </a>
-                        @endif
-                    </div>
-                </div>
-
-                @endif
-
-                {{-- Financeiro --}}
-                @if ($podeFinanceiro || $podeFormas)
-                    <div class="sidebar__group" data-group>
-                        <div class="sidebar__group-toggle" data-toggle>
-                            <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="12" y1="1" x2="12" y2="23"></line>
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                            </svg>
-                            <span class="sidebar__group-label">Financeiro</span>
-                            <span class="sidebar__group-arrow">›</span>
-                        </div>
-                        <div class="sidebar__group-links" data-links>
-                            @if ($podeFinanceiro)
-                            <a href="{{ route('conta-receber.index') }}"
-                                class="sidebar__link {{ request()->routeIs('conta-receber.*') ? 'sidebar__link--active' : '' }}">
-                                A receber
-                            </a>
-                            <a href="{{ route('conta-pagar.index') }}"
-                                class="sidebar__link {{ request()->routeIs('conta-pagar.*') ? 'sidebar__link--active' : '' }}">
-                                A pagar
-                            </a>
-                            <a href="{{ route('fluxo-de-caixa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('fluxo-de-caixa.*') ? 'sidebar__link--active' : '' }}">
-                                Fluxo de caixa
-                            </a>
-                            <a href="{{ route('categoria-financeira.index') }}"
-                                class="sidebar__link {{ request()->routeIs('categoria-financeira.*') ? 'sidebar__link--active' : '' }}">
-                                Categorias
-                            </a>
-                            @endif
-                            @if ($podeFormas)
-                                <a href="{{ route('formaPagamento.index') }}"
-                                    class="sidebar__link {{ request()->routeIs('formaPagamento.*') ? 'sidebar__link--active' : '' }}">
-                                    Formas de pagamento
-                                </a>
-                            @endif
-                        </div>
-                    </div>
-                @endif
-
-                @if ($podeClientes || $podeFornecedores || $podeFuncionarios)
-                {{-- Cadastros --}}
-                <div class="sidebar__group" data-group>
-                    <div class="sidebar__group-toggle" data-toggle>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
-                        <span class="sidebar__group-label">Cadastros</span>
-                        <span class="sidebar__group-arrow">›</span>
-                    </div>
-                    <div class="sidebar__group-links" data-links>
-                        @if ($podeClientes)
-                        <a href="{{ route('cliente.index') }}"
-                            class="sidebar__link {{ request()->routeIs('cliente.*') ? 'sidebar__link--active' : '' }}">
-                            Clientes
-                        </a>
-                        @endif
-                        @if ($podeFornecedores)
-                        <a href="{{ route('fornecedor.index') }}"
-                            class="sidebar__link {{ request()->routeIs('fornecedor.*') ? 'sidebar__link--active' : '' }}">
-                            Fornecedores
-                        </a>
-                        @endif
-                        @if ($podeFuncionarios)
-                            <a href="{{ route('funcionario.index') }}"
-                                class="sidebar__link {{ request()->routeIs('funcionario.*') ? 'sidebar__link--active' : '' }}">
-                                Funcionários
-                            </a>
-                        @endif
-                    </div>
-                </div>
-
-                @endif
-
-                @if ($mostraRelatorios)
-                <div class="sidebar__group">
-                    <a href="{{ route('relatorios.index') }}" @class(['sidebar__link', 'sidebar__link--active' => request()->routeIs('relatorios.*', 'relatorio.*')])>
-                        <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <line x1="18" y1="20" x2="18" y2="10"></line>
-                            <line x1="12" y1="20" x2="12" y2="4"></line>
-                            <line x1="6" y1="20" x2="6" y2="14"></line>
-                        </svg>
-                        Relatórios
-                    </a>
-                </div>
-                @endif
-
-                {{-- Configurações --}}
-                @if ($podeConfiguracoes)
-                    <div class="sidebar__group" data-group>
-                        <div class="sidebar__group-toggle" data-toggle>
-                            <svg class="sidebar__icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path
-                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                </path>
-                            </svg>
-                            <span class="sidebar__group-label">Configurações</span>
-                            <span class="sidebar__group-arrow">›</span>
-                        </div>
-                        <div class="sidebar__group-links" data-links>
-                            <a href="{{ route('usuario.index') }}"
-                                class="sidebar__link {{ request()->routeIs('usuario.*') ? 'sidebar__link--active' : '' }}">
-                                Usuários
-                            </a>
-                            <a href="{{ route('empresa.index') }}"
-                                class="sidebar__link {{ request()->routeIs('empresa.*') ? 'sidebar__link--active' : '' }}">
-                                Empresa
-                            </a>
-                            <a href="{{ route('permissao.index') }}"
-                                class="sidebar__link {{ request()->routeIs('permissao.*') ? 'sidebar__link--active' : '' }}">
-                                Permissões
-                            </a>
-                        </div>
-                    </div>
-                @endif
-
-            </nav>
+        <aside class="sidebar sidebar--iniciando" id="menu-lateral">
+            <x-menu-lateral />
         </aside>
 
         {{-- Roda logo após a sidebar (antes dos scripts externos) para o menu já ser desenhado recolhido. --}}
@@ -390,39 +89,18 @@
                     var toggle = group.querySelector('[data-toggle]');
                     var links = group.querySelector('[data-links]');
                     var arrow = group.querySelector('.sidebar__group-arrow');
-
                     if (!toggle || !links || !arrow) return;
 
-                    var hasActive = group.querySelector('.sidebar__link--active');
-                    var keepOpen = group.hasAttribute('data-keep-open');
-                    if (!hasActive && !keepOpen) {
-                        links.classList.add('sidebar__group-links--collapsed');
-                        arrow.classList.add('sidebar__group-arrow--collapsed');
+                    function marcar(recolhido) {
+                        links.classList.toggle('sidebar__group-links--collapsed', recolhido);
+                        arrow.classList.toggle('sidebar__group-arrow--collapsed', recolhido);
+                        toggle.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
                     }
+
+                    marcar(!group.querySelector('.sidebar__link--active') && !group.hasAttribute('data-keep-open'));
 
                     toggle.addEventListener('click', function () {
-                        var collapsed = links.classList.toggle('sidebar__group-links--collapsed');
-                        arrow.classList.toggle('sidebar__group-arrow--collapsed', collapsed);
-                    });
-                });
-
-                document.querySelectorAll('[data-subgroup]').forEach(function (subgroup) {
-                    var subtoggle = subgroup.querySelector('[data-subtoggle]');
-                    var sublinks = subgroup.querySelector('[data-sublinks]');
-                    var subarrow = subgroup.querySelector('.sidebar__subgroup-arrow');
-
-                    if (!subtoggle || !sublinks || !subarrow) return;
-
-                    var hasActive = subgroup.querySelector('.sidebar__link--active');
-                    if (!hasActive) {
-                        sublinks.classList.add('sidebar__subgroup-links--collapsed');
-                        subarrow.classList.add('sidebar__subgroup-arrow--collapsed');
-                    }
-
-                    subtoggle.addEventListener('click', function () {
-                        var collapsed = sublinks.classList.toggle('sidebar__subgroup-links--collapsed');
-                        subarrow.classList.toggle('sidebar__subgroup-arrow--collapsed', collapsed);
-                        subtoggle.classList.toggle('sidebar__subgroup-toggle--open', !collapsed);
+                        marcar(!links.classList.contains('sidebar__group-links--collapsed'));
                     });
                 });
 
@@ -448,14 +126,16 @@
 
             <div class="page-bar">
                 <div class="page-bar__title">
-                    <h1 class="page-title">@yield('page_title')</h1>
                     @hasSection('breadcrumb')
-                        <nav class="breadcrumb">@yield('breadcrumb')</nav>
+                        <nav class="breadcrumb" aria-label="Trilha de navegação">@yield('breadcrumb')</nav>
                     @endif
+                    <h1 class="page-title">@yield('page_title')</h1>
                 </div>
-                <div class="page-bar__actions">
-                    @yield('page_actions')
-                </div>
+                @hasSection('page_actions')
+                    <div class="page-bar__actions">
+                        @yield('page_actions')
+                    </div>
+                @endif
             </div>
 
             <div class="page-content">
@@ -465,23 +145,16 @@
         </main>
     </div>
 
-    <footer class="footer">
-        <a href="/" class="footer__brand" title="Visys">
-            <img src="{{ asset('img/logo-v-sem-fundo.png') }}" alt="Visys" class="footer__logo-img">
-        </a>
-        <span>&copy; {{ date('Y') }} · Visys · Gestão empresarial</span>
-    </footer>
-
     <x-modal-ver />
 
     <div class="modal-overlay" id="modal-confirm" hidden>
         <div class="modal-box">
             <div class="modal-box__header">
                 <span class="card__title" id="modal-confirm-title">Confirmar</span>
-                <button type="button" class="btn btn--ghost btn--sm" data-confirm-close aria-label="Fechar">✕</button>
+                <button type="button" class="btn btn--ghost btn--sm btn--icon" data-confirm-close aria-label="Fechar"><x-icon name="x" /></button>
             </div>
             <div class="modal-box__body">
-                <p id="modal-confirm-message" style="margin:0; font-size:13px; color:var(--color-text);"></p>
+                <p id="modal-confirm-message" class="modal-confirm__texto"></p>
             </div>
             <div class="modal-box__footer">
                 <button type="button" class="btn btn--ghost" data-confirm-close>Voltar</button>

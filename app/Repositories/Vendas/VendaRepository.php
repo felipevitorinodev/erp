@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Vendas;
 
+use App\Models\Clientes\Cliente;
 use App\Models\Comissoes\Comissao;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
@@ -15,6 +16,9 @@ use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
 use App\Repositories\ContasReceber\ContaReceberRepository;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
+use App\Support\IndiceBanco;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +30,10 @@ class VendaRepository
 
     public function index(?Request $request = null)
     {
-        $query = Venda::with(['cliente:id,nome'])
+        // Índice (empresa_id, deleted_at, id, situação, cliente, número, data): a página é lida em ordem direto
+        // do índice e o COUNT não lê linhas. Indicado ao MySQL porque, sozinho, ele percorria a chave primária
+        // (passando pelas vendas das outras empresas) e contava por um índice sem deleted_at.
+        $query = IndiceBanco::usar(Venda::with(['cliente:id,nome']), 'vendas', 'vendas_lista_index')
             ->where('empresa_id', auth()->user()->empresa_id)
             ->orderByDesc('id');
 
@@ -35,7 +42,7 @@ class VendaRepository
                 $busca = $request->busca;
                 $query->where(function ($q) use ($busca) {
                     $q->where('numero', 'like', "%{$busca}%")
-                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                        ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, (int) auth()->user()->empresa_id, $busca));
                 });
             }
             if ($request->filled('situacao')) {
@@ -57,7 +64,7 @@ class VendaRepository
             $query->whereIn('situacao', ['confirmada', 'em_andamento']);
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['vendas', 'cadastros']));
     }
 
     public function findOrFail(int $id): Venda
@@ -74,9 +81,10 @@ class VendaRepository
     {
         Empresa::whereKey($empresaId)->lockForUpdate()->first(['id']);
 
+        // numero_seq: coluna gerada e indexada (empresa_id, numero_seq); o MAX lê só o fim do índice.
         $ultimo = Venda::withTrashed()
             ->where('empresa_id', $empresaId)
-            ->max(DB::raw('CAST(numero AS UNSIGNED)'));
+            ->max('numero_seq');
 
         $proximo = $ultimo ? ((int) $ultimo) + 1 : 1;
 

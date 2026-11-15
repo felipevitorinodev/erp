@@ -9,9 +9,12 @@ use App\Relatorios\Periodo;
 use App\Relatorios\SerieTemporal;
 use App\Repositories\Relatorios\ProdutoMaisVendidoRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\CacheDados;
+use App\Support\IndiceBanco;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -27,11 +30,9 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
     {
         $filtros = $this->validar($request);
         $empresaId = $this->empresaId();
-        $totais = $this->repository->totais($this->repository->consulta($empresaId, $filtros['periodo'], $filtros));
-        $anterior = $this->repository->totais($this->repository->consulta($empresaId, $filtros['periodo']->anterior(), $filtros));
-        $produtos = $this->repository->consulta($empresaId, $filtros['periodo'], $filtros)
-            ->paginate(20, ['*'], 'page', null, $totais['produtos'])
-            ->withQueryString();
+        [$produtos, $totais] = $this->paginaRanking($empresaId, $filtros);
+        $produtos->withQueryString();
+        $anterior = $this->totaisAnteriores($empresaId, $filtros);
 
         return view('relatorios.consulta', array_merge(
             $this->shell('produtos-mais-vendidos', $filtros, true, ['grupo_id', 'busca']),
@@ -76,9 +77,7 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
     public function dados(Request $request): array
     {
         $filtros = $this->validar($request);
-        $totais = $this->repository->totais($this->repository->consulta($this->empresaId(), $filtros['periodo'], $filtros));
-        $produtos = $this->repository->consulta($this->empresaId(), $filtros['periodo'], $filtros)
-            ->paginate(20, ['*'], 'page', null, $totais['produtos']);
+        [$produtos, $totais] = $this->paginaRanking($this->empresaId(), $filtros);
 
         return [
             'total' => $produtos->total(),
@@ -100,7 +99,7 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
         return CsvRelatorio::stream(
             'relatorio-produtos-mais-vendidos-'.date('Y-m-d').'.csv',
             ['Código', 'Produto', 'Qtd', 'Valor Total'],
-            $query->lazy(1000)->map(fn ($produto) => [
+            $query->cursor()->map(fn ($produto) => [
                 $produto->produto_codigo,
                 $produto->produto_nome,
                 number_format((float) $produto->qtd_total, 2, ',', '.'),
@@ -115,8 +114,9 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
         $empresaId = $this->empresaId();
         $periodo = $filtros['periodo'];
         $query = $this->repository->consulta($empresaId, $periodo, $filtros);
-        $totais = $this->repository->totais(clone $query);
-        $produtos = (clone $query)->limit(PdfRelatorio::LIMITE)->get();
+        $resultado = $this->repository->paginaComTotais($query, $filtros, PdfRelatorio::LIMITE, 1);
+        $produtos = $resultado['linhas'];
+        $totais = $resultado['totais'] ?? $this->repository->totais(clone $query);
         $aviso = PdfRelatorio::aviso($totais['produtos']);
 
         $resumo = ['Somente vendas confirmadas'];
@@ -156,6 +156,42 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
                 ['label' => 'Valor total', 'valor' => $this->moeda($totais['valor_total']), 'destaque' => true],
             ],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filtros
+     * @return array{0: LengthAwarePaginator, 1: array{produtos: int, qtd_total: float, valor_total: float}}
+     */
+    private function paginaRanking(int $empresaId, array $filtros): array
+    {
+        $porPagina = 20;
+        $pagina = LengthAwarePaginator::resolveCurrentPage();
+        $query = $this->repository->consulta($empresaId, $filtros['periodo'], $filtros);
+        $resultado = $this->repository->paginaComTotais($query, $filtros, $porPagina, $pagina);
+        $totais = $resultado['totais'] ?? $this->repository->totais($query);
+
+        $paginador = new LengthAwarePaginator($resultado['linhas'], $totais['produtos'], $porPagina, $pagina, [
+            'path' => LengthAwarePaginator::resolveCurrentPath(),
+            'pageName' => 'page',
+        ]);
+
+        return [$paginador, $totais];
+    }
+
+    /**
+     * Totais do período anterior (comparação dos KPIs): passado muda pouco, então fica no cache entre telas.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array{produtos: int, qtd_total: float, valor_total: float}
+     */
+    private function totaisAnteriores(int $empresaId, array $filtros): array
+    {
+        $anterior = $filtros['periodo']->anterior();
+        $chave = [$anterior, $filtros['grupo_id'] ?? null, $filtros['busca'] ?? ''];
+
+        return CacheDados::lembrar('rel.mais-vendidos.anterior', ['vendas'], $chave, fn () => $this->repository->totais(
+            $this->repository->consulta($empresaId, $anterior, $filtros)
+        ), 600, $empresaId);
     }
 
     /**
@@ -264,8 +300,8 @@ class ProdutoMaisVendidoRelatorioService implements ConsultaRelatorio
      */
     private function serieValor(int $empresaId, Periodo $periodo, array $filtros): array
     {
-        $query = DB::table('venda_itens')
-            ->join('vendas', 'vendas.id', '=', 'venda_itens.venda_id')
+        $query = IndiceBanco::usar(DB::table('vendas'), 'vendas', 'vendas_relatorio_index')
+            ->join('venda_itens', 'venda_itens.venda_id', '=', 'vendas.id')
             ->where('vendas.empresa_id', $empresaId)
             ->where('vendas.situacao', 'confirmada')
             ->whereNull('vendas.deleted_at')

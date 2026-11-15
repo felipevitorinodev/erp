@@ -6,6 +6,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
 use App\Repositories\Nfces\NfceRepository;
+use App\Repositories\Nfes\NfeRepository;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Nfes\NfeBuilderService;
 use App\Services\Nfes\NfeSenderService;
@@ -107,7 +108,8 @@ class NfceService
                 && $ultima->situacao === 'rejeitada'
                 && (int) $ultima->ambiente === $ambiente
                 && $ultima->serie === $serie
-                && $ultima->codigo_status !== '539') {
+                && $ultima->codigo_status !== '539'
+                && ! app(NfeRepository::class)->numeroInutilizado((int) $empresa->id, Nfe::MODELO_NFCE, $ambiente, $serie, (int) $ultima->numero)) {
                 return $this->repository->reabrirRejeitada($ultima);
             }
 
@@ -220,7 +222,7 @@ class NfceService
         }
 
         if (! $nfe->podeCancelar()) {
-            return $this->resposta(false, $nfe, 'O prazo para cancelar esta NFC-e já passou. Fale com o contador sobre a nota de devolução.');
+            return $this->resposta(false, $nfe, 'O prazo para cancelar esta NFC-e ('.$nfe->prazoCancelamentoTexto().' após a autorização) já passou. Fale com o contador sobre a nota de devolução.');
         }
 
         if (blank($nfe->chave_acesso) || blank($nfe->protocolo)) {

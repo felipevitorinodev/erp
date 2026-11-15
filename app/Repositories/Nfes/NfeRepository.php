@@ -6,6 +6,7 @@ use App\Models\Clientes\Cliente;
 use App\Models\Empresas\Empresa;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfes\Nfe;
+use App\Models\Nfes\NfeCartaCorrecao;
 use App\Models\Nfes\NfeInutilizacao;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
@@ -206,7 +207,39 @@ class NfeRepository
             ->get();
     }
 
+    /**
+     * Faixa com número usado na SEFAZ (autorizada, cancelada, denegada), pendente (situação desconhecida) ou
+     * rejeitada com 539 (o número já existe lá com outra chave). Nota só rejeitada não usou o número e pode ser inutilizada.
+     */
     public function faixaOcupada(int $empresaId, int $ambiente, string $serie, int $inicio, int $fim, int $modelo = Nfe::MODELO_NFE): bool
+    {
+        return $this->notasDaFaixa($empresaId, $ambiente, $serie, $inicio, $fim, $modelo)
+            ->where(fn ($query) => $query->where('situacao', '!=', 'rejeitada')->orWhere('codigo_status', '539'))
+            ->exists();
+    }
+
+    public function rejeitadasNaFaixa(int $empresaId, int $ambiente, string $serie, int $inicio, int $fim, int $modelo = Nfe::MODELO_NFE): int
+    {
+        return $this->notasDaFaixa($empresaId, $ambiente, $serie, $inicio, $fim, $modelo)
+            ->where('situacao', 'rejeitada')
+            ->count();
+    }
+
+    /** Número dentro de uma faixa já inutilizada: a reemissão da venda não pode reaproveitá-lo (a SEFAZ recusa, 206). */
+    public function numeroInutilizado(int $empresaId, int $modelo, int $ambiente, string $serie, int $numero): bool
+    {
+        return NfeInutilizacao::query()
+            ->where('empresa_id', $empresaId)
+            ->where('modelo', $modelo)
+            ->where('ambiente', $ambiente)
+            ->where('serie', $serie)
+            ->where('situacao', 'autorizada')
+            ->where('numero_inicial', '<=', $numero)
+            ->where('numero_final', '>=', $numero)
+            ->exists();
+    }
+
+    private function notasDaFaixa(int $empresaId, int $ambiente, string $serie, int $inicio, int $fim, int $modelo)
     {
         return Nfe::withTrashed()
             ->where('empresa_id', $empresaId)
@@ -216,12 +249,47 @@ class NfeRepository
             ->whereBetween('numero', [
                 str_pad((string) $inicio, 9, '0', STR_PAD_LEFT),
                 str_pad((string) $fim, 9, '0', STR_PAD_LEFT),
-            ])
-            ->exists();
+            ]);
     }
 
     public function criarInutilizacao(array $dados): NfeInutilizacao
     {
         return NfeInutilizacao::query()->create($dados);
+    }
+
+    /** Trava a nota enquanto a CC-e é enviada: duas cartas ao mesmo tempo pegariam a mesma sequência (573). */
+    public function travarNfe(int $nfeId): Nfe
+    {
+        return Nfe::query()->whereKey($nfeId)->lockForUpdate()->firstOrFail();
+    }
+
+    public function cartasCorrecao(Nfe $nfe): Collection
+    {
+        return NfeCartaCorrecao::query()
+            ->where('nfe_id', $nfe->id)
+            ->orderByDesc('sequencia')
+            ->get(['id', 'nfe_id', 'sequencia', 'correcao', 'protocolo', 'codigo_status', 'data_registro']);
+    }
+
+    public function proximaSequenciaCce(int $nfeId): int
+    {
+        return (int) NfeCartaCorrecao::query()->where('nfe_id', $nfeId)->max('sequencia') + 1;
+    }
+
+    public function cartaCorrecaoDaNota(Nfe $nfe, int $cartaId): ?NfeCartaCorrecao
+    {
+        return NfeCartaCorrecao::query()
+            ->where('nfe_id', $nfe->id)
+            ->where('empresa_id', $nfe->empresa_id)
+            ->find($cartaId);
+    }
+
+    /** Grava a carta registrada. A mesma sequência não entra duas vezes (recuperação após 573). */
+    public function gravarCartaCorrecao(array $dados): NfeCartaCorrecao
+    {
+        return NfeCartaCorrecao::query()->firstOrCreate(
+            ['nfe_id' => $dados['nfe_id'], 'sequencia' => $dados['sequencia']],
+            $dados,
+        );
     }
 }

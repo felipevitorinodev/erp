@@ -10,6 +10,7 @@ use App\Relatorios\Periodo;
 use App\Relatorios\SerieTemporal;
 use App\Repositories\Relatorios\RankingClienteRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\CacheDados;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -179,26 +180,24 @@ class RankingClienteRelatorioService implements ConsultaRelatorio
      */
     private function classificado(int $empresaId, Periodo $periodo): array
     {
-        $brutas = $this->repository->linhas($this->repository->consulta($empresaId, $periodo));
-        $ids = array_values(array_filter(array_column($brutas, 'cliente_id')));
-        $nomes = $ids === []
-            ? collect()
-            : Cliente::withTrashed()->where('empresa_id', $empresaId)->whereIn('id', $ids)->pluck('nome', 'id');
+        // A tela pede a mesma classificação várias vezes (página, gráficos, paginação, PDF, CSV):
+        // guardada até a próxima venda ou alteração de cadastro.
+        return CacheDados::lembrar('rel.ranking-clientes', ['vendas', 'cadastros'], [$periodo], function () use ($empresaId, $periodo) {
+            $linhas = [];
+            foreach ($this->repository->linhas($this->repository->consulta($empresaId, $periodo), $empresaId) as $linha) {
+                $linhas[] = [
+                    'cliente_id' => $linha['cliente_id'],
+                    'nome' => $linha['cliente_id']
+                        ? ($linha['nome'] ?? 'Cliente #'.$linha['cliente_id'])
+                        : 'Consumidor final',
+                    'qtd' => $linha['qtd'],
+                    'valor' => $linha['valor'],
+                    'ticket' => $linha['qtd'] > 0 ? round($linha['valor'] / $linha['qtd'], 2) : 0.0,
+                ];
+            }
 
-        $linhas = [];
-        foreach ($brutas as $linha) {
-            $linhas[] = [
-                'cliente_id' => $linha['cliente_id'],
-                'nome' => $linha['cliente_id']
-                    ? (string) ($nomes[$linha['cliente_id']] ?? 'Cliente #'.$linha['cliente_id'])
-                    : 'Consumidor final',
-                'qtd' => $linha['qtd'],
-                'valor' => $linha['valor'],
-                'ticket' => $linha['qtd'] > 0 ? round($linha['valor'] / $linha['qtd'], 2) : 0.0,
-            ];
-        }
-
-        return CurvaAbc::classificar($linhas);
+            return CurvaAbc::classificar($linhas);
+        }, 600, $empresaId);
     }
 
     /**
@@ -232,10 +231,7 @@ class RankingClienteRelatorioService implements ConsultaRelatorio
 
     private function faturamento(int $empresaId, Periodo $periodo): float
     {
-        return round((float) array_sum(array_column(
-            $this->repository->linhas($this->repository->consulta($empresaId, $periodo)),
-            'valor'
-        )), 2);
+        return $this->repository->faturamento($empresaId, $periodo);
     }
 
     /**

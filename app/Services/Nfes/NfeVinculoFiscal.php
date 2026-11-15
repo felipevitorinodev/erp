@@ -16,7 +16,8 @@ use Illuminate\Support\Collection;
  * 3. perfil fiscal ligado ao produto e ativo
  * 4. perfil ativo que casa com o contexto (quanto mais campos preenchidos, maior a prioridade; empate: o mais antigo)
  * 5. padrão da empresa
- * 6. valor de reserva já usado hoje (5102 / 400 / 07)
+ * 6. valor de reserva (5102 / 102 / 99): venda sem ST no Simples Nacional, como orienta a SEFAZ-PB
+ *    (CSOSN 102; PIS/COFINS CST 99 com alíquota 0% e valor 0,00)
  *
  * Campo vazio de operação ou UF casa com qualquer valor.
  * Perfil sem NCM, sem operação e sem UF não entra sozinho: só vale se estiver ligado ao produto.
@@ -104,7 +105,7 @@ class NfeVinculoFiscal
      */
     public function csosn(object $item, ?Produto $produto): array
     {
-        return $this->escolherCampo($item, $produto, 'csosn', 'cst_icms', 'csosn', 'nfe_csosn_padrao', '400');
+        return $this->escolherCampo($item, $produto, 'csosn', 'cst_icms', 'csosn', 'nfe_csosn_padrao', '102');
     }
 
     /**
@@ -112,7 +113,7 @@ class NfeVinculoFiscal
      */
     public function cst(object $item, ?Produto $produto, string $campoItem, string $campoProduto, string $campoPerfil, string $campoEmpresa): array
     {
-        $escolha = $this->escolherCampo($item, $produto, $campoItem, $campoProduto, $campoPerfil, $campoEmpresa, '07');
+        $escolha = $this->escolherCampo($item, $produto, $campoItem, $campoProduto, $campoPerfil, $campoEmpresa, '99');
         $digitos = preg_replace('/\D/', '', $escolha['valor']) ?? '';
 
         return [

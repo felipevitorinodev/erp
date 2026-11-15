@@ -4,6 +4,9 @@ namespace App\Repositories\ContasPagar;
 
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasPagar\ContaPagarBaixa;
+use App\Models\Fornecedores\Fornecedor;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +23,7 @@ class ContaPagarRepository
                 $busca = $request->busca;
                 $query->where(function ($q) use ($busca) {
                     $q->where('descricao', 'like', "%{$busca}%")
-                        ->orWhereHas('fornecedor', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                        ->orWhereIn('fornecedor_id', BuscaPorNome::ids(Fornecedor::class, (int) auth()->user()->empresa_id, $busca));
                 });
             }
             if ($request->filled('situacao')) {
@@ -32,7 +35,7 @@ class ContaPagarRepository
             }
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['financeiro', 'cadastros']));
     }
 
     public function findOrFail(int $id): ContaPagar

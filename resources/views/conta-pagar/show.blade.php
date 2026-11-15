@@ -88,7 +88,7 @@
             <div class="card__header">
                 <span class="card__title">Pagamentos</span>
             </div>
-            <div class="card__body" style="padding:0;">
+            <div class="card__body card__body--flush">
                 <table class="table">
                     <thead>
                         <tr>

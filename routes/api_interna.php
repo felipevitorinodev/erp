@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Fiscal\CatalogoFiscalController;
 use App\Http\Requests\Clientes\ClienteRapidoRequest;
 use App\Http\Requests\Fornecedores\FornecedorRapidoRequest;
 use App\Models\Clientes\Cliente;
@@ -15,7 +16,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Clientes\ClienteRepository;
 use App\Repositories\Fornecedores\FornecedorRepository;
 use App\Services\Nfes\NfeVinculoFiscal;
-use App\Http\Controllers\Fiscal\CatalogoFiscalController;
+use App\Support\BuscaPorNome;
 use App\Support\NaturezasOperacao;
 use Illuminate\Support\Facades\Route;
 
@@ -154,7 +155,7 @@ Route::middleware('auth')->group(function () {
         // Custo só para quem cuida de produtos ou estoque; a chave continua na resposta para não mudar o formato.
         $veCusto = auth()->user()->pode('produtos') || auth()->user()->pode('estoque');
 
-        $empresaBusca = Empresa::query()->find(auth()->user()->empresa_id);
+        $empresaBusca = Empresa::atual();
         $vinculo = $empresaBusca
             ? NfeVinculoFiscal::daEmpresa($empresaBusca)->usarContexto([
                 'operacao' => request('operacao'),
@@ -368,11 +369,9 @@ Route::middleware('auth')->group(function () {
             ->where('empresa_id', $empresaId);
 
         if ($q !== '') {
-            $query->where(function ($builder) use ($q) {
+            $query->where(function ($builder) use ($q, $empresaId) {
                 $builder->where('numero', 'like', '%'.$q.'%')
-                    ->orWhereHas('cliente', function ($c) use ($q) {
-                        $c->where('nome', 'like', '%'.$q.'%');
-                    });
+                    ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, (int) $empresaId, $q));
             });
         }
 

@@ -55,13 +55,15 @@ class NfePendenciasService
 
             $csosn = $this->digitos($vinculo->csosn($item, $produto)['valor']);
             if (! in_array($csosn, NfeBuilderService::CSOSN_SEM_CALCULO, true)) {
-                $pendencias[] = "Item {$nome}: CSOSN {$csosn} não é aceito (use 102, 103, 300 ou 400).";
+                $pendencias[] = "Item {$nome}: CSOSN {$csosn} não é aceito (use 102, 103, 300, 400 ou 500).";
+            } elseif (($par = NfeBuilderService::pendenciaCfopCsosn($cfop, $csosn)) !== null) {
+                $pendencias[] = "Item {$nome}: {$par}";
             }
 
             foreach (['cst_pis' => 'PIS', 'cst_cofins' => 'COFINS'] as $campo => $imposto) {
                 $cst = $vinculo->cst($item, $produto, $campo, $campo, $campo, 'nfe_'.$campo.'_padrao')['valor'];
-                if (! in_array($cst, NfeBuilderService::CST_SEM_INCIDENCIA, true)) {
-                    $pendencias[] = "Item {$nome}: CST de {$imposto} {$cst} não é aceito (use 04 a 09).";
+                if (! in_array($cst, NfeBuilderService::CST_ACEITOS, true)) {
+                    $pendencias[] = "Item {$nome}: CST de {$imposto} {$cst} não é aceito (use 04 a 09, 49 ou 99).";
                 }
             }
 
@@ -74,33 +76,20 @@ class NfePendenciasService
             $pendencias[] = 'O desconto é maior que o valor dos itens.';
         }
 
-        $cliente = $venda->cliente;
-        if ($cliente) {
-            $endereco = [
-                'logradouro' => trim((string) $cliente->logradouro),
-                'número' => trim((string) $cliente->numero),
-                'bairro' => trim((string) $cliente->bairro),
-                'cidade' => trim((string) $cliente->cidade),
-            ];
-            $preenchidos = array_filter($endereco, fn ($v) => $v !== '');
-            $documento = $this->digitos($cliente->cnpj) ?: $this->digitos($cliente->cpf);
+        array_push($pendencias, ...$this->pendenciasDeDestinatario($venda));
 
-            if ($documento !== '' && ! in_array(strlen($documento), [11, 14], true)) {
-                $pendencias[] = 'O CPF/CNPJ do cliente "'.$cliente->nome.'" está incompleto; a nota sairia como consumidor final.';
+        $cliente = $venda->cliente;
+        if ($cliente && NfeBuilderService::pendenciaEnderecoDestinatario($cliente) === null) {
+            $cep = $this->digitos($cliente->cep ?: $empresa->cep);
+            if (strlen($cep) !== 8) {
+                $pendencias[] = 'Informe o CEP do cliente com 8 dígitos. Sem CEP do cliente, vale o CEP da empresa, que também precisa ter 8 dígitos.';
             }
 
-            if (count($preenchidos) === count($endereco)) {
-                $cep = $this->digitos($cliente->cep ?: $empresa->cep);
-                if (strlen($cep) !== 8) {
-                    $pendencias[] = 'Informe o CEP do cliente com 8 dígitos. Sem CEP do cliente, vale o CEP da empresa, que também precisa ter 8 dígitos.';
-                }
-
-                $ufCliente = strtoupper(trim((string) $cliente->estado));
-                if ($ufCliente !== '' && $ufCliente !== strtoupper((string) $empresa->uf)) {
-                    $pendencias[] = 'O cliente é de outra UF; esta versão emite apenas operação interna.';
-                } elseif (mb_strtolower($endereco['cidade']) !== mb_strtolower(trim((string) $empresa->cidade))) {
-                    $pendencias[] = 'O cliente está em outro município; esta versão só emite para a cidade da empresa (ou deixe o endereço do cliente em branco).';
-                }
+            $ufCliente = strtoupper(trim((string) $cliente->estado));
+            if ($ufCliente !== '' && $ufCliente !== strtoupper((string) $empresa->uf)) {
+                $pendencias[] = 'O cliente é de outra UF; esta versão emite apenas operação interna.';
+            } elseif (mb_strtolower(trim((string) $cliente->cidade)) !== mb_strtolower(trim((string) $empresa->cidade))) {
+                $pendencias[] = 'O cliente está em outro município; esta versão só emite NF-e para a cidade da empresa.';
             }
         }
 
@@ -115,14 +104,41 @@ class NfePendenciasService
     public function pendenciasDeData(Venda $venda, Empresa $empresa): array
     {
         $pendencias = [];
-        $datas = new NfeDatas();
+        $datas = new NfeDatas;
 
-        if ($datas->diaPosterior($venda->data_venda, $datas->fusoDaUf($empresa->uf))) {
+        $fuso = $datas->fusoDaUf($empresa->uf);
+        if ($datas->diaPosterior($venda->data_venda, $fuso)) {
             $pendencias[] = 'A data de emissão não pode ser posterior a hoje.';
+        } elseif ($datas->diasDeAtraso($venda->data_venda, $fuso) >= NfeDatas::ATRASO_MAXIMO_DIAS) {
+            $pendencias[] = 'A data de emissão está '.NfeDatas::ATRASO_MAXIMO_DIAS.' dias ou mais no passado. A SEFAZ rejeita NF-e emitida há mais de 30 dias (código 228): use uma data mais recente.';
         }
 
         if ($venda->data_saida && $venda->data_venda && $venda->data_saida->copy()->startOfDay()->lt($venda->data_venda->copy()->startOfDay())) {
             $pendencias[] = 'A data de saída não pode ser anterior à data de emissão.';
+        }
+
+        return $pendencias;
+    }
+
+    /**
+     * Destinatário que a SEFAZ recusaria: sem CPF/CNPJ válido (237), sem endereço (726) ou não contribuinte
+     * (indIEDest 9) marcado como "não é consumidor final" (696). Vale antes de reservar número.
+     *
+     * @return list<string>
+     */
+    public function pendenciasDeDestinatario(Venda $venda): array
+    {
+        $venda->loadMissing('cliente');
+        $pendencias = [];
+
+        if (($documento = NfeBuilderService::pendenciaDocumentoDestinatario($venda->cliente)) !== null) {
+            $pendencias[] = $documento;
+        } elseif (($endereco = NfeBuilderService::pendenciaEnderecoDestinatario($venda->cliente)) !== null) {
+            $pendencias[] = $endereco;
+        }
+
+        if ($venda->ind_final !== null && (int) $venda->ind_final === 0 && NfeBuilderService::indIEDest($venda->cliente) === 9) {
+            $pendencias[] = NfeBuilderService::MENSAGEM_NAO_CONTRIBUINTE;
         }
 
         return $pendencias;

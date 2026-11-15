@@ -11,6 +11,8 @@ use App\Relatorios\Periodo;
 use App\Relatorios\SerieTemporal;
 use App\Repositories\Relatorios\VendaRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\CacheDados;
+use App\Support\LeituraEmLotes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,8 +30,8 @@ class VendaRelatorioService implements ConsultaRelatorio
     {
         $filtros = $this->validar($request);
         $empresaId = $this->empresaId();
-        $totais = $this->repository->totais($this->repository->consulta($empresaId, $filtros['periodo'], $filtros));
-        $anterior = $this->repository->totais($this->repository->consulta($empresaId, $filtros['periodo']->anterior(), $filtros));
+        $totais = $this->totais($empresaId, $filtros['periodo'], $filtros);
+        $anterior = $this->totais($empresaId, $filtros['periodo']->anterior(), $filtros);
         $vendas = $this->repository->ordenar(
             $this->repository->consulta($empresaId, $filtros['periodo'], $filtros)->with('cliente:id,nome'),
             $filtros
@@ -75,7 +77,7 @@ class VendaRelatorioService implements ConsultaRelatorio
     {
         $filtros = $this->validar($request);
         $empresaId = $this->empresaId();
-        $totais = $this->repository->totais($this->repository->consulta($empresaId, $filtros['periodo'], $filtros));
+        $totais = $this->totais($empresaId, $filtros['periodo'], $filtros);
         $vendas = $this->repository->ordenar(
             $this->repository->consulta($empresaId, $filtros['periodo'], $filtros)->with('cliente:id,nome'),
             $filtros
@@ -107,7 +109,7 @@ class VendaRelatorioService implements ConsultaRelatorio
         return CsvRelatorio::stream(
             'relatorio-vendas-'.date('Y-m-d').'.csv',
             ['Nº', 'Data', 'Cliente', 'Forma de Pagamento', 'Total', 'Situação'],
-            $query->lazy(500)->map(fn ($venda) => [
+            LeituraEmLotes::porChave($query)->map(fn ($venda) => [
                 $venda->numero,
                 $venda->data_venda->format('d/m/Y'),
                 $venda->cliente->nome ?? 'Consumidor Final',
@@ -123,7 +125,7 @@ class VendaRelatorioService implements ConsultaRelatorio
         $filtros = $this->validar($request);
         $empresaId = $this->empresaId();
         $periodo = $filtros['periodo'];
-        $totais = $this->repository->totais($this->repository->consulta($empresaId, $periodo, $filtros));
+        $totais = $this->totais($empresaId, $periodo, $filtros);
         $vendas = $this->repository->ordenar(
             $this->repository->consulta($empresaId, $periodo, $filtros)->with('cliente:id,nome'),
             $filtros
@@ -201,6 +203,22 @@ class VendaRelatorioService implements ConsultaRelatorio
                 ['label' => 'Total das confirmadas', 'valor' => $this->moeda($totais['valor_confirmadas']), 'destaque' => true],
             ],
         ]);
+    }
+
+    /**
+     * Totais do período (KPIs, contagem da paginação e PDF). A página, a paginação por AJAX e o PDF pedem os
+     * mesmos totais: guardados no cache entre telas até a próxima gravação de venda ou cadastro.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<string, int|float>
+     */
+    private function totais(int $empresaId, Periodo $periodo, array $filtros): array
+    {
+        $chave = [$periodo, array_diff_key($filtros, array_flip(['periodo', 'data_inicio', 'data_fim', 'ordem', 'direcao']))];
+
+        return CacheDados::lembrar('rel.vendas.totais', ['vendas', 'cadastros'], $chave, fn () => $this->repository->totais(
+            $this->repository->consulta($empresaId, $periodo, $filtros)
+        ), 600, $empresaId);
     }
 
     /**

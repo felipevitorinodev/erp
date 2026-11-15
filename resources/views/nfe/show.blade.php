@@ -32,7 +32,7 @@
         @endif
 
         @if ($nfe->situacao === 'rejeitada' && $nfe->venda_id)
-            <form method="POST" action="{{ route('nfe.limpar-codigos', $nfe) }}" style="display:inline;">
+            <form method="POST" action="{{ route('nfe.limpar-codigos', $nfe) }}">
                 @csrf
                 <button type="submit" class="btn btn--ghost btn--sm"
                     data-confirm="Limpar CFOP, CSOSN e CST gravados nos itens desta venda? A próxima emissão usa o perfil atual. Esta nota rejeitada não é alterada."
@@ -43,10 +43,16 @@
         @endif
 
         @if ($nfe->situacao === 'pendente')
-            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}" style="display:inline;">
+            <form method="POST" action="{{ route('nfe.consultar', $nfe) }}">
                 @csrf
                 <button type="submit" class="btn btn--primary btn--sm" data-espera="Consultando..." data-demora="Consultando a situação na SEFAZ.">Consultar SEFAZ</button>
             </form>
+        @endif
+
+        @if ($nfe->aceitaCartaCorrecao() && $cartas->count() < \App\Models\Nfes\Nfe::CCE_MAXIMO)
+            <button type="button" class="btn btn--outline btn--sm" id="btn-abrir-cce">
+                Carta de correção
+            </button>
         @endif
 
         @if ($nfe->podeCancelar())
@@ -66,7 +72,7 @@
     @endif
 
     @if (in_array($nfe->situacao, ['rejeitada', 'denegada'], true) && $nfe->motivo_status)
-        <div class="alert alert--error" style="margin-top:0.75rem;">
+        <div class="alert alert--error">
             {{ $nfe->motivo_status }}
             @if ($nfe->codigo_status)
                 <span class="text-muted">(Código {{ $nfe->codigo_status }})</span>
@@ -78,7 +84,7 @@
     @endif
 
     @if ($nfe->situacao === 'pendente')
-        <div class="alert alert--warning" style="margin-top:0.75rem;">
+        <div class="alert alert--warning">
             A situação desta NF-e na SEFAZ ainda não foi confirmada. Use "Consultar SEFAZ" antes de qualquer nova tentativa de emissão.
             @if ($nfe->motivo_status)
                 <br><span class="text-muted">Último retorno: {{ $nfe->motivo_status }}@if ($nfe->codigo_status) (Código {{ $nfe->codigo_status }})@endif</span>
@@ -121,25 +127,100 @@
         <x-ficha-campo label="Chave de acesso" largo mono>{{ $nfe->chave_acesso ?? '—' }}</x-ficha-campo>
     </x-ficha>
 
+    @if ($cartas->isNotEmpty())
+        <div class="card">
+            <div class="card__header">
+                <span class="card__title">Cartas de correção</span>
+            </div>
+            <div class="card__body card__body--flush">
+                <div class="table-wrap">
+                    <table class="table table--cards">
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Registro</th>
+                                <th>Protocolo</th>
+                                <th>Correção</th>
+                                <th class="col-actions">Arquivos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($cartas as $carta)
+                                <tr>
+                                    <td data-label="Nº">
+                                        {{ $carta->sequencia }}
+                                        @if ($loop->first)
+                                            <span class="badge badge--success">Vigente</span>
+                                        @endif
+                                    </td>
+                                    <td data-label="Registro">{{ $carta->data_registro?->format('d/m/Y H:i') ?? '—' }}</td>
+                                    <td data-label="Protocolo">{{ $carta->protocolo ?: '—' }}</td>
+                                    <td data-label="Correção" class="col-largo texto-pre-linha">{{ $carta->correcao }}</td>
+                                    <td data-label="Arquivos" class="col-actions">
+                                        <a href="{{ route('nfe.carta-correcao.arquivo', [$nfe, $carta->id, 'tipo' => 'pdf']) }}" target="_blank" class="btn btn--ghost btn--sm">PDF</a>
+                                        <a href="{{ route('nfe.carta-correcao.arquivo', [$nfe, $carta->id]) }}" class="btn btn--ghost btn--sm">XML</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($nfe->aceitaCartaCorrecao() && $cartas->count() < \App\Models\Nfes\Nfe::CCE_MAXIMO)
+        <div class="modal-overlay" id="modal-cce" hidden data-sem-atalho-salvar>
+            <div class="modal-box">
+                <div class="modal-box__header">
+                    <span class="card__title">Carta de correção nº {{ ($cartas->first()?->sequencia ?? 0) + 1 }}</span>
+                    <button type="button" class="btn btn--ghost btn--sm btn--icon" id="btn-fechar-cce" aria-label="Fechar"><x-icon name="x" /></button>
+                </div>
+                <form method="POST" action="{{ route('nfe.carta-correcao', $nfe) }}">
+                    @csrf
+                    <div class="modal-box__body">
+                        <p class="modal-box__intro">
+                            A carta mais recente substitui as anteriores: escreva todas as correções desta nota.
+                            Não pode corrigir valores, impostos, quantidade, preço, a troca do emitente ou do destinatário, nem as datas de emissão e saída.
+                            Até {{ \App\Models\Nfes\Nfe::CCE_MAXIMO }} cartas por NF-e.
+                        </p>
+                        <div class="form-group">
+                            <label class="form-label form-label--required" for="correcao-cce">Correção</label>
+                            <textarea name="correcao" id="correcao-cce" rows="5" maxlength="1000" required minlength="15"
+                                class="form-control @error('correcao') is-invalid @enderror">{{ old('correcao') }}</textarea>
+                            <small class="text-muted"><span id="correcao-cce-contagem">0</span>/1000 (mínimo 15)</small>
+                            @error('correcao')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-box__footer">
+                        <button type="button" class="btn btn--ghost" id="btn-voltar-cce">Voltar</button>
+                        <button type="submit" class="btn btn--primary" id="btn-confirmar-cce" data-espera="Enviando..." data-demora="Registrando a carta de correção na SEFAZ.">Enviar à SEFAZ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     @if ($nfe->podeCancelar())
         <div class="modal-overlay" id="modal-cancelar-nfe" hidden>
             <div class="modal-box">
                 <div class="modal-box__header">
                     <span class="card__title">Cancelar NF-e</span>
-                    <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-cancelar-nfe" aria-label="Fechar">✕</button>
+                    <button type="button" class="btn btn--ghost btn--sm btn--icon" id="btn-fechar-cancelar-nfe" aria-label="Fechar"><x-icon name="x" /></button>
                 </div>
                 <form method="POST" action="{{ route('nfe.cancelar', $nfe) }}">
                     @csrf
                     <div class="modal-box__body">
-                        <p class="text-muted" style="margin:0 0 0.75rem; font-size:13px;">
-                            O cancelamento só é aceito pela SEFAZ em até 24 horas após a autorização.
+                        <p class="modal-box__intro">
+                            O cancelamento só é aceito pela SEFAZ em até {{ $nfe->prazoCancelamentoTexto() }} após a autorização.
                             A justificativa precisa ter no mínimo 15 caracteres.
                         </p>
                         <div class="form-group">
-                            <label class="form-label form-label--required">Justificativa</label>
+                            <label class="form-label form-label--required" for="justificativa-cancelamento">Justificativa</label>
                             <textarea name="justificativa" id="justificativa-cancelamento" rows="4" maxlength="255" required minlength="15"
-                                class="form-control @error('justificativa') is-invalid @enderror"
-                                style="resize:vertical;">{{ old('justificativa') }}</textarea>
+                                class="form-control @error('justificativa') is-invalid @enderror">{{ old('justificativa') }}</textarea>
                             <small class="text-muted"><span id="justificativa-contagem">0</span>/255 (mínimo 15)</small>
                             @error('justificativa')
                                 <span class="form-error">{{ $message }}</span>
@@ -159,6 +240,43 @@
 
 @push('scripts')
     <script>
+        (function() {
+            var modal = document.getElementById('modal-cce');
+            if (!modal) return;
+
+            function abrir() { modal.hidden = false; }
+            function fechar() { modal.hidden = true; }
+
+            var btnAbrir = document.getElementById('btn-abrir-cce');
+            if (btnAbrir) btnAbrir.addEventListener('click', abrir);
+
+            ['btn-fechar-cce', 'btn-voltar-cce'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', fechar);
+            });
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) fechar();
+            });
+
+            var campo = document.getElementById('correcao-cce');
+            var contagem = document.getElementById('correcao-cce-contagem');
+            var confirmar = document.getElementById('btn-confirmar-cce');
+            function atualizarContagem() {
+                if (!campo || !contagem) return;
+                contagem.textContent = String(campo.value.length);
+                if (confirmar) confirmar.disabled = campo.value.trim().length < 15;
+            }
+            if (campo) {
+                campo.addEventListener('input', atualizarContagem);
+                atualizarContagem();
+            }
+
+            @if ($errors->has('correcao') || old('correcao'))
+                abrir();
+            @endif
+        })();
+
         (function() {
             var modal = document.getElementById('modal-cancelar-nfe');
             if (!modal) return;

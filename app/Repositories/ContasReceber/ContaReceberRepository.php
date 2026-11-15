@@ -2,11 +2,14 @@
 
 namespace App\Repositories\ContasReceber;
 
+use App\Models\Clientes\Cliente;
 use App\Models\ContasReceber\ContaReceber;
 use App\Models\ContasReceber\ContaReceberBaixa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Vendas\Venda;
 use App\Services\CategoriasFinanceiras\CategoriaPadraoService;
+use App\Support\BuscaPorNome;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +26,7 @@ class ContaReceberRepository
                 $busca = $request->busca;
                 $query->where(function ($q) use ($busca) {
                     $q->where('descricao', 'like', "%{$busca}%")
-                        ->orWhereHas('cliente', fn ($c) => $c->where('nome', 'like', "%{$busca}%"));
+                        ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, (int) auth()->user()->empresa_id, $busca));
                 });
             }
             if ($request->filled('situacao')) {
@@ -35,7 +38,7 @@ class ContaReceberRepository
             }
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['financeiro', 'cadastros']));
     }
 
     public function findOrFail(int $id): ContaReceber

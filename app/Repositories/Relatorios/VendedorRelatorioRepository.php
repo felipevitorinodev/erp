@@ -4,6 +4,7 @@ namespace App\Repositories\Relatorios;
 
 use App\Models\Vendas\Venda;
 use App\Relatorios\Periodo;
+use App\Support\IndiceBanco;
 use Illuminate\Database\Eloquent\Builder;
 
 class VendedorRelatorioRepository
@@ -13,7 +14,7 @@ class VendedorRelatorioRepository
      */
     public function consulta(int $empresaId, Periodo $periodo, array $filtros): Builder
     {
-        $query = Venda::query()
+        $query = IndiceBanco::usar(Venda::query(), 'vendas', 'vendas_relatorio_index')
             ->where('empresa_id', $empresaId)
             ->whereDataEntre('data_venda', $periodo->inicio, $periodo->fim);
 

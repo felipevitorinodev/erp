@@ -73,6 +73,24 @@ class NfeController extends Controller
         return $this->nfeService->cancelar($nfe, $dados['justificativa']);
     }
 
+    public function cartaCorrecao(Request $request, Nfe $nfe)
+    {
+        $dados = $request->validate([
+            'correcao' => ['required', 'string', 'min:15', 'max:1000'],
+        ], [
+            'correcao.required' => 'Escreva a correção.',
+            'correcao.min' => 'A correção deve ter no mínimo 15 caracteres.',
+            'correcao.max' => 'A correção deve ter no máximo 1000 caracteres.',
+        ]);
+
+        return $this->nfeService->cartaCorrecao($nfe, trim($dados['correcao']));
+    }
+
+    public function cartaCorrecaoArquivo(Request $request, Nfe $nfe, int $carta)
+    {
+        return $this->nfeService->arquivoCartaCorrecao($nfe, $carta, $request->query('tipo') === 'pdf');
+    }
+
     public function danfe(Nfe $nfe)
     {
         return $this->nfeService->danfe($nfe);

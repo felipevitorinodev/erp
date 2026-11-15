@@ -24,8 +24,11 @@ class SefazSimulada extends SoapBase implements SoapInterface
 
     public string $motivoRejeicao = 'Rejeicao: Nao informados os dados do cartao de credito / debito nas Formas de Pagamento da Nota Fiscal';
 
-    /** Retorno do evento de cancelamento: 135 registrado, 501 fora do prazo. */
+    /** Retorno do evento: 135 registrado, 501 fora do prazo (cancelamento), 573 duplicidade. */
     public string $codigoEvento = '135';
+
+    /** @var array<string, list<string>> procEventoNFe aceitos por chave; a consulta da chave devolve todos */
+    public array $eventos = [];
 
     /** @var list<string> raiz de cada pedido recebido (enviNFe, consSitNFe, envEvento...) */
     public array $pedidos = [];
@@ -83,6 +86,17 @@ class SefazSimulada extends SoapBase implements SoapInterface
             .'<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>'
             .'<nfeResultMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/simulada">'.$retorno.'</nfeResultMsg>'
             .'</soap:Body></soap:Envelope>';
+    }
+
+    /** Nota autorizada antes do teste (criada direto no banco), para a consulta da chave encontrá-la. */
+    public function notaAutorizada(string $chave, string $nProt): void
+    {
+        $this->notas[$chave] = [
+            'digVal' => '',
+            'nProt' => $nProt,
+            'cStat' => '100',
+            'xMotivo' => 'Autorizado o uso da NF-e',
+        ];
     }
 
     public function quantos(string $raiz): int
@@ -153,6 +167,7 @@ class SefazSimulada extends SoapBase implements SoapInterface
                 .'<dhRecbto>'.$this->agora().'</dhRecbto><chNFe>'.$chave.'</chNFe>'
             : '<cStat>'.$nota['cStat'].'</cStat><xMotivo>'.$nota['xMotivo'].'</xMotivo><cUF>'.substr($chave, 0, 2).'</cUF>'
                 .'<dhRecbto>'.$this->agora().'</dhRecbto><chNFe>'.$chave.'</chNFe>'.$this->protNFe($chave, $tpAmb);
+        $corpo .= implode('', $this->eventos[$chave] ?? []);
 
         return '<retConsSitNFe versao="4.00" xmlns="'.self::NS.'">'
             .'<tpAmb>'.$tpAmb.'</tpAmb><verAplic>SIMULADA</verAplic>'.$corpo
@@ -171,19 +186,34 @@ class SefazSimulada extends SoapBase implements SoapInterface
             $this->notas[$chave]['xMotivo'] = 'Cancelamento de NF-e homologado';
         }
 
+        $recusa = match ($this->codigoEvento) {
+            '573' => 'Rejeicao: Duplicidade de Evento',
+            '594' => 'Rejeicao: O numero de sequencia do evento informado e maior que o permitido',
+            default => 'Rejeicao: Prazo de Cancelamento superior ao previsto na Legislacao',
+        };
+
+        $retEvento = '<retEvento versao="1.00"><infEvento>'
+            .'<tpAmb>'.$tpAmb.'</tpAmb><verAplic>SIMULADA</verAplic><cOrgao>'.substr($chave, 0, 2).'</cOrgao>'
+            .'<cStat>'.$this->codigoEvento.'</cStat>'
+            .'<xMotivo>'.($aceito ? 'Evento registrado e vinculado a NF-e' : $recusa).'</xMotivo>'
+            .'<chNFe>'.$chave.'</chNFe><tpEvento>'.$tpEvento.'</tpEvento>'
+            .'<xEvento>'.($tpEvento === '110110' ? 'Carta de Correcao registrada' : 'Cancelamento').'</xEvento>'
+            .'<nSeqEvento>'.$this->valor($pedido, 'nSeqEvento').'</nSeqEvento>'
+            .'<dhRegEvento>'.$this->agora().'</dhRegEvento>'
+            .($aceito ? '<nProt>'.$this->protocolo++.'</nProt>' : '')
+            .'</infEvento></retEvento>';
+
+        if ($aceito) {
+            $evento = $pedido->getElementsByTagName('evento')->item(0);
+            $this->eventos[$chave][] = '<procEventoNFe versao="1.00" xmlns="'.self::NS.'">'
+                .$evento->ownerDocument->saveXML($evento).$retEvento.'</procEventoNFe>';
+        }
+
         return '<retEnvEvento versao="1.00" xmlns="'.self::NS.'">'
             .'<idLote>'.$this->valor($pedido, 'idLote').'</idLote>'
             .'<tpAmb>'.$tpAmb.'</tpAmb><verAplic>SIMULADA</verAplic><cOrgao>'.substr($chave, 0, 2).'</cOrgao>'
             .'<cStat>128</cStat><xMotivo>Lote de Evento Processado</xMotivo>'
-            .'<retEvento versao="1.00"><infEvento>'
-            .'<tpAmb>'.$tpAmb.'</tpAmb><verAplic>SIMULADA</verAplic><cOrgao>'.substr($chave, 0, 2).'</cOrgao>'
-            .'<cStat>'.$this->codigoEvento.'</cStat>'
-            .'<xMotivo>'.($aceito ? 'Evento registrado e vinculado a NF-e' : 'Rejeicao: Prazo de Cancelamento superior ao previsto na Legislacao').'</xMotivo>'
-            .'<chNFe>'.$chave.'</chNFe><tpEvento>'.$tpEvento.'</tpEvento><xEvento>Cancelamento</xEvento>'
-            .'<nSeqEvento>'.$this->valor($pedido, 'nSeqEvento').'</nSeqEvento>'
-            .'<dhRegEvento>'.$this->agora().'</dhRegEvento>'
-            .($aceito ? '<nProt>'.$this->protocolo++.'</nProt>' : '')
-            .'</infEvento></retEvento>'
+            .$retEvento
             .'</retEnvEvento>';
     }
 

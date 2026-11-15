@@ -9,31 +9,15 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('categoria-financeira.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $busca ?? '' }}"
+    <x-filtros :action="route('categoria-financeira.index')">
+                <div class="form-group filtros__principal form-group--span-2">
+                    <label class="form-label" for="campo-busca">Busca</label>
+                    <input id="campo-busca" type="search" enterkeyhint="search" name="busca" class="form-control" value="{{ $busca ?? '' }}"
                         placeholder="Nome da categoria">
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('categoria-financeira.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Resultados" :paginator="$categorias">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -45,7 +29,7 @@
                     <tbody>
                         @forelse($categorias as $categoria)
                             <tr>
-                                <td data-label="Nome">{{ $categoria->nome }}</td>
+                                <td data-label="Nome" class="col-titulo">{{ $categoria->nome }}</td>
                                 <td data-label="Tipo">
                                     @if($categoria->tipo === 'receita')
                                         <span class="badge badge--success">Receita</span>
@@ -54,11 +38,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Situação">
-                                    @if($categoria->ativo)
-                                        <span class="badge badge--success">Ativa</span>
-                                    @else
-                                        <span class="badge badge--neutral">Inativa</span>
-                                    @endif
+                                    <x-badge-situacao tipo="ativa" :valor="(bool) ($categoria->ativo)" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
                                     <x-acoes>
@@ -92,12 +72,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $categorias->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

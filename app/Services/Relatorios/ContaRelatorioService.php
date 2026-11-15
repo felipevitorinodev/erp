@@ -11,6 +11,7 @@ use App\Relatorios\Periodo;
 use App\Relatorios\SerieTemporal;
 use App\Repositories\Relatorios\ContaRelatorioRepository;
 use App\Services\Relatorios\Concerns\MontaRelatorio;
+use App\Support\LeituraEmLotes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -123,7 +124,7 @@ class ContaRelatorioService implements ConsultaRelatorio
         return CsvRelatorio::stream(
             'relatorio-contas-'.$this->tipo.'-'.date('Y-m-d').'.csv',
             ['Descrição', $rotulo, 'Categoria', 'Vencimento', 'Valor', 'Pago', 'Situação'],
-            $query->lazy(500)->map(fn ($conta) => [
+            LeituraEmLotes::porChave($query)->map(fn ($conta) => [
                 $conta->descricao,
                 $conta->{$relacao}->nome ?? '—',
                 $conta->categoria->nome ?? '—',

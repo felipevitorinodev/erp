@@ -2,10 +2,13 @@
 
 namespace App\Repositories\Relatorios;
 
+use App\Models\Clientes\Cliente;
 use App\Models\ContasPagar\ContaPagar;
 use App\Models\ContasReceber\ContaReceber;
+use App\Models\Fornecedores\Fornecedor;
 use App\Relatorios\FaixaAtraso;
 use App\Relatorios\SerieTemporal;
+use App\Support\BuscaPorNome;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -41,9 +44,11 @@ class InadimplenciaRelatorioRepository
 
         if (($filtros['busca'] ?? '') !== '') {
             $busca = $filtros['busca'];
-            $query->where(function ($q) use ($busca, $relacao) {
+            $pessoas = $tipo === 'pagar' ? Fornecedor::class : Cliente::class;
+            $coluna = $tipo === 'pagar' ? 'fornecedor_id' : 'cliente_id';
+            $query->where(function ($q) use ($busca, $pessoas, $coluna, $empresaId) {
                 $q->where('descricao', 'like', "%{$busca}%")
-                    ->orWhereHas($relacao, fn ($pessoa) => $pessoa->where('nome', 'like', "%{$busca}%"));
+                    ->orWhereIn($coluna, BuscaPorNome::ids($pessoas, $empresaId, $busca));
             });
         }
 

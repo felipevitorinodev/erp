@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Estoque;
 use App\Http\Controllers\Controller;
 use App\Models\Estoque\MovimentacaoEstoque;
 use App\Models\Produtos\Produto;
+use App\Support\ContagemPaginada;
 use App\Support\MensagemPublica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -136,7 +137,9 @@ class AjusteEstoqueController extends Controller
             $query->whereDataAte('created_at', $request->data_fim);
         }
 
-        $movimentacoes = $query->orderByDesc('id')->paginate(20)->withQueryString();
+        $movimentacoes = $query->orderByDesc('id')
+            ->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['estoque']))
+            ->withQueryString();
 
         $produtoSelecionado = null;
         if ($request->filled('produto_id')) {

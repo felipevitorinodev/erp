@@ -11,31 +11,15 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('empresa.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+    <x-filtros :action="route('empresa.index')">
+                <div class="form-group filtros__principal form-group--span-2">
+                    <label class="form-label" for="campo-busca">Busca</label>
+                    <input id="campo-busca" type="search" enterkeyhint="search" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
                         placeholder="Razão social, fantasia ou CNPJ">
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('empresa.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Resultados" :paginator="$empresas">
                     <thead>
                         <tr>
                             <th>Código</th>
@@ -54,7 +38,7 @@
                         @forelse($empresas as $empresa)
                             <tr>
                                 <td data-label="Código">{{ $empresa->id }}</td>
-                                <td data-label="Razão social">{{ $empresa->razao_social }}</td>
+                                <td data-label="Razão social" class="col-titulo">{{ $empresa->razao_social }}</td>
                                 <td data-label="CNPJ">{{ $empresa->cnpj ?: 'Sem CNPJ' }}</td>
                                 <td data-label="Inscrição estadual">{{ $empresa->ie }}</td>
                                 <td data-label="Inscrição municipal">{{ $empresa->im }}</td>
@@ -82,12 +66,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $empresas->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

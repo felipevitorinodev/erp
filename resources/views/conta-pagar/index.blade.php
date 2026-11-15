@@ -9,20 +9,13 @@
 
 @section('content')
 
-    <x-filtros :action="route('conta-pagar.index')">
+    <x-filtros :action="route('conta-pagar.index')" :manter="['situacao']">
         <x-filtro-campo
             label="Busca"
             name="busca"
             :value="$filtros['busca'] ?? ''"
             placeholder="Descrição ou fornecedor"
             :span="2"
-        />
-        <x-filtro-campo
-            label="Situação"
-            name="situacao"
-            type="select"
-            :value="$filtros['situacao'] ?? ''"
-            :options="['aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada']"
         />
         <x-filtro-campo
             label="Vencimento"
@@ -33,6 +26,9 @@
     </x-filtros>
 
     <x-tabela-card titulo="Resultados" :paginator="$contas">
+        <x-slot:abas>
+            <x-filtro-abas :opcoes="['aberta' => 'Abertas', 'parcial' => 'Parciais', 'paga' => 'Pagas', 'cancelada' => 'Canceladas']" />
+        </x-slot:abas>
                     <thead>
                         <tr>
                             <th style="width:60px;">Nº</th>
@@ -53,7 +49,7 @@
                             @endphp
                             <tr>
                                 <td data-label="Nº" class="text-muted">{{ $conta->id }}</td>
-                                <td data-label="Descrição">{{ $conta->descricao }}</td>
+                                <td data-label="Descrição" class="col-titulo">{{ $conta->descricao }}</td>
                                 <td data-label="Fornecedor">{{ $conta->fornecedor->nome ?? '—' }}</td>
                                 <td data-label="Vencimento" class="{{ $vencido ? 'text--danger' : '' }}">
                                     {{ $conta->data_vencimento->format('d/m/Y') }}

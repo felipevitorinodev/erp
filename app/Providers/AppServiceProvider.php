@@ -21,7 +21,9 @@ use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use App\Services\Usuarios\PerfilService;
+use App\Support\CacheDados;
 use Carbon\Carbon;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Pagination\Paginator;
@@ -68,6 +70,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->registrarBindingsPorEmpresa();
         $this->registrarFiltrosDeData();
+
+        // Cache entre telas: toda escrita nas tabelas do sistema troca a versão do domínio após o commit.
+        CacheDados::esquecerLeituras();
+        DB::listen(fn (QueryExecuted $consulta) => CacheDados::registrarEscrita($consulta));
 
         Empresa::created(function (Empresa $empresa) {
             app(PerfilService::class)->garantir($empresa);

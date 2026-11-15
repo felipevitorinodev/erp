@@ -22,6 +22,7 @@ use App\Support\MensagemPublica;
 use App\Support\PrecoMinimo;
 use App\Traits\ConversorMoeda;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -110,7 +111,7 @@ class VendaService
                 'numero' => $venda->numero,
                 'situacao' => $venda->situacao,
             ];
-            $empresa = Empresa::query()->find($empresaId);
+            $empresa = Empresa::atual();
             if ($situacao === 'confirmada' && $empresa?->nfce_emitir_pdv) {
                 $payload['nfce'] = $this->emitirNfceDoPdv($request, $venda);
             }
@@ -266,7 +267,7 @@ class VendaService
         }
 
         $avisoEstoque = $this->montarAvisoEstoque($itens);
-        $empresa = Empresa::query()->findOrFail($empresaId);
+        $empresa = Empresa::atual() ?? Empresa::query()->findOrFail($empresaId);
 
         if ($request->expectsJson() && $situacao === 'confirmada' && $empresa->nfce_emitir_pdv) {
             app(NfceService::class)->validarAntesDaVenda(
@@ -455,7 +456,7 @@ class VendaService
             'repetida' => true,
         ];
 
-        $empresa = Empresa::query()->find($venda->empresa_id);
+        $empresa = Empresa::atual();
         if ($venda->situacao === 'confirmada' && $empresa?->nfce_emitir_pdv) {
             $payload['nfce'] = [
                 'ok' => false,
@@ -484,7 +485,7 @@ class VendaService
             'contasReceber' => fn ($q) => $q->orderBy('data_vencimento')->orderBy('id'),
             'nfes' => fn ($q) => $q->orderByDesc('id'),
         ]);
-        $empresa = Empresa::query()->findOrFail($venda->empresa_id);
+        $empresa = Empresa::atual() ?? Empresa::query()->findOrFail($venda->empresa_id);
 
         // NFC-e e NF-e em quadros próprios: cada uma tem as rotas e a permissão dela.
         return view('venda.show', [
@@ -553,7 +554,7 @@ class VendaService
         }
 
         if ($venda->data_saida && $request->filled('data_venda')) {
-            $emissao = \Carbon\Carbon::parse($request->data_venda)->startOfDay();
+            $emissao = Carbon::parse($request->data_venda)->startOfDay();
             if ($venda->data_saida->copy()->startOfDay()->lt($emissao)) {
                 return back()
                     ->withErrors(['data_venda' => 'A data da venda não pode ficar depois da data de saída já informada na nota.'])

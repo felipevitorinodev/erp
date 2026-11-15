@@ -3,6 +3,7 @@
 namespace App\Repositories\Clientes;
 
 use App\Models\Clientes\Cliente;
+use App\Support\ContagemPaginada;
 use Illuminate\Http\Request;
 
 class ClienteRepository
@@ -25,7 +26,7 @@ class ClienteRepository
             });
         }
 
-        return $query->paginate(20);
+        return $query->paginate(20, ['*'], 'page', null, ContagemPaginada::total($query, ['cadastros']));
     }
 
     public function store(array $request)

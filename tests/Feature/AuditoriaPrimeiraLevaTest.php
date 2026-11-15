@@ -216,8 +216,21 @@ class AuditoriaPrimeiraLevaTest extends TestCase
         $empresa = $this->criarEmpresa('Empresa A', '00000000000191');
         $user = $this->criarUsuario($empresa);
 
+        // NF-e exige destinatário com CPF/CNPJ e endereço; sem isso a SEFAZ rejeita (237/726).
+        $cliente = Cliente::create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Cliente Teste',
+            'cpf' => '52998224725',
+            'logradouro' => 'Rua Teste',
+            'numero' => '10',
+            'bairro' => 'Centro',
+            'cidade' => 'São Paulo',
+            'ativo' => true,
+        ]);
+
         $venda = Venda::create([
             'empresa_id' => $empresa->id,
+            'cliente_id' => $cliente->id,
             'numero' => '20',
             'data_venda' => now()->toDateString(),
             'situacao' => 'confirmada',

@@ -9,25 +9,23 @@
 
 @section('content')
 
-    <div class="card mb-2">
-        <div class="card__body">
-            <form method="GET" action="{{ route('produto.index') }}" class="form-grid form-grid--col-3">
-                <div class="form-group form-group--span-2">
-                    <label class="form-label">Busca</label>
-                    <input type="text" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
+    <x-filtros :action="route('produto.index')">
+                <div class="form-group filtros__principal form-group--span-2">
+                    <label class="form-label" for="campo-busca">Busca</label>
+                    <input id="campo-busca" type="search" enterkeyhint="search" name="busca" class="form-control" value="{{ $filtros['busca'] ?? '' }}"
                         placeholder="Nome, código ou código de barras">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-control">
+                    <label class="form-label" for="campo-tipo">Tipo</label>
+                    <select id="campo-tipo" name="tipo" class="form-control">
                         <option value="">— Todos —</option>
                         <option value="1" {{ (string) ($filtros['tipo'] ?? '') === '1' ? 'selected' : '' }}>Produto</option>
                         <option value="2" {{ (string) ($filtros['tipo'] ?? '') === '2' ? 'selected' : '' }}>Serviço</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Grupo</label>
-                    <select name="grupo_id" class="form-control">
+                    <label class="form-label" for="campo-grupo_id">Grupo</label>
+                    <select id="campo-grupo_id" name="grupo_id" class="form-control">
                         <option value="">— Todos —</option>
                         @foreach($grupos as $grupo)
                             <option value="{{ $grupo->id }}"
@@ -37,23 +35,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="form-group">
-                    <div class="filter-actions">
-                        <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
-                        <a href="{{ route('produto.index') }}" class="btn btn--ghost btn--sm">Limpar</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    </x-filtros>
 
-    <div class="card">
-        <div class="card__header">
-            <span class="card__title">Resultados</span>
-        </div>
-        <div class="card__body" style="padding: 0;">
-            <div class="table-wrap">
-                <table class="table table--cards">
+    <x-tabela-card titulo="Resultados" :paginator="$produtos">
                     <thead>
                         <tr>
                             <th>Código</th>
@@ -69,7 +53,7 @@
                         @forelse($produtos as $produto)
                             <tr>
                                 <td data-label="Código">{{ $produto->codigo ?: '—' }}</td>
-                                <td data-label="Nome">{{ $produto->nome }}</td>
+                                <td data-label="Nome" class="col-titulo">{{ $produto->nome }}</td>
                                 <td data-label="Grupo">{{ $produto->grupos->nome ?? '—' }}</td>
                                 <td data-label="Preço de venda" class="col-num">R$ {{ number_format($produto->preco_venda, 2, ',', '.') }}</td>
                                 @php($estoqueBaixo = $produto->ativo && $produto->controla_estoque && (float) $produto->estoque_atual <= (float) $produto->estoque_minimo)
@@ -80,11 +64,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Situação">
-                                    @if($produto->ativo)
-                                        <span class="badge badge--success">Ativo</span>
-                                    @else
-                                        <span class="badge badge--neutral">Inativo</span>
-                                    @endif
+                                    <x-badge-situacao tipo="ativo" :valor="(bool) ($produto->ativo)" />
                                 </td>
                                 <td class="col-actions" data-label="Ações">
                                     <x-acoes>
@@ -109,7 +89,7 @@
                             </tr>
                         @empty
                             <x-tabela-vazia ilustracao="prateleira"
-                                :colspan="8"
+                                :colspan="7"
                                 titulo="Nenhum produto cadastrado"
                                 texto="Cadastre produtos e serviços para vender no PDV e emitir notas."
                                 :acao="route('produto.create')"
@@ -118,12 +98,6 @@
                             />
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card__footer">
-            {{ $produtos->withQueryString()->links() }}
-        </div>
-    </div>
+    </x-tabela-card>
 
 @endsection

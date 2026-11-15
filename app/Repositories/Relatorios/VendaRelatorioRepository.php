@@ -2,9 +2,12 @@
 
 namespace App\Repositories\Relatorios;
 
+use App\Models\Clientes\Cliente;
 use App\Models\Vendas\Venda;
 use App\Relatorios\Periodo;
 use App\Relatorios\SerieTemporal;
+use App\Support\BuscaPorNome;
+use App\Support\IndiceBanco;
 use Illuminate\Database\Eloquent\Builder;
 
 class VendaRelatorioRepository
@@ -14,7 +17,8 @@ class VendaRelatorioRepository
      */
     public function consulta(int $empresaId, Periodo $periodo, array $filtros): Builder
     {
-        $query = Venda::query()
+        // Período de vendas: índice de relatório indicado ao MySQL (ver IndiceBanco).
+        $query = IndiceBanco::usar(Venda::query(), 'vendas', 'vendas_relatorio_index')
             ->where('empresa_id', $empresaId)
             ->whereDataEntre('data_venda', $periodo->inicio, $periodo->fim);
 
@@ -28,9 +32,9 @@ class VendaRelatorioRepository
 
         if (($filtros['busca'] ?? '') !== '') {
             $busca = $filtros['busca'];
-            $query->where(function ($q) use ($busca) {
+            $query->where(function ($q) use ($busca, $empresaId) {
                 $q->where('numero', 'like', "%{$busca}%")
-                    ->orWhereHas('cliente', fn ($cliente) => $cliente->where('nome', 'like', "%{$busca}%"));
+                    ->orWhereIn('cliente_id', BuscaPorNome::ids(Cliente::class, $empresaId, $busca));
             });
         }
 

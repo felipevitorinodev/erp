@@ -9,22 +9,13 @@
 
 @section('content')
 
-    <x-filtros :action="route('venda.index')">
+    <x-filtros :action="route('venda.index')" :manter="['situacao']">
         <x-filtro-campo
             label="Busca"
             name="busca"
             :value="$filtros['busca'] ?? ''"
             placeholder="Número ou cliente"
             :span="2"
-        />
-        <x-filtro-campo
-            label="Situação"
-            name="situacao"
-            type="select"
-            :value="$filtros['situacao'] ?? ''"
-            :options="auth()->user()->pode('vendas.ver_canceladas')
-                ? ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada']
-                : ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada']"
         />
         <x-filtro-periodo
             :inicio="$filtros['data_inicio'] ?? ''"
@@ -35,6 +26,11 @@
     </x-filtros>
 
     <x-tabela-card titulo="Resultados" :paginator="$vendas">
+        <x-slot:abas>
+            <x-filtro-abas :opcoes="auth()->user()->pode('vendas.ver_canceladas')
+                ? ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmadas', 'cancelada' => 'Canceladas']
+                : ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmadas']" />
+        </x-slot:abas>
                     <thead>
                         <tr>
                             <th style="width:80px;">Número</th>
