@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Estoque;
 
+use App\Models\Estoque\PedidoCompra;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
 use App\Traits\ConversorMoeda;
@@ -21,6 +22,7 @@ class EntradaEstoqueRequest extends FormRequest
     {
         return [
             'fornecedor_id' => 'nullable|exists:fornecedores,id',
+            'pedido_compra_id' => 'nullable|integer|exists:pedidos_compra,id',
             'numero' => 'required|string|max:20',
             'data_entrada' => 'required|date',
             'desconto' => 'nullable|numeric|min:0',
@@ -49,7 +51,28 @@ class EntradaEstoqueRequest extends FormRequest
                 }
             }
 
-            foreach ($this->input('itens', []) as $idx => $item) {
+            if ($this->filled('pedido_compra_id')) {
+                $pedido = PedidoCompra::whereKey($this->input('pedido_compra_id'))
+                    ->where('empresa_id', $empresaId)
+                    ->first();
+
+                if (! $pedido || ! in_array($pedido->situacao, ['aprovado', 'parcial'], true)) {
+                    $validator->errors()->add('pedido_compra_id', 'Pedido de compra inválido ou sem saldo para recebimento.');
+                } elseif ((int) $pedido->fornecedor_id !== (int) $this->input('fornecedor_id')) {
+                    $validator->errors()->add('fornecedor_id', 'O fornecedor deve ser o mesmo do pedido de compra.');
+                }
+            }
+
+            $itens = $this->input('itens', []);
+            if (! is_array($itens)) {
+                return;
+            }
+
+            foreach ($itens as $idx => $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
                 if (empty($item['produto_id'])) {
                     continue;
                 }
@@ -67,6 +90,7 @@ class EntradaEstoqueRequest extends FormRequest
     {
         return [
             'fornecedor_id' => 'fornecedor',
+            'pedido_compra_id' => 'pedido de compra',
             'numero' => 'número da NF',
             'data_entrada' => 'data de entrada',
             'desconto' => 'desconto',

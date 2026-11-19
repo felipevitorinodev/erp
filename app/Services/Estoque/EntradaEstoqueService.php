@@ -6,6 +6,7 @@ use App\Http\Requests\Estoque\EntradaEstoqueRequest;
 use App\Http\Requests\Estoque\ImportarXmlRequest;
 use App\Models\Empresas\Empresa;
 use App\Models\Estoque\EntradaEstoque;
+use App\Models\Estoque\PedidoCompra;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Produtos\Produto;
 use App\Repositories\Estoque\EntradaEstoqueRepository;
@@ -133,6 +134,41 @@ class EntradaEstoqueService
     {
         $dadosXml = session('dados_xml');
         $observacoesXml = null;
+        $pedidoCompra = null;
+        $itensCompra = collect();
+        $pedidoId = request()->query('pedido_compra_id');
+
+        if ($pedidoId) {
+            $pedidoCompra = PedidoCompra::with(['fornecedor', 'itens.produto'])
+                ->where('empresa_id', auth()->user()->empresa_id)
+                ->find($pedidoId);
+
+            if (! $pedidoCompra || ! in_array($pedidoCompra->situacao, ['aprovado', 'parcial'], true)) {
+                return redirect()->route('pedido-compra.index')
+                    ->with('error', 'Pedido de compra inválido ou sem saldo para recebimento.');
+            }
+
+            $itensCompra = $pedidoCompra->itens
+                ->filter(fn ($item) => (float) $item->quantidade - (float) $item->quantidade_recebida > 0.0005)
+                ->map(fn ($item) => (object) [
+                    'produto_id' => $item->produto_id,
+                    'produto_nome' => $item->produto_nome,
+                    'produto_codigo' => $item->produto_codigo,
+                    'quantidade' => round((float) $item->quantidade - (float) $item->quantidade_recebida, 3),
+                    'preco_unitario' => $item->preco_unitario,
+                    'desconto' => 0,
+                    'total' => round(((float) $item->quantidade - (float) $item->quantidade_recebida) * (float) $item->preco_unitario, 2),
+                ]);
+
+            if ($itensCompra->isEmpty() && ! $dadosXml) {
+                return redirect()->route('pedido-compra.show', $pedidoCompra)
+                    ->with('error', 'Este pedido não possui quantidades pendentes de recebimento.');
+            }
+
+            if ($dadosXml) {
+                $itensCompra = collect();
+            }
+        }
 
         if ($dadosXml) {
             $observacoesXml = sprintf(
@@ -147,6 +183,8 @@ class EntradaEstoqueService
         return view('entrada-estoque.create', [
             'dadosXml' => $dadosXml,
             'observacoesXml' => $observacoesXml,
+            'pedidoCompra' => $pedidoCompra,
+            'itensCompra' => $itensCompra,
         ]);
     }
 
@@ -161,7 +199,9 @@ class EntradaEstoqueService
 
             session(['dados_xml' => $result, 'xml_content' => $result['_xml_raw']]);
 
-            return redirect()->route('entrada-estoque.create')
+            return redirect()->route('entrada-estoque.create', array_filter([
+                'pedido_compra_id' => $request->input('pedido_compra_id'),
+            ]))
                 ->with('success', 'XML importado com sucesso. Revise os dados antes de salvar.');
         } catch (RuntimeException $e) {
             return redirect()->back()->with('error', MensagemPublica::de($e));
@@ -175,7 +215,9 @@ class EntradaEstoqueService
     {
         session()->forget(['dados_xml', 'xml_content']);
 
-        return redirect()->route('entrada-estoque.create');
+        return redirect()->route('entrada-estoque.create', array_filter([
+            'pedido_compra_id' => request()->query('pedido_compra_id'),
+        ]));
     }
 
     public function store(EntradaEstoqueRequest $request)
@@ -235,6 +277,21 @@ class EntradaEstoqueService
             }
         }
 
+        $pedidoCompraId = $request->input('pedido_compra_id');
+        if ($pedidoCompraId) {
+            $pedidoCompra = PedidoCompra::where('empresa_id', $empresaId)
+                ->whereKey($pedidoCompraId)
+                ->first();
+
+            if (! $pedidoCompra
+                || ! in_array($pedidoCompra->situacao, ['aprovado', 'parcial'], true)
+                || (int) $pedidoCompra->fornecedor_id !== (int) $fornecedorId) {
+                return back()
+                    ->withErrors(['pedido_compra_id' => 'Pedido de compra inválido ou incompatível com o fornecedor.'])
+                    ->withInput();
+            }
+        }
+
         $desconto = $this->parseMoeda($request->desconto);
         $subtotal = round(array_sum(array_column($itens, 'total')), 2);
         $total = max(0, round($subtotal - $desconto, 2));
@@ -242,6 +299,7 @@ class EntradaEstoqueService
         $dados = [
             'empresa_id' => $empresaId,
             'fornecedor_id' => $fornecedorId,
+            'pedido_compra_id' => $pedidoCompraId ?: null,
             'numero' => trim((string) $request->numero),
             'data_entrada' => $request->data_entrada,
             'subtotal' => $subtotal,

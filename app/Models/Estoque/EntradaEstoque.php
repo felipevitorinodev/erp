@@ -19,6 +19,7 @@ class EntradaEstoque extends Model
     protected $fillable = [
         'empresa_id',
         'fornecedor_id',
+        'pedido_compra_id',
         'numero',
         'data_entrada',
         'subtotal',
@@ -51,6 +52,11 @@ class EntradaEstoque extends Model
     public function fornecedor()
     {
         return $this->belongsTo(Fornecedor::class);
+    }
+
+    public function pedidoCompra()
+    {
+        return $this->belongsTo(PedidoCompra::class, 'pedido_compra_id');
     }
 
     public function itens()

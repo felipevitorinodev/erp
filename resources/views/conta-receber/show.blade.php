@@ -115,6 +115,75 @@
     @endif
 
     @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
+        <div class="card" style="margin-top:1rem;">
+            <div class="card__header">
+                <span class="card__title">Registrar contato de cobrança</span>
+            </div>
+            <form method="POST" action="{{ route('cobranca.registrar', $conta) }}">
+                @csrf
+                <div class="card__body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label form-label--required" for="canal">Canal</label>
+                            <select id="canal" name="canal" class="form-control" required>
+                                <option value="">Selecione</option>
+                                @foreach (['telefone' => 'Telefone', 'whatsapp' => 'WhatsApp', 'email' => 'E-mail', 'presencial' => 'Presencial', 'outro' => 'Outro'] as $valor => $rotulo)
+                                    <option value="{{ $valor }}" @selected(old('canal') === $valor)>{{ $rotulo }}</option>
+                                @endforeach
+                            </select>
+                            @error('canal') <span class="form-error">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label form-label--required" for="contatado_em">Data do contato</label>
+                            <input id="contatado_em" type="date" name="contatado_em" class="form-control"
+                                value="{{ old('contatado_em', today()->toDateString()) }}" required>
+                            @error('contatado_em') <span class="form-error">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="proxima_cobranca_em">Lembrar novamente em</label>
+                            <input id="proxima_cobranca_em" type="date" name="proxima_cobranca_em" class="form-control"
+                                value="{{ old('proxima_cobranca_em') }}">
+                            @error('proxima_cobranca_em') <span class="form-error">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="form-group form-group--full">
+                            <label class="form-label form-label--required" for="resultado">Resultado / observações</label>
+                            <textarea id="resultado" name="resultado" class="form-control" rows="3" maxlength="2000" required>{{ old('resultado') }}</textarea>
+                            @error('resultado') <span class="form-error">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+                <div class="card__footer">
+                    <button type="submit" class="btn btn--primary btn--sm">Registrar contato</button>
+                </div>
+            </form>
+        </div>
+    @endif
+
+    @if ($conta->cobrancas->isNotEmpty())
+        <div class="card" style="margin-top:1rem;">
+            <div class="card__header"><span class="card__title">Histórico de cobranças</span></div>
+            <div class="card__body card__body--flush">
+                <table class="table">
+                    <thead>
+                        <tr><th>Data</th><th>Canal</th><th>Resultado</th><th>Próximo contato</th><th>Registrado por</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($conta->cobrancas->sortByDesc('contatado_em') as $cobranca)
+                            <tr>
+                                <td>{{ $cobranca->contatado_em->format('d/m/Y') }}</td>
+                                <td>{{ ucfirst($cobranca->canal) }}</td>
+                                <td>{{ $cobranca->resultado }}</td>
+                                <td>{{ $cobranca->proxima_cobranca_em?->format('d/m/Y') ?? '—' }}</td>
+                                <td>{{ $cobranca->usuario->name ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
         <div class="modal-overlay" id="modal-receber" hidden>
             <div class="modal-box">
                 <div class="modal-box__header">

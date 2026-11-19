@@ -30,6 +30,7 @@ class ContaReceber extends Model
         'categoria_id',
         'situacao',
         'observacoes',
+        'proxima_cobranca_em',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class ContaReceber extends Model
         'valor_pago' => 'decimal:2',
         'data_vencimento' => 'date',
         'data_pagamento' => 'date',
+        'proxima_cobranca_em' => 'date',
     ];
 
     public function empresa()
@@ -62,5 +64,15 @@ class ContaReceber extends Model
     public function categoria()
     {
         return $this->belongsTo(CategoriaFinanceira::class, 'categoria_id');
+    }
+
+    public function cobrancas()
+    {
+        return $this->hasMany(CobrancaHistorico::class, 'conta_receber_id');
+    }
+
+    public function cobrancaMaisRecente()
+    {
+        return $this->hasOne(CobrancaHistorico::class, 'conta_receber_id')->latestOfMany('contatado_em');
     }
 }

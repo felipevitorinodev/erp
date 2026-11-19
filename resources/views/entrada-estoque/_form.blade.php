@@ -3,6 +3,9 @@
     $entrada = $entrada ?? null;
     $dadosXml = $dadosXml ?? null;
     $observacoesXml = $observacoesXml ?? null;
+    $pedidoCompra = $pedidoCompra ?? $entrada?->pedidoCompra;
+    $itensCompra = $itensCompra ?? collect();
+    $decimaisQuantidade = $pedidoCompra ? 3 : 2;
 @endphp
 
 @pushOnce('styles', 'css-entrada-estoque')
@@ -11,6 +14,11 @@
 @if($dadosXml)
     <input type="hidden" name="chave_acesso_xml" value="{{ $dadosXml['nota']['chave_acesso'] ?? '' }}">
 @endif
+@if($pedidoCompra)
+    <input type="hidden" name="pedido_compra_id" value="{{ $pedidoCompra->id }}">
+@elseif($entrada?->pedido_compra_id)
+    <input type="hidden" name="pedido_compra_id" value="{{ $entrada->pedido_compra_id }}">
+@endif
 <div class="form-section">
     <div class="form-section__title">Nota do fornecedor</div>
     <div class="form-grid form-grid--col-3">
@@ -18,10 +26,10 @@
             <label class="form-label">Fornecedor</label>
             <div class="autocomplete-wrap">
                 <input type="text" id="input-fornecedor" class="form-control"
-                    value="{{ old('fornecedor_nome', $entrada && $entrada->fornecedor ? $entrada->fornecedor->nome : '') }}"
+                    value="{{ old('fornecedor_nome', $entrada && $entrada->fornecedor ? $entrada->fornecedor->nome : ($pedidoCompra?->fornecedor?->nome ?? '')) }}"
                     placeholder="Digite para buscar..." autocomplete="off">
                 <input type="hidden" name="fornecedor_id" id="hidden-fornecedor-id"
-                    value="{{ old('fornecedor_id', $entrada->fornecedor_id ?? '') }}">
+                    value="{{ old('fornecedor_id', $entrada->fornecedor_id ?? $pedidoCompra?->fornecedor_id ?? '') }}">
             </div>
             @error('fornecedor_id')<span class="form-error">{{ $message }}</span>@enderror
         </div>
@@ -47,7 +55,12 @@
 
 {{-- Itens --}}
 <div class="form-section">
-    <div class="form-section__title">Itens</div>
+    <div class="form-section__title">
+        Itens
+        @if($pedidoCompra)
+            <span class="text-muted">— Pedido {{ $pedidoCompra->numero }} (recebimento parcial permitido)</span>
+        @endif
+    </div>
     <div class="itens-panel">
     <div class="section-toolbar">
         <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar item</button>
@@ -57,7 +70,7 @@
 
     <div class="itens-list" id="itens-body">
         @php
-            $itensExistentes = $entrada ? $entrada->itens : collect();
+            $itensExistentes = $entrada ? $entrada->itens : $itensCompra;
         @endphp
         @foreach($itensExistentes as $i => $item)
             <div class="item-card item-row">
@@ -82,7 +95,8 @@
                         <label class="form-label">Qtd.</label>
                         @include('components.input-quantity', [
                             'name' => 'itens[' . $i . '][quantidade]',
-                            'value' => old('itens.' . $i . '.quantidade', number_format($item->quantidade, 2, ',', '.')),
+                            'value' => old('itens.' . $i . '.quantidade', number_format($item->quantidade, $decimaisQuantidade, ',', '.')),
+                            'decimals' => $decimaisQuantidade,
                             'class' => 'text-right input-qtd'
                         ])
                     </div>
@@ -156,6 +170,7 @@
 (function ($) {
     var urlProdutos = '{{ route('api.produtos.busca') }}?apenas_controlados=1';
     var indice = {{ $entrada ? $entrada->itens->count() : 0 }};
+    var decimaisQuantidade = {{ $decimaisQuantidade }};
 
     initAutocomplete('#input-fornecedor', '#hidden-fornecedor-id', '{{ route('api.fornecedores.busca') }}', function (item) {
         var doc = item.cpf || item.cnpj || '';
@@ -180,6 +195,10 @@
 
     function formatInput(val) {
         return val.toFixed(2).replace('.', ',');
+    }
+
+    function formatQuantidade(val) {
+        return val.toFixed(decimaisQuantidade).replace('.', ',');
     }
 
     function atualizarEmpty() {
@@ -237,7 +256,7 @@
             '<div class="item-card__grid">' +
                 '<div class="form-group">' +
                     '<label class="form-label">Qtd.</label>' +
-                    '<input type="tel" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd input-quantity input-numeric" inputmode="numeric" data-decimals="2" value="1,00">' +
+                    '<input type="tel" name="itens[' + idx + '][quantidade]" class="form-control text-right input-qtd input-quantity input-numeric" inputmode="numeric" data-decimals="' + decimaisQuantidade + '" value="' + formatQuantidade(1) + '">' +
                 '</div>' +
                 '<div class="form-group">' +
                     '<label class="form-label">Preço unit.</label>' +
@@ -317,7 +336,7 @@
             inputProdutoCodigoHidden.value = dados.produto_codigo;
         }
         if (dados.quantidade) {
-            row.querySelector('.input-qtd').value = formatInput(parseFloat(dados.quantidade));
+            row.querySelector('.input-qtd').value = formatQuantidade(parseFloat(dados.quantidade));
         }
         if (dados.preco_unitario) {
             row.querySelector('.input-preco').value = formatInput(parseFloat(dados.preco_unitario));

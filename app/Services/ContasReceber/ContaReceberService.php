@@ -12,6 +12,7 @@ use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use App\Traits\ConversorMoeda;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ContaReceberService
@@ -31,6 +32,69 @@ class ContaReceberService
             'contas' => $contas,
             'filtros' => $request->only(['busca', 'situacao', 'data_vencimento']),
         ]);
+    }
+
+    public function cobrancas()
+    {
+        $contas = ContaReceber::with(['cliente:id,nome', 'cobrancaMaisRecente'])
+            ->where('empresa_id', auth()->user()->empresa_id)
+            ->whereIn('situacao', ['aberta', 'parcial'])
+            ->where(function ($query) {
+                $query->where(function ($vencidas) {
+                    $vencidas->whereDate('data_vencimento', '<=', today())
+                        ->whereNull('proxima_cobranca_em');
+                })->orWhereDate('proxima_cobranca_em', '<=', today());
+            })
+            ->orderByRaw('proxima_cobranca_em IS NULL DESC')
+            ->orderBy('proxima_cobranca_em')
+            ->orderBy('data_vencimento')
+            ->paginate(20);
+
+        return view('conta-receber.cobrancas', compact('contas'));
+    }
+
+    public function registrarCobranca(Request $request, ContaReceber $contaReceber)
+    {
+        $this->garantirEmpresa($contaReceber);
+
+        if (! in_array($contaReceber->situacao, ['aberta', 'parcial'], true)) {
+            return back()->with('error', 'Só é possível registrar contatos em contas abertas ou parciais.');
+        }
+
+        $dados = $request->validate([
+            'canal' => 'required|in:telefone,whatsapp,email,presencial,outro',
+            'resultado' => 'required|string|max:2000',
+            'contatado_em' => 'required|date|before_or_equal:today',
+            'proxima_cobranca_em' => 'nullable|date|after_or_equal:contatado_em',
+        ], [
+            'contatado_em.before_or_equal' => 'A data do contato não pode ser futura.',
+            'proxima_cobranca_em.after_or_equal' => 'O próximo contato não pode anteceder o contato registrado.',
+        ]);
+
+        DB::transaction(function () use ($contaReceber, $dados) {
+            $conta = ContaReceber::where('empresa_id', auth()->user()->empresa_id)
+                ->lockForUpdate()
+                ->findOrFail($contaReceber->id);
+
+            if (! in_array($conta->situacao, ['aberta', 'parcial'], true)) {
+                throw ValidationException::withMessages([
+                    'conta' => 'Só é possível registrar contatos em contas abertas ou parciais.',
+                ]);
+            }
+
+            $dados['empresa_id'] = $conta->empresa_id;
+            $dados['user_id'] = auth()->id();
+            $conta->cobrancas()->create($dados);
+            $conta->update(['proxima_cobranca_em' => $dados['proxima_cobranca_em'] ?? null]);
+        });
+
+        Auditoria::registrar('conta_receber.cobranca_registrada', 'conta_receber', $contaReceber->id, [
+            'canal' => $dados['canal'],
+            'proxima_cobranca_em' => $dados['proxima_cobranca_em'] ?? null,
+        ]);
+
+        return redirect()->route('conta-receber.show', $contaReceber)
+            ->with('success', 'Contato de cobrança registrado com sucesso.');
     }
 
     public function create()
@@ -71,7 +135,7 @@ class ContaReceberService
     public function show(ContaReceber $contaReceber)
     {
         $this->garantirEmpresa($contaReceber);
-        $contaReceber->load(['cliente', 'venda', 'categoria', 'baixas']);
+        $contaReceber->load(['cliente', 'venda', 'categoria', 'baixas', 'cobrancas.usuario']);
 
         return view('conta-receber.show', ['conta' => $contaReceber]);
     }
