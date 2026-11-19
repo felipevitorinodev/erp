@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#163A5F">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ asset('js/tema.js') }}?v={{ filemtime(public_path('js/tema.js')) }}"></script>
     <title>@yield('title', 'Visys') — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
 
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="{{ asset('css/ilustracoes.css') }}?v={{ filemtime(public_path('css/ilustracoes.css')) }}">
 
     @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/tema.css') }}?v={{ filemtime(public_path('css/tema.css')) }}">
 </head>
 
 <body>
@@ -62,6 +64,18 @@
                     </span>
                 </div>
             </div>
+            <button type="button" class="header__logout header__theme-toggle" data-theme-toggle
+                aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false">
+                <svg class="header__theme-icon header__theme-icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"></path>
+                </svg>
+                <svg class="header__theme-icon header__theme-icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+                </svg>
+            </button>
             <form method="POST" action="{{ route('logout') }}" class="header__logout-form">
                 @csrf
                 <button type="submit" class="header__logout" title="Sair do sistema" aria-label="Sair">

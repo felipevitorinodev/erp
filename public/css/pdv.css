@@ -171,7 +171,7 @@ body.pdv-page .page-title {
 
 .pdv-qtd-busca:focus-within,
 .pdv-qtd-busca.is-ativa {
-    background: #fff;
+    background: var(--pdv-surface);
     border-color: var(--pdv-blue);
     box-shadow: 0 0 0 4px rgba(31, 79, 122, .16);
 }
@@ -239,7 +239,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-input-busca:focus {
-    background: #fff;
+    background: var(--pdv-surface);
     border-color: var(--pdv-blue);
     box-shadow: 0 0 0 4px rgba(31, 79, 122, .16);
 }
@@ -271,7 +271,7 @@ body.pdv-page .page-title {
     gap: 10px;
     border: 1px solid var(--pdv-line);
     border-radius: 12px;
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-navy);
     font: inherit;
     font-size: 14px;
@@ -294,7 +294,7 @@ body.pdv-page .page-title {
     padding: 0;
     border: 1px solid var(--pdv-line);
     border-radius: 50%;
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-muted);
     cursor: help;
 }
@@ -364,7 +364,7 @@ body.pdv-page .page-title {
     border: 1px solid #D3DCE7;
     border-bottom-width: 2px;
     border-radius: 999px;
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     white-space: nowrap;
 }
@@ -392,7 +392,7 @@ body.pdv-page .page-title {
     max-height: min(420px, calc(100dvh - 240px));
     overflow: auto;
     padding: 6px;
-    background: #fff;
+    background: var(--pdv-surface);
     border: 1px solid var(--pdv-line);
     border-radius: 14px;
     box-shadow: var(--pdv-shadow-2);
@@ -628,7 +628,7 @@ body.pdv-page .page-title {
     height: 32px;
     border-radius: 50%;
     border: 1px solid var(--pdv-line);
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     font-size: 17px;
     line-height: 1;
@@ -658,7 +658,7 @@ body.pdv-page .page-title {
     padding: 0 6px;
     border: 1px solid var(--pdv-blue);
     border-radius: 8px;
-    background: #fff;
+    background: var(--pdv-surface);
     text-align: center;
     font-weight: 700;
 }
@@ -774,7 +774,7 @@ body.pdv-page .page-title {
     margin-top: 12px;
     padding: 14px 16px;
     border-radius: 12px;
-    background: #fff;
+    background: var(--pdv-surface);
     border: 1px solid #E5E7EB;
 }
 
@@ -821,7 +821,7 @@ body.pdv-page .page-title {
     padding: 0 14px;
     border: 1px solid var(--pdv-line);
     border-radius: 10px;
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     font: inherit;
     font-size: 14px;
@@ -857,7 +857,7 @@ body.pdv-page .page-title {
     padding: 8px 14px;
     border: 1px solid var(--pdv-line);
     border-radius: 10px;
-    background: #fff;
+    background: var(--pdv-surface);
     cursor: pointer;
     text-align: left;
 }
@@ -990,7 +990,7 @@ body.pdv-dialogo-aberto .layout {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #fff;
+    background: var(--pdv-surface);
     border-radius: 20px;
     box-shadow: 0 30px 60px -20px rgba(10, 24, 40, .5);
 }
@@ -1035,7 +1035,7 @@ body.pdv-dialogo-aberto .layout {
     padding: 0 12px;
     border: 1px solid var(--pdv-line);
     border-radius: 10px;
-    background: #fff;
+    background: var(--pdv-surface);
     font: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -1110,7 +1110,7 @@ body.pdv-dialogo-aberto .layout {
     padding: 10px 12px 10px 50px;
     border: 1px solid var(--pdv-line);
     border-radius: 12px;
-    background: #fff;
+    background: var(--pdv-surface);
     text-align: left;
     cursor: pointer;
 }
@@ -1169,7 +1169,7 @@ body.pdv-dialogo-aberto .layout {
 .pdv-forma-btn--prazo.pdv-forma-btn--ativa .pdv-forma-btn__tecla {
     color: var(--pdv-orange-ink);
     border-color: rgba(194, 65, 12, .35);
-    background: #fff;
+    background: var(--pdv-surface);
 }
 
 .pdv-pag__valores {
@@ -1319,7 +1319,7 @@ body.pdv-dialogo-aberto .layout {
 .pdv-input-busca--dialogo {
     height: 46px;
     font-size: 14px;
-    background: #fff;
+    background: var(--pdv-surface);
     border: 1px solid var(--pdv-line);
 }
 
@@ -1403,7 +1403,7 @@ body.pdv-dialogo-aberto .layout {
     text-align: right;
     border: 1px solid var(--pdv-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--pdv-surface);
     font: inherit;
     font-variant-numeric: tabular-nums;
 }
@@ -1427,7 +1427,7 @@ body.pdv-dialogo-aberto .layout {
     text-align: center;
     border: 1px solid var(--pdv-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--pdv-surface);
     font: inherit;
     font-weight: 700;
 }
@@ -1442,7 +1442,7 @@ body.pdv-dialogo-aberto .layout {
     padding: 0 14px;
     border-radius: 9px;
     border: 1px solid var(--pdv-line);
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     font: inherit;
     font-size: 13px;
@@ -1507,7 +1507,7 @@ body.pdv-dialogo-aberto .layout {
     width: min(460px, 100%);
     padding: 36px 32px 28px;
     text-align: center;
-    background: #fff;
+    background: var(--pdv-surface);
     border: 1px solid var(--pdv-line);
     border-radius: 22px;
     box-shadow: var(--pdv-shadow-2);
@@ -1634,7 +1634,7 @@ body.pdv-dialogo-aberto .layout {
     height: 56px;
     border: 1px solid var(--pdv-line);
     border-radius: 12px;
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     font-size: 14px;
     font-weight: 600;
@@ -1678,7 +1678,7 @@ body.pdv-dialogo-aberto .layout {
     width: min(100%, 360px);
     padding: 28px 24px;
     text-align: center;
-    background: #fff;
+    background: var(--pdv-surface);
     border: 1px solid var(--pdv-line);
     border-radius: 18px;
     box-shadow: var(--pdv-shadow-1);
@@ -1739,7 +1739,7 @@ body.pdv-dialogo-aberto .layout {
 }
 
 .pdv-tela-pequena__btn--sec {
-    background: #fff;
+    background: var(--pdv-surface);
     color: var(--pdv-ink);
     border: 1px solid var(--pdv-line);
 }
