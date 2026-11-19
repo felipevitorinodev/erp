@@ -13,6 +13,7 @@ use App\Models\Produtos\Produto;
 use App\Models\Usuarios\Perfil;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
+use App\Models\Vendas\VendaItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -160,8 +161,20 @@ class AssistenteTest extends TestCase
             ->assertJsonPath('texto', 'Cliente: Maria Souza')
             ->assertJsonPath('link.url', route('cliente.index', ['busca' => 'Maria Souza']));
 
-        $this->diz('editar cliente Maria Souza')
-            ->assertJsonPath('link.url', route('cliente.edit', $cliente));
+        $edicao = $this->diz('editar cliente Maria Souza')
+            ->assertJsonPath('tipo', 'pergunta');
+        $this->assertContains('Email', $this->rotulos($edicao));
+        $this->diz('email')->assertJsonPath('tipo', 'pergunta');
+
+        $this->diz('email-invalido')
+            ->assertJsonPath('tipo', 'pergunta');
+        $previaEdicao = $this->diz('maria@example.com')
+            ->assertJsonPath('tipo', 'confirmacao');
+        $this->assertDatabaseHas('clientes', ['id' => $cliente->id, 'email' => null]);
+
+        $this->confirmar($previaEdicao->json('token'))
+            ->assertJsonPath('tipo', 'sucesso');
+        $this->assertDatabaseHas('clientes', ['id' => $cliente->id, 'email' => 'maria@example.com']);
 
         $previa = $this->diz('excluir cliente Maria Souza')
             ->assertJsonPath('tipo', 'confirmacao')
@@ -183,6 +196,74 @@ class AssistenteTest extends TestCase
             ->assertJsonPath('tipo', 'erro')
             ->assertJsonPath('texto', 'Seu perfil não tem acesso a esse módulo.');
         $this->assertDatabaseHas('clientes', ['nome' => 'Maria Souza', 'deleted_at' => null]);
+    }
+
+    public function test_edita_preco_de_produto_com_confirmacao(): void
+    {
+        $produto = $this->produto('Coca lata', 6.5);
+
+        $this->diz('editar produto Coca lata')->assertJsonPath('tipo', 'pergunta');
+        $this->diz('preço de venda')->assertJsonPath('tipo', 'pergunta');
+        $previa = $this->diz('7,50')->assertJsonPath('tipo', 'confirmacao');
+
+        $this->confirmar($previa->json('token'))->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame(7.5, (float) $produto->fresh()->preco_venda);
+    }
+
+    public function test_edita_venda_sem_perder_seus_itens(): void
+    {
+        $produto = $this->produto('Coca lata', 6.5);
+        $venda = Venda::create([
+            'empresa_id' => $this->empresa->id,
+            'usuario_id' => $this->admin->id,
+            'numero' => '000009',
+            'data_venda' => '2026-11-06',
+            'subtotal' => 13,
+            'total' => 13,
+            'situacao' => 'em_andamento',
+        ]);
+        VendaItem::create([
+            'venda_id' => $venda->id,
+            'produto_id' => $produto->id,
+            'produto_nome' => $produto->nome,
+            'produto_codigo' => $produto->codigo,
+            'quantidade' => 2,
+            'preco_unitario' => 6.5,
+            'desconto' => 0,
+            'total' => 13,
+        ]);
+
+        $this->diz('editar venda #'.$venda->id)->assertJsonPath('tipo', 'pergunta');
+        $this->diz('data da venda')->assertJsonPath('tipo', 'pergunta');
+        $previa = $this->diz('07/11/2026')->assertJsonPath('tipo', 'confirmacao');
+
+        $this->confirmar($previa->json('token'))->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame('2026-11-07', $venda->fresh()->data_venda->toDateString());
+        $this->assertDatabaseHas('venda_itens', [
+            'venda_id' => $venda->id,
+            'produto_id' => $produto->id,
+            'quantidade' => 2,
+            'preco_unitario' => 6.5,
+        ]);
+    }
+
+    public function test_edita_conta_a_pagar_com_confirmacao(): void
+    {
+        $conta = ContaPagar::create([
+            'empresa_id' => $this->empresa->id,
+            'descricao' => 'Energia',
+            'valor' => 80,
+            'valor_pago' => 0,
+            'data_vencimento' => '2026-11-08',
+            'situacao' => 'aberta',
+        ]);
+
+        $this->diz('editar conta a pagar Energia')->assertJsonPath('tipo', 'pergunta');
+        $this->diz('valor')->assertJsonPath('tipo', 'pergunta');
+        $previa = $this->diz('90,00')->assertJsonPath('tipo', 'confirmacao');
+
+        $this->confirmar($previa->json('token'))->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame(90.0, (float) $conta->fresh()->valor);
     }
 
     public function test_responder_sim_salva_e_nao_descarta(): void
