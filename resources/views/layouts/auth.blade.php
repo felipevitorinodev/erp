@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+    <script src="{{ asset('js/tema.js') }}?v={{ filemtime(public_path('js/tema.js')) }}"></script>
     <title>@yield('title', 'Acesso') — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/ilustracoes.css') }}?v={{ filemtime(public_path('css/ilustracoes.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/tema.css') }}?v={{ filemtime(public_path('css/tema.css')) }}">
 </head>
 
 <body class="auth-body">
