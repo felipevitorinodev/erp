@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('produto_nome', 200);
             $table->string('produto_codigo', 50)->nullable();
             $table->decimal('quantidade', 10, 3);
-            $table->decimal('preco_unitario', 12, 4);
+            $table->decimal('preco_unitario', 12, 2);
             $table->decimal('desconto', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
 
