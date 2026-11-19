@@ -31,7 +31,7 @@ class ComandoController extends Controller
         ]);
 
         $resposta = ($dados['acao'] ?? 'confirmar') === 'cancelar'
-            ? $this->assistente->cancelar($dados['token'])
+            ? $this->assistente->cancelar($dados['token'], $request->user())
             : $this->assistente->confirmar($dados['token'], $request->user());
 
         return response()->json($resposta->paraJson());

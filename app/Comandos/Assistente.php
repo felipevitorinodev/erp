@@ -65,6 +65,12 @@ final class Assistente
         if (preg_match(self::NAO, $curto)) {
             if ($temPrevia || $pergunta !== null) {
                 $this->conversa->esquecer();
+                $retomada = $this->retomarTarefa($usuario);
+                if ($retomada !== null) {
+                    return $retomada
+                        ->comTextoAntes('Tudo bem, interrompi só a tarefa auxiliar. ')
+                        ->encerrandoPrevia($temPrevia ? 'cancelada' : 'encerrada');
+                }
 
                 return $temPrevia
                     ? Resposta::info('Tudo bem, não salvei nada.')->encerrandoPrevia('cancelada')
@@ -78,12 +84,18 @@ final class Assistente
             return $this->ajuda($usuario);
         }
 
+        if ($temPrevia && $this->interpretador->reconhecer($texto) !== null) {
+            return Resposta::info('Confirme ou cancele a prévia atual antes de iniciar outra tarefa.');
+        }
+
         if ($pergunta !== null) {
             $novoPedido = $this->interpretador->reconhecer($texto, tolerante: false);
             if ($novoPedido === null) {
                 return $this->responderPergunta($pergunta, $texto, $usuario);
             }
-            $this->conversa->esquecer();
+            if (! $this->conversa->pausar()) {
+                return Resposta::erro('Não consegui pausar esta etapa. Responda à pergunta atual antes de iniciar outra tarefa.');
+            }
 
             return $this->atender($novoPedido['comando'], $novoPedido['argumento'], $usuario);
         }
@@ -123,12 +135,34 @@ final class Assistente
             Auditoria::registrar('comando.executado', $registro['entidade'], $registro['id'], ['comando' => $comando->chave()]);
         }
 
-        return $resposta->encerrandoPrevia($resposta->tipo === 'sucesso' ? 'confirmada' : 'encerrada');
+        $resposta = $resposta->encerrandoPrevia($resposta->tipo === 'sucesso' ? 'confirmada' : 'encerrada');
+        if ($this->conversa->temPausada()) {
+            $retomada = $this->retomarTarefa(
+                $usuario,
+                $resposta->tipo === 'sucesso' && $comando->chave() === 'cliente'
+                    ? $pendente['dados']['nome'] ?? null
+                    : null,
+            );
+
+            if ($retomada !== null) {
+                return $retomada
+                    ->comTextoAntes($resposta->texto.' ')
+                    ->encerrandoPrevia($resposta->tipo === 'sucesso' ? 'confirmada' : 'encerrada');
+            }
+        }
+
+        return $resposta;
     }
 
-    public function cancelar(string $token): Resposta
+    public function cancelar(string $token, User $usuario): Resposta
     {
         $this->conversa->retirarPrevia($token);
+        $retomada = $this->retomarTarefa($usuario);
+        if ($retomada !== null) {
+            return $retomada
+                ->comTextoAntes('Tudo bem, interrompi só a tarefa auxiliar. ')
+                ->encerrandoPrevia('cancelada');
+        }
 
         return Resposta::info('Tudo bem, não salvei nada.')->encerrandoPrevia('cancelada');
     }
@@ -144,10 +178,18 @@ final class Assistente
     private function atender(Comando $comando, string $argumento, User $usuario): Resposta
     {
         if (! $usuario->pode($comando->permissao())) {
-            return Resposta::erro('Seu perfil não pode usar “'.$comando->titulo().'”. Se precisar, peça a liberação ao administrador.');
+            $resposta = Resposta::erro('Seu perfil não pode usar “'.$comando->titulo().'”. Se precisar, peça a liberação ao administrador.');
+        } else {
+            $resposta = $this->lembrar($comando, $argumento, $comando->preparar($argumento));
         }
 
-        return $this->lembrar($comando, $argumento, $comando->preparar($argumento));
+        if ($this->conversa->temPausada() && ! $resposta->precisaConfirmar() && $resposta->perguntaPendente() === null) {
+            $retomada = $this->retomarTarefa($usuario);
+
+            return $retomada !== null ? $retomada->comTextoAntes($resposta->texto.' ') : $resposta;
+        }
+
+        return $resposta;
     }
 
     /** A resposta completa a frase guardada; a rotina lê tudo de novo. */
@@ -185,6 +227,29 @@ final class Assistente
         }
 
         return $resposta;
+    }
+
+    /**
+     * Reabre a pergunta pausada; se um cliente foi cadastrado, completa o nome citado na tarefa principal.
+     */
+    private function retomarTarefa(User $usuario, ?string $clienteCadastrado = null): ?Resposta
+    {
+        $estado = $this->conversa->retomar();
+        if ($estado === null) {
+            return null;
+        }
+
+        $comando = $this->registro->buscar((string) ($estado['comando'] ?? ''));
+        if ($comando === null || ! $usuario->pode($comando->permissao())) {
+            return Resposta::erro('A tarefa anterior não pode ser retomada com as permissões atuais.');
+        }
+
+        $argumento = (string) ($estado['argumento'] ?? '');
+        if ($clienteCadastrado !== null && ($estado['campo'] ?? null) === 'cliente') {
+            $argumento = $comando->completar($argumento, 'cliente', $clienteCadastrado, $estado['termo'] ?? null);
+        }
+
+        return $this->lembrar($comando, $argumento, $comando->preparar($argumento));
     }
 
     private function saudar(string $saudacao, User $usuario): Resposta

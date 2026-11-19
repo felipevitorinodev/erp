@@ -151,6 +151,40 @@ class AssistenteTest extends TestCase
         $this->assertSame(1, Cliente::where('nome', 'Maria Souza')->count());
     }
 
+    public function test_consulta_edita_e_exclui_cliente_pelo_assistente(): void
+    {
+        $cliente = $this->cliente('Maria Souza');
+
+        $this->diz('consultar cliente Maria Souza')
+            ->assertJsonPath('tipo', 'info')
+            ->assertJsonPath('texto', 'Cliente: Maria Souza')
+            ->assertJsonPath('link.url', route('cliente.index', ['busca' => 'Maria Souza']));
+
+        $this->diz('editar cliente Maria Souza')
+            ->assertJsonPath('link.url', route('cliente.edit', $cliente));
+
+        $previa = $this->diz('excluir cliente Maria Souza')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Excluir cliente “Maria Souza”? Essa ação não poderá ser desfeita.');
+        $this->assertDatabaseHas('clientes', ['id' => $cliente->id, 'deleted_at' => null]);
+
+        $this->confirmar($previa->json('token'))
+            ->assertJsonPath('tipo', 'sucesso')
+            ->assertJsonPath('texto', 'Cliente excluído.');
+        $this->assertSoftDeleted('clientes', ['id' => $cliente->id]);
+    }
+
+    public function test_gerenciar_registro_respeita_permissao_do_modulo(): void
+    {
+        $this->cliente('Maria Souza');
+        $usuario = $this->usuarioCom(['comandos']);
+
+        $this->diz('excluir cliente Maria Souza', $usuario)
+            ->assertJsonPath('tipo', 'erro')
+            ->assertJsonPath('texto', 'Seu perfil não tem acesso a esse módulo.');
+        $this->assertDatabaseHas('clientes', ['nome' => 'Maria Souza', 'deleted_at' => null]);
+    }
+
     public function test_responder_sim_salva_e_nao_descarta(): void
     {
         $this->diz('sim')->assertJsonPath('texto', 'Certo! É só me dizer o que precisa.');
@@ -348,6 +382,11 @@ class AssistenteTest extends TestCase
         $this->assertSame('confirmada', $venda->situacao);
         $this->assertEquals(13.0, (float) $venda->total);
         $this->assertEquals(8.0, (float) $coca->fresh()->estoque_atual);
+
+        $this->diz('excluir venda #'.$venda->id)
+            ->assertJsonPath('tipo', 'info')
+            ->assertJsonPath('texto', 'Venda confirmada não pode ser excluída. Cancele-a pela tela da venda.');
+        $this->assertDatabaseHas('vendas', ['id' => $venda->id, 'deleted_at' => null]);
     }
 
     public function test_venda_do_jeito_que_se_fala_e_cliente_com_nome_errado(): void
@@ -374,6 +413,34 @@ class AssistenteTest extends TestCase
         $this->diz('a Mria comprou 2 coca lata no pix');
         $this->diz('sem cliente')->assertJsonPath('texto', 'Qual a data da venda?');
         $this->diz('hoje')->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix?');
+    }
+
+    public function test_cadastra_cliente_em_subfluxo_e_retoma_venda(): void
+    {
+        $this->produto('Coca lata', 6.5);
+        $this->forma('Pix');
+
+        $this->diz('a Maria comprou 2 coca lata no pix')
+            ->assertJsonPath('tipo', 'pergunta')
+            ->assertJsonPath('texto', 'Não encontrei o cliente “Maria”. Qual é o nome certo?');
+
+        $this->diz('cadastrar cliente Maria Souza')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Cadastrar o cliente Maria Souza?');
+
+        $this->diz('sim')
+            ->assertJsonPath('tipo', 'pergunta')
+            ->assertJsonPath('previa', 'confirmada')
+            ->assertJsonPath('texto', 'Pronto! Cliente cadastrado: Maria Souza. Qual a data da venda?');
+
+        $this->diz('hoje')
+            ->assertJsonPath('tipo', 'confirmacao')
+            ->assertJsonPath('texto', 'Registrar venda de R$ 13,00 no Pix para Maria Souza?');
+
+        $this->diz('sim')->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame(1, Cliente::where('nome', 'Maria Souza')->count());
+        $this->assertSame(1, Venda::count());
+        $this->assertSame(Cliente::where('nome', 'Maria Souza')->value('id'), Venda::sole()->cliente_id);
     }
 
     public function test_venda_a_prazo_e_produto_ambiguo(): void
@@ -442,10 +509,12 @@ class AssistenteTest extends TestCase
         $this->assertContains('Nova venda', $this->rotulos($this->diz('o que você faz?')));
     }
 
-    public function test_pedido_novo_no_meio_de_uma_pergunta_troca_de_assunto(): void
+    public function test_tarefa_auxiliar_preserva_a_pergunta_anterior(): void
     {
         $this->diz('cadastre cliente')->assertJsonPath('texto', 'Qual o nome do cliente?');
         $this->diz('conta a pagar')->assertJsonPath('texto', 'Qual o valor?');
+        $this->diz('não')
+            ->assertJsonPath('texto', 'Tudo bem, interrompi só a tarefa auxiliar. Qual o nome do cliente?');
         $this->diz('não')->assertJsonPath('texto', 'Tudo bem, deixei de lado.');
     }
 

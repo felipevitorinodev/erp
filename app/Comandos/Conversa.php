@@ -7,13 +7,17 @@ use Illuminate\Support\Str;
 
 /**
  * O que o assistente espera do usuário: uma confirmação (prévia) ou a resposta a uma pergunta.
- * Fica na sessão, um de cada vez, e vale por pouco tempo. Da prévia, o navegador só recebe o token.
+ * Fica na sessão e vale por pouco tempo. Da prévia, o navegador só recebe o token.
  */
 final class Conversa
 {
     private const CHAVE = 'assistente.conversa';
 
+    private const PILHA = 'assistente.conversa.pausadas';
+
     private const VALIDADE_SEGUNDOS = 600;
+
+    private const MAX_FLUXOS_PAUSADOS = 5;
 
     public function __construct(private readonly Session $sessao) {}
 
@@ -75,9 +79,71 @@ final class Conversa
         $this->sessao->forget(self::CHAVE);
     }
 
+    /** Pausa uma pergunta ativa para permitir uma tarefa auxiliar. */
+    public function pausar(): bool
+    {
+        $estado = $this->atual();
+        if (($estado['tipo'] ?? null) !== 'pergunta') {
+            return false;
+        }
+
+        $pilha = $this->pausadas();
+        if (count($pilha) >= self::MAX_FLUXOS_PAUSADOS) {
+            return false;
+        }
+
+        $pilha[] = $estado;
+        $this->sessao->put(self::PILHA, $pilha);
+        $this->esquecer();
+
+        return true;
+    }
+
+    public function temPausada(): bool
+    {
+        return $this->pausadas() !== [];
+    }
+
+    /** Restaura a tarefa mais recente que ainda não expirou. */
+    public function retomar(): ?array
+    {
+        $pilha = $this->pausadas();
+        $estado = array_pop($pilha);
+        $this->sessao->put(self::PILHA, $pilha);
+
+        if ($estado === null) {
+            return null;
+        }
+
+        $this->sessao->put(self::CHAVE, $estado);
+
+        return $estado;
+    }
+
     private function guardar(array $estado): void
     {
         $this->sessao->put(self::CHAVE, $estado + ['expira' => now()->timestamp + self::VALIDADE_SEGUNDOS]);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function pausadas(): array
+    {
+        $estados = $this->sessao->get(self::PILHA, []);
+        if (! is_array($estados)) {
+            return [];
+        }
+
+        $agora = now()->timestamp;
+        $validas = array_values(array_filter(
+            $estados,
+            fn ($estado) => is_array($estado) && ($estado['expira'] ?? 0) > $agora,
+        ));
+
+        if (count($validas) !== count($estados)) {
+            $this->sessao->put(self::PILHA, $validas);
+        }
+
+        return $validas;
     }
 
     private function atual(): ?array
