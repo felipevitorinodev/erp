@@ -10,6 +10,7 @@ use App\Comandos\Rotinas\CadastrarServico;
 use App\Comandos\Rotinas\ConsultarContas;
 use App\Comandos\Rotinas\ConsultarProduto;
 use App\Comandos\Rotinas\ConsultarVendas;
+use App\Comandos\Rotinas\GerenciarRegistro;
 use App\Comandos\Rotinas\LancarContaPagar;
 use App\Comandos\Rotinas\LancarContaReceber;
 use App\Comandos\Rotinas\RegistrarOrcamento;
@@ -39,6 +40,7 @@ final class RegistroComandos
         LancarContaReceber::class,
         LancarContaPagar::class,
         ConsultarProduto::class,
+        GerenciarRegistro::class,
     ];
 
     /** Ordem em que as tarefas aparecem para o usuário: as mais usadas no dia a dia primeiro. */

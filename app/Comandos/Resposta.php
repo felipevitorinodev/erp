@@ -123,10 +123,14 @@ final class Resposta
     /** Mesma resposta com algo antes da frase ("Não entendi. Qual o valor?"). */
     public function comTextoAntes(string $prefixo): self
     {
-        return new self(
+        $resposta = new self(
             $this->tipo, $prefixo.$this->texto, $this->detalhes, $this->itens, $this->avisos, $this->opcoes,
             $this->link, $this->comando, $this->dados, $this->registro, $this->pergunta,
         );
+        $resposta->token = $this->token;
+        $resposta->previaEncerrada = $this->previaEncerrada;
+
+        return $resposta;
     }
 
     /** Formato enviado ao navegador (sem os dados internos). */
