@@ -42,9 +42,9 @@ return new class extends Migration
             $table->text('descricao')->nullable();
             $table->tinyInteger('tipo')->default(1)->comment('1=Produto, 2=Servico');
 
-            $table->decimal('preco_custo', 12, 4)->default(0);
-            $table->decimal('preco_venda', 12, 4)->default(0);
-            $table->decimal('preco_minimo', 12, 4)->default(0)->comment('Preço mínimo para venda');
+            $table->decimal('preco_custo', 12, 2)->default(0);
+            $table->decimal('preco_venda', 12, 2)->default(0);
+            $table->decimal('preco_minimo', 12, 2)->default(0)->comment('Preço mínimo para venda');
             $table->decimal('margem_lucro', 6, 2)->nullable();
 
             $table->decimal('estoque_minimo', 12, 3)->default(0);

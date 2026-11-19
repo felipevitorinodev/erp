@@ -71,7 +71,7 @@ return new class extends Migration
             $table->string('produto_codigo', 50)->nullable();
 
             $table->decimal('quantidade', 12, 3)->default(1);
-            $table->decimal('preco_unitario', 12, 4)->default(0);
+            $table->decimal('preco_unitario', 12, 2)->default(0);
             $table->decimal('desconto', 12, 2)->default(0);
             $table->decimal('total', 12, 2)->default(0);
 
