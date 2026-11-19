@@ -21,6 +21,13 @@
             'cancelada'  => ['error', 'Cancelada'],
             'rascunho'   => ['warning', 'Rascunho'],
         ],
+        'pedido-compra' => [
+            'rascunho' => ['warning', 'Rascunho'],
+            'aprovado' => ['info', 'Aprovado'],
+            'parcial' => ['warning', 'Recebido parcialmente'],
+            'recebido' => ['success', 'Recebido'],
+            'cancelado' => ['error', 'Cancelado'],
+        ],
         'orcamento' => [
             'aprovado'  => ['success', 'Aprovado'],
             'recusado'  => ['error', 'Recusado'],

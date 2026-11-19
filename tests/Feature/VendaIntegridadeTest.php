@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\ContasReceber\ContaReceber;
 use App\Models\Empresas\Empresa;
+use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Nfes\Nfe;
 use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
@@ -43,7 +45,7 @@ class VendaIntegridadeTest extends TestCase
         $this->actingAs($this->usuario);
     }
 
-    private function vendaConfirmada(): Venda
+    private function vendaConfirmada(?FormaPagamento $formaPagamento = null): Venda
     {
         $venda = Venda::create([
             'empresa_id' => $this->empresa->id,
@@ -51,7 +53,9 @@ class VendaIntegridadeTest extends TestCase
             'data_venda' => now()->toDateString(),
             'subtotal' => 20,
             'total' => 20,
-            'situacao' => 'confirmada',
+            'forma_pagamento' => $formaPagamento?->nome,
+            'forma_pagamento_id' => $formaPagamento?->id,
+            'situacao' => 'em_andamento',
         ]);
         VendaItem::create([
             'venda_id' => $venda->id,
@@ -62,7 +66,7 @@ class VendaIntegridadeTest extends TestCase
             'total' => 20,
         ]);
 
-        return $venda;
+        return app(VendaRepository::class)->confirmar($venda);
     }
 
     public function test_cancelar_duas_vezes_estorna_estoque_uma_vez(): void
@@ -77,7 +81,7 @@ class VendaIntegridadeTest extends TestCase
         } catch (\Exception) {
         }
 
-        $this->assertEquals(10.0, (float) $this->produto->fresh()->estoque_atual);
+        $this->assertEquals(8.0, (float) $this->produto->fresh()->estoque_atual);
         $this->assertSame('cancelada', $venda->fresh()->situacao);
     }
 
@@ -96,7 +100,33 @@ class VendaIntegridadeTest extends TestCase
         $this->post(route('venda.cancelar', $venda))->assertSessionHas('error');
 
         $this->assertSame('confirmada', $venda->fresh()->situacao);
+        $this->assertEquals(6.0, (float) $this->produto->fresh()->estoque_atual);
+    }
+
+    public function test_confirmacao_baixa_estoque_e_cancelamento_estorna_estoque_e_conta_a_receber(): void
+    {
+        $formaPagamento = FormaPagamento::create([
+            'empresa_id' => $this->empresa->id,
+            'nome' => 'Boleto',
+            'tipo' => 'prazo',
+            'gera_conta_receber' => true,
+            'dias_vencimento' => 30,
+            'ativo' => true,
+        ]);
+
+        $venda = $this->vendaConfirmada($formaPagamento);
+        $conta = ContaReceber::where('venda_id', $venda->id)->sole();
+
+        $this->assertSame('confirmada', $venda->situacao);
+        $this->assertEquals(6.0, (float) $this->produto->fresh()->estoque_atual);
+        $this->assertSame('aberta', $conta->situacao);
+        $this->assertEquals(20.0, (float) $conta->valor);
+
+        app(VendaRepository::class)->cancelar($venda);
+
+        $this->assertSame('cancelada', $venda->fresh()->situacao);
         $this->assertEquals(8.0, (float) $this->produto->fresh()->estoque_atual);
+        $this->assertSame('cancelada', $conta->fresh()->situacao);
     }
 
     public function test_numero_da_venda_nao_reutiliza_numero_de_venda_excluida(): void

@@ -19,6 +19,16 @@ class ContaReceberController extends Controller
         return $this->service->index($request);
     }
 
+    public function cobrancas()
+    {
+        return $this->service->cobrancas();
+    }
+
+    public function registrarCobranca(Request $request, ContaReceber $contaReceber)
+    {
+        return $this->service->registrarCobranca($request, $contaReceber);
+    }
+
     public function create()
     {
         return $this->service->create();

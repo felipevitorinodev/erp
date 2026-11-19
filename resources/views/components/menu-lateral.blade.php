@@ -27,13 +27,16 @@
             ['rotulo' => 'Grupos', 'rota' => 'grupo.index', 'ativo' => ['grupo.*'], 'ver' => $pode('produtos')],
         ]],
         ['rotulo' => 'Estoque', 'icone' => 'package', 'links' => [
+            ['rotulo' => 'Pedidos de compra', 'rota' => 'pedido-compra.index', 'ativo' => ['pedido-compra.*'], 'ver' => $pode('estoque')],
             ['rotulo' => 'Entradas', 'rota' => 'entrada-estoque.index', 'ativo' => ['entrada-estoque.*'], 'ver' => $pode('estoque')],
             ['rotulo' => 'Ajuste manual', 'rota' => 'estoque.ajuste.create', 'ativo' => ['estoque.ajuste.*'], 'ver' => $pode('estoque')],
             ['rotulo' => 'Posição atual', 'rota' => 'relatorio.estoque', 'ativo' => ['relatorio.estoque*'], 'ver' => $pode('estoque') && $podeRelatorios],
         ]],
         ['rotulo' => 'Financeiro', 'icone' => 'dollar', 'links' => [
             ['rotulo' => 'A receber', 'rota' => 'conta-receber.index', 'ativo' => ['conta-receber.*'], 'ver' => $pode('financeiro')],
+            ['rotulo' => 'Cobranças', 'rota' => 'cobranca.index', 'ativo' => ['cobranca.*'], 'ver' => $pode('financeiro')],
             ['rotulo' => 'A pagar', 'rota' => 'conta-pagar.index', 'ativo' => ['conta-pagar.*'], 'ver' => $pode('financeiro')],
+            ['rotulo' => 'Conciliação bancária', 'rota' => 'conciliacao-bancaria.index', 'ativo' => ['conciliacao-bancaria.*'], 'ver' => $pode('financeiro')],
             ['rotulo' => 'Fluxo de caixa', 'rota' => 'fluxo-de-caixa.index', 'ativo' => ['fluxo-de-caixa.*'], 'ver' => $pode('financeiro')],
             ['rotulo' => 'Categorias', 'rota' => 'categoria-financeira.index', 'ativo' => ['categoria-financeira.*'], 'ver' => $pode('financeiro')],
             ['rotulo' => 'Formas de pagamento', 'rota' => 'formaPagamento.index', 'ativo' => ['formaPagamento.*'], 'ver' => $pode('formas_pagamento')],

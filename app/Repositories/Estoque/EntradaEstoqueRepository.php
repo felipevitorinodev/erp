@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 class EntradaEstoqueRepository
 {
+    public function __construct(
+        protected PedidoCompraRepository $pedidoCompraRepository
+    ) {}
+
     public function index(Request $request)
     {
         $query = EntradaEstoque::with(['fornecedor:id,nome'])
@@ -85,6 +89,7 @@ class EntradaEstoqueRepository
             }
 
             $entrada->load(['itens.produto', 'fornecedor']);
+            $pedidoCompra = $this->pedidoCompraRepository->validarRecebimento($entrada);
 
             // Item sem produto vira cadastro novo. A trava na empresa vem antes de travar qualquer produto
             // (mesma ordem da venda) e serializa o código automático.
@@ -133,6 +138,10 @@ class EntradaEstoqueRepository
                 ]);
             }
 
+            if ($pedidoCompra) {
+                $this->pedidoCompraRepository->aplicarRecebimento($pedidoCompra, $entrada->itens, 1);
+            }
+
             $jaTemConta = ContaPagar::where('entrada_estoque_id', $entrada->id)
                 ->whereNotIn('situacao', ['cancelada'])
                 ->exists();
@@ -170,6 +179,9 @@ class EntradaEstoqueRepository
                 throw new \Exception('Somente entradas confirmadas podem ser canceladas.');
             }
 
+            $entrada->load('itens.produto');
+            $pedidoCompra = $this->pedidoCompraRepository->validarEstorno($entrada);
+
             $temPago = ContaPagar::where('entrada_estoque_id', $entrada->id)
                 ->lockForUpdate()
                 ->get()
@@ -178,8 +190,6 @@ class EntradaEstoqueRepository
             if ($temPago) {
                 throw new \Exception('Não é possível cancelar: a conta a pagar vinculada já foi paga ou parcialmente paga.');
             }
-
-            $entrada->load('itens.produto');
 
             foreach ($entrada->itens as $item) {
                 if (! $item->produto_id) {
@@ -228,6 +238,10 @@ class EntradaEstoqueRepository
             ContaPagar::where('entrada_estoque_id', $entrada->id)
                 ->where('situacao', 'aberta')
                 ->update(['situacao' => 'cancelada']);
+
+            if ($pedidoCompra) {
+                $this->pedidoCompraRepository->aplicarRecebimento($pedidoCompra, $entrada->itens, -1);
+            }
 
             $entrada->update(['situacao' => 'cancelada']);
 

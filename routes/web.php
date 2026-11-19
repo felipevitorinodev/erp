@@ -5,11 +5,13 @@ use App\Http\Controllers\CategoriasFinanceiras\CategoriaFinanceiraController;
 use App\Http\Controllers\Clientes\ClienteController;
 use App\Http\Controllers\Comandos\ComandoController;
 use App\Http\Controllers\Comissoes\ComissaoController;
+use App\Http\Controllers\ConciliacaoBancaria\ConciliacaoBancariaController;
 use App\Http\Controllers\ContasPagar\ContaPagarController;
 use App\Http\Controllers\ContasReceber\ContaReceberController;
 use App\Http\Controllers\Empresas\EmpresaController;
 use App\Http\Controllers\Estoque\AjusteEstoqueController;
 use App\Http\Controllers\Estoque\EntradaEstoqueController;
+use App\Http\Controllers\Estoque\PedidoCompraController;
 use App\Http\Controllers\FluxoCaixa\FluxoCaixaController;
 use App\Http\Controllers\FormasPagamento\FormaPagamentoController;
 use App\Http\Controllers\Fornecedores\FornecedorController;
@@ -238,6 +240,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('{entradaEstoque}/excluir', [EntradaEstoqueController::class, 'destroy'])->name('entrada-estoque.destroy');
     });
 
+    Route::prefix('pedido-compra')->middleware('permissao:estoque')->group(function () {
+        Route::get('/', [PedidoCompraController::class, 'index'])->name('pedido-compra.index');
+        Route::get('/novo', [PedidoCompraController::class, 'create'])->name('pedido-compra.create');
+        Route::post('/salvar', [PedidoCompraController::class, 'store'])->name('pedido-compra.store');
+        Route::get('{pedidoCompra}/ver', [PedidoCompraController::class, 'show'])->name('pedido-compra.show');
+        Route::get('{pedidoCompra}/editar', [PedidoCompraController::class, 'edit'])->name('pedido-compra.edit');
+        Route::put('{pedidoCompra}/editar/salvar', [PedidoCompraController::class, 'update'])->name('pedido-compra.update');
+        Route::post('{pedidoCompra}/aprovar', [PedidoCompraController::class, 'aprovar'])->name('pedido-compra.aprovar');
+        Route::post('{pedidoCompra}/cancelar', [PedidoCompraController::class, 'cancelar'])->name('pedido-compra.cancelar');
+        Route::delete('{pedidoCompra}/excluir', [PedidoCompraController::class, 'destroy'])->name('pedido-compra.destroy');
+    });
+
     Route::prefix('estoque')->middleware('permissao:estoque')->group(function () {
         Route::get('/ajuste', [AjusteEstoqueController::class, 'create'])->name('estoque.ajuste.create');
         Route::post('/ajuste', [AjusteEstoqueController::class, 'store'])->name('estoque.ajuste.store');
@@ -254,6 +268,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('conta-receber')->middleware('permissao:financeiro')->group(function () {
+        Route::get('/cobrancas', [ContaReceberController::class, 'cobrancas'])->name('cobranca.index');
+        Route::post('{contaReceber}/cobrancas', [ContaReceberController::class, 'registrarCobranca'])->name('cobranca.registrar');
         Route::get('/', [ContaReceberController::class, 'index'])->name('conta-receber.index');
         Route::get('/nova', [ContaReceberController::class, 'create'])->name('conta-receber.create');
         Route::post('/salvar', [ContaReceberController::class, 'store'])->name('conta-receber.store');
@@ -264,6 +280,15 @@ Route::middleware('auth')->group(function () {
         Route::post('{contaReceber}/receber', [ContaReceberController::class, 'receber'])->name('conta-receber.receber');
         Route::post('{contaReceber}/cancelar', [ContaReceberController::class, 'cancelar'])->name('conta-receber.cancelar');
         Route::delete('{contaReceber}/excluir', [ContaReceberController::class, 'destroy'])->name('conta-receber.destroy');
+    });
+
+    Route::prefix('conciliacao-bancaria')->middleware('permissao:financeiro')->group(function () {
+        Route::get('/', [ConciliacaoBancariaController::class, 'index'])->name('conciliacao-bancaria.index');
+        Route::post('/importar', [ConciliacaoBancariaController::class, 'importar'])->name('conciliacao-bancaria.importar');
+        Route::get('/contas', [ConciliacaoBancariaController::class, 'buscarContas'])->name('conciliacao-bancaria.contas');
+        Route::get('/{extratoBancario}', [ConciliacaoBancariaController::class, 'show'])->name('conciliacao-bancaria.show');
+        Route::post('/transacoes/{transacaoBancaria}/conciliar', [ConciliacaoBancariaController::class, 'conciliar'])->name('conciliacao-bancaria.conciliar');
+        Route::post('/transacoes/{transacaoBancaria}/ignorar', [ConciliacaoBancariaController::class, 'ignorar'])->name('conciliacao-bancaria.ignorar');
     });
 
     Route::prefix('conta-pagar')->middleware('permissao:financeiro')->group(function () {

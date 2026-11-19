@@ -14,6 +14,7 @@
         ['Nova NF-e', 'nfe.create', 'nfe', 'nota fiscal emitir'],
         ['Novo produto', 'produto.create', 'produtos', 'item mercadoria servico'],
         ['Nova entrada de estoque', 'entrada-estoque.create', 'estoque', 'compra xml nota fornecedor'],
+        ['Novo pedido de compra', 'pedido-compra.create', 'estoque', 'compra fornecedor cotacao pedido'],
         ['Ajustar estoque', 'estoque.ajuste.create', 'estoque', 'inventario acerto'],
         ['Nova conta a receber', 'conta-receber.create', 'financeiro', 'receita boleto cobranca'],
         ['Nova conta a pagar', 'conta-pagar.create', 'financeiro', 'despesa boleto pagamento'],

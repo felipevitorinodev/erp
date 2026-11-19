@@ -85,6 +85,11 @@
         <x-ficha-campo label="Número">#{{ $entrada->numero }}</x-ficha-campo>
         <x-ficha-campo label="Fornecedor">{{ $entrada->fornecedor->nome ?? '—' }}</x-ficha-campo>
         <x-ficha-campo label="Data">{{ $entrada->data_entrada->format('d/m/Y') }}</x-ficha-campo>
+        @if($entrada->pedidoCompra)
+            <x-ficha-campo label="Pedido de compra" largo>
+                <a href="{{ route('pedido-compra.show', $entrada->pedidoCompra) }}">{{ $entrada->pedidoCompra->numero }}</a>
+            </x-ficha-campo>
+        @endif
         @if($entrada->chave_acesso)
             <x-ficha-campo label="NF-e número/série">{{ $entrada->numero_nfe }} / {{ $entrada->serie_nfe }}</x-ficha-campo>
             <x-ficha-campo label="Data de emissão">{{ $entrada->data_emissao_nfe?->format('d/m/Y') ?? '—' }}</x-ficha-campo>

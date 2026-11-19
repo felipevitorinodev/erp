@@ -9,6 +9,13 @@
 
 @section('content')
 
+    @if($pedidoCompra ?? false)
+        <div class="alert alert--warning mb-2">
+            Recebimento do pedido <a href="{{ route('pedido-compra.show', $pedidoCompra) }}"><strong>{{ $pedidoCompra->numero }}</strong></a>.
+            Ajuste as quantidades recebidas; o pedido e o estoque serão atualizados ao confirmar a entrada.
+        </div>
+    @endif
+
     {{-- Card de importação XML ou alerta de dados importados --}}
     @if(empty($dadosXml))
         <div class="card mb-2">
@@ -18,6 +25,9 @@
             <div class="card__body">
                 <form method="POST" action="{{ route('entrada-estoque.importar-xml') }}" enctype="multipart/form-data" id="form-importar-xml-create">
                     @csrf
+                    @if($pedidoCompra ?? false)
+                        <input type="hidden" name="pedido_compra_id" value="{{ $pedidoCompra->id }}">
+                    @endif
                     <div class="upload-area-inline" id="upload-area-create">
                         <div class="upload-area-inline__left">
                             <div class="upload-area-inline__icon">
@@ -55,7 +65,7 @@
                         Revise os itens antes de salvar.
                     </span>
                 </div>
-                <a href="{{ route('entrada-estoque.limpar-xml') }}" class="btn btn--ghost btn--sm"
+                <a href="{{ route('entrada-estoque.limpar-xml', ['pedido_compra_id' => $pedidoCompra->id ?? null]) }}" class="btn btn--ghost btn--sm"
                     data-confirm="Isso limpará os dados importados do XML.">
                     Limpar
                 </a>
@@ -71,7 +81,12 @@
         <form method="POST" action="{{ route('entrada-estoque.store') }}">
             @csrf
             <div class="card__body">
-                @include('entrada-estoque._form', ['dadosXml' => $dadosXml ?? null, 'observacoesXml' => $observacoesXml ?? null])
+                @include('entrada-estoque._form', [
+                    'dadosXml' => $dadosXml ?? null,
+                    'observacoesXml' => $observacoesXml ?? null,
+                    'pedidoCompra' => $pedidoCompra ?? null,
+                    'itensCompra' => $itensCompra ?? collect(),
+                ])
             </div>
             <div class="card__footer">
                 <a href="{{ route('entrada-estoque.index') }}" class="btn btn--ghost">Cancelar</a>
