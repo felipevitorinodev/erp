@@ -13,7 +13,8 @@ final class Conversa
 {
     private const CHAVE = 'assistente.conversa';
 
-    private const PILHA = 'assistente.conversa.pausadas';
+    /** Fora de CHAVE: a sessão usa ponto como caminho, e esquecer() a conversa atual apagaria a pilha junto. */
+    private const PILHA = 'assistente.pausadas';
 
     private const VALIDADE_SEGUNDOS = 600;
 
@@ -104,18 +105,15 @@ final class Conversa
         return $this->pausadas() !== [];
     }
 
-    /** Restaura a tarefa mais recente que ainda não expirou. */
+    /**
+     * Tira da pilha a tarefa mais recente que ainda não expirou. Quem retoma prepara a rotina de novo
+     * e guarda a pergunta ou a prévia que ela devolver; se a rotina já terminar, nada fica pendente.
+     */
     public function retomar(): ?array
     {
         $pilha = $this->pausadas();
         $estado = array_pop($pilha);
         $this->sessao->put(self::PILHA, $pilha);
-
-        if ($estado === null) {
-            return null;
-        }
-
-        $this->sessao->put(self::CHAVE, $estado);
 
         return $estado;
     }

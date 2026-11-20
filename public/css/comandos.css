@@ -176,7 +176,7 @@ body.comandos-aberto .comandos-botao {
     margin: 0.35rem 0 0;
     font-size: 15px;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .comandos-boas-vindas__texto {
@@ -205,7 +205,7 @@ body.comandos-aberto .comandos-botao {
     border: 1px solid var(--color-border-mid);
     border-radius: 999px;
     background: var(--color-surface);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-family: var(--font-main);
     font-size: 13px;
     font-weight: 600;
@@ -219,7 +219,7 @@ body.comandos-aberto .comandos-botao {
 .comandos-chip:hover:not(:disabled),
 .comandos-chip:focus-visible {
     background: var(--color-primary-soft);
-    border-color: var(--color-primary);
+    border-color: var(--color-primary-ink);
     outline: none;
 }
 
@@ -232,7 +232,7 @@ body.comandos-aberto .comandos-botao {
 .comandos-opcoes.is-usada .comandos-chip.is-escolhido {
     opacity: 1;
     background: var(--color-primary-soft);
-    border-color: var(--color-primary);
+    border-color: var(--color-primary-ink);
 }
 
 .comandos-exemplo {
@@ -250,7 +250,7 @@ body.comandos-aberto .comandos-botao {
 
 .comandos-exemplo:hover,
 .comandos-exemplo:focus-visible {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     background: var(--color-primary-soft);
     outline: none;
 }
@@ -284,7 +284,7 @@ body.comandos-aberto .comandos-botao {
 /* Prévia ocupa a largura toda: tem botões e, na venda, itens. */
 .comandos-msg--confirmacao {
     width: 88%;
-    border-left: 3px solid var(--color-primary);
+    border-left: 3px solid var(--color-primary-ink);
 }
 
 .comandos-msg--erro { border-left: 3px solid var(--color-error); }
@@ -419,7 +419,7 @@ body.comandos-aberto .comandos-botao {
 }
 
 .comandos__campo:focus {
-    border-color: var(--color-primary);
+    border-color: var(--color-primary-ink);
     outline: 2px solid var(--color-primary-soft);
 }
 
@@ -447,7 +447,7 @@ body.comandos-aberto .comandos-botao {
 .comandos__enviar:disabled { opacity: 0.55; cursor: progress; }
 
 .comandos__enviar:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-primary-ink);
     outline-offset: 2px;
 }
 

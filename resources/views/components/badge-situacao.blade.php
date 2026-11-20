@@ -22,11 +22,16 @@
             'rascunho'   => ['warning', 'Rascunho'],
         ],
         'pedido-compra' => [
-            'rascunho' => ['warning', 'Rascunho'],
-            'aprovado' => ['info', 'Aprovado'],
-            'parcial' => ['warning', 'Recebido parcialmente'],
-            'recebido' => ['success', 'Recebido'],
+            'rascunho'  => ['warning', 'Rascunho'],
+            'aprovado'  => ['info', 'Aprovado'],
+            'parcial'   => ['info', 'Recebido em parte'],
+            'recebido'  => ['success', 'Recebido'],
             'cancelado' => ['error', 'Cancelado'],
+        ],
+        'transacao-bancaria' => [
+            'pendente'   => ['warning', 'Pendente'],
+            'conciliada' => ['success', 'Conciliada'],
+            'ignorada'   => ['neutral', 'Ignorada'],
         ],
         'orcamento' => [
             'aprovado'  => ['success', 'Aprovado'],

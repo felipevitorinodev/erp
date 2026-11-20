@@ -158,7 +158,9 @@ class EntradaEstoqueService
                     'preco_unitario' => $item->preco_unitario,
                     'desconto' => 0,
                     'total' => round(((float) $item->quantidade - (float) $item->quantidade_recebida) * (float) $item->preco_unitario, 2),
-                ]);
+                ])
+                // Sem buracos nos índices: o formulário numera os itens novos a partir da quantidade.
+                ->values();
 
             if ($itensCompra->isEmpty() && ! $dadosXml) {
                 return redirect()->route('pedido-compra.show', $pedidoCompra)

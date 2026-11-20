@@ -4,16 +4,13 @@
 @section('page_title', 'Cobranças')
 
 @section('content')
-    <div class="card">
-        <div class="card__body">
-            Contas vencidas sem próximo lembrete e lembretes programados para hoje ou antes aparecem nesta lista. O registro de contato é manual; nenhuma mensagem é enviada automaticamente.
-        </div>
-    </div>
-
     <x-tabela-card titulo="Contas que precisam de acompanhamento" :paginator="$contas">
+        <x-slot:acoes>
+            <small class="text-muted">Vencidas sem lembrete e lembretes para hoje ou antes. Nada é enviado automaticamente.</small>
+        </x-slot:acoes>
         <thead>
             <tr>
-                <th>Conta</th>
+                <th class="col-titulo">Conta</th>
                 <th>Cliente</th>
                 <th>Vencimento</th>
                 <th>Próximo contato</th>
@@ -24,13 +21,13 @@
         <tbody>
             @forelse ($contas as $conta)
                 <tr>
-                    <td data-label="Conta">#{{ $conta->id }} — {{ $conta->descricao }}</td>
+                    <td data-label="Conta" class="col-titulo">#{{ $conta->id }} — {{ $conta->descricao }}</td>
                     <td data-label="Cliente">{{ $conta->cliente->nome ?? '—' }}</td>
-                    <td data-label="Vencimento">{{ $conta->data_vencimento->format('d/m/Y') }}</td>
+                    <td data-label="Vencimento" @class(['text--danger' => $conta->data_vencimento->lt(today())])>{{ $conta->data_vencimento->format('d/m/Y') }}</td>
                     <td data-label="Próximo contato">{{ $conta->proxima_cobranca_em?->format('d/m/Y') ?? 'Imediato' }}</td>
                     <td data-label="Saldo" class="col-num"><x-moeda :valor="$conta->valor - $conta->valor_pago" /></td>
                     <td data-label="Ações" class="col-actions">
-                        <a href="{{ route('conta-receber.show', $conta) }}" class="btn btn--ghost btn--sm">Registrar contato</a>
+                        <a href="{{ route('conta-receber.show', $conta) }}#registrar-cobranca" class="btn btn--ghost btn--sm js-ver" data-no-loader>Registrar contato</a>
                     </td>
                 </tr>
             @empty

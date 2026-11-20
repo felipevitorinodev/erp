@@ -12,6 +12,7 @@ use App\Models\ContasReceber\ContaReceber;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 /** "contas que vencem amanhã", "contas a receber de hoje", "buscar contas desta semana". */
 final class ConsultarContas extends Rotina
@@ -55,8 +56,14 @@ final class ConsultarContas extends Rotina
     {
         $quando = self::QUANDO;
 
-        return '/^(?:(?:consult|ver|mostr|busc|procur|list|pesquis)\w*\s+)(?:as\s+)?contas?\b'
-            .'|^(?:as\s+)?contas?(?=\s+(?:a\s+(?:receber|pagar)\s+)?(?:que\s+)?(?:vencem|vencendo|vence|a\s+vencer|do\s+dia|entre|de\s+(?:'.$quando.')|em\s+(?:'.$quando.')))/u';
+        // "consultar conta a receber 15" ou "... mensalidade" é um registro só (GerenciarRegistro):
+        // no singular, a consulta por data só vale quando o que vem depois é um período.
+        $periodo = '(?:que\s+)?(?:vencem|vencendo|vence|a\s+vencer|do\s+dia|entre|de|do|da|em|no|na|para|'.$quando.')\b';
+
+        return '/^(?:(?:consult|ver|mostr|busc|procur|list|pesquis)\w*\s+)(?:as\s+)?(?:contas\b|conta\b(?!\s+(?:a\s+)?(?:receber|pagar)\s+(?!'.$periodo.')\S))'
+            .'|^(?:as\s+)?contas?(?=\s+(?:a\s+(?:receber|pagar)\s+)?(?:que\s+)?(?:vencem|vencendo|vence|a\s+vencer|do\s+dia|entre|de\s+(?:'.$quando.')|em\s+(?:'.$quando.')))'
+            // "contas a receber desta semana", "contas a pagar deste mês": no plural, o período pode vir direto.
+            .'|^(?:as\s+)?contas(?=\s+(?:a\s+(?:receber|pagar)\s+)?(?:para\s+|de\s+|do\s+|da\s+)?(?:'.$quando.')\b)/u';
     }
 
     public function completar(string $argumento, string $campo, string $resposta, ?string $termo): string
@@ -132,7 +139,6 @@ final class ConsultarContas extends Rotina
         return [$tipo, $leitor->resto()];
     }
 
-    /** @return PeriodoFalado|Resposta */
     private function periodo(string $texto): PeriodoFalado|Resposta
     {
         if ($texto === '') {
@@ -184,7 +190,7 @@ final class ConsultarContas extends Rotina
             ->first();
     }
 
-    private function lista(Builder $consulta, string $pessoa): \Illuminate\Support\Collection
+    private function lista(Builder $consulta, string $pessoa): Collection
     {
         return (clone $consulta)
             ->with($pessoa.':id,nome')
@@ -195,10 +201,10 @@ final class ConsultarContas extends Rotina
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Model>  $contas
+     * @param  Collection<int, Model>  $contas
      * @return list<array{data: string, id: int, descricao: string, valor: string}>
      */
-    private function linhas(\Illuminate\Support\Collection $contas, string $lado, string $quitada): array
+    private function linhas(Collection $contas, string $lado, string $quitada): array
     {
         $relacao = $lado === 'A receber' ? 'cliente' : 'fornecedor';
 

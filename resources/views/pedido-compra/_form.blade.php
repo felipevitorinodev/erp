@@ -1,20 +1,34 @@
 @php
     $pedido = $pedido ?? null;
-    $itensAntigos = old('itens', []);
-    $itens = $pedido?->itens ?? collect(is_array($itensAntigos) ? $itensAntigos : [])->map(function ($item) {
-        $item = is_array($item) ? $item : [];
+    // Depois de um erro de validação, os itens voltam como foram enviados (inclusive na edição).
+    // values(): índices 0..n-1, para o próximo item criado no navegador não reaproveitar um índice já usado.
+    // O valor antigo volta como foi digitado ("1.234,50"); mesma leitura do PedidoCompraRequest.
+    $numeroDigitado = function ($valor): float {
+        $valor = str_replace(' ', '', trim((string) $valor));
+        $valor = str_contains($valor, ',') && str_contains($valor, '.') ? str_replace('.', '', $valor) : $valor;
 
-        return (object) [
-            'produto_id' => $item['produto_id'] ?? null,
-            'produto_nome' => $item['produto_nome'] ?? '',
-            'produto_codigo' => $item['produto_codigo'] ?? '',
-            'quantidade' => $item['quantidade'] ?? 0,
-            'quantidade_recebida' => 0,
-            'preco_unitario' => $item['preco_unitario'] ?? 0,
-            'desconto' => $item['desconto'] ?? 0,
-            'total' => max(0, ((float) ($item['quantidade'] ?? 0) * (float) ($item['preco_unitario'] ?? 0)) - (float) ($item['desconto'] ?? 0)),
-        ];
-    });
+        return (float) str_replace(',', '.', $valor);
+    };
+    $itensAntigos = old('itens');
+    $itens = is_array($itensAntigos)
+        ? collect($itensAntigos)->map(function ($item, $chave) use ($numeroDigitado) {
+            $item = is_array($item) ? $item : [];
+            $quantidade = $numeroDigitado($item['quantidade'] ?? 0);
+            $preco = $numeroDigitado($item['preco_unitario'] ?? 0);
+            $desconto = $numeroDigitado($item['desconto'] ?? 0);
+
+            return (object) [
+                'chave' => $chave,
+                'produto_id' => $item['produto_id'] ?? null,
+                'produto_nome' => $item['produto_nome'] ?? '',
+                'produto_codigo' => $item['produto_codigo'] ?? '',
+                'quantidade' => $quantidade,
+                'preco_unitario' => $preco,
+                'desconto' => $desconto,
+                'total' => max(0, $quantidade * $preco - $desconto),
+            ];
+        })->values()
+        : collect($pedido?->itens ?? [])->values();
 @endphp
 
 @pushOnce('styles', 'css-entrada-estoque')
@@ -22,7 +36,7 @@
 @endPushOnce
 
 <div class="form-section">
-    <div class="form-section__title">Dados do pedido</div>
+    <div class="form-section__title">Fornecedor e prazos</div>
     <div class="form-grid form-grid--col-3">
         <div class="form-group">
             <label class="form-label form-label--required">Fornecedor</label>
@@ -73,7 +87,6 @@
                             <input type="hidden" name="itens[{{ $i }}][produto_nome]" class="input-produto-nome-hidden" value="{{ $item->produto_nome }}">
                             <input type="hidden" name="itens[{{ $i }}][produto_codigo]" class="input-produto-codigo-hidden" value="{{ $item->produto_codigo }}">
                         </div>
-                        @error('itens.'.$i.'.produto_id')<span class="form-error">{{ $message }}</span>@enderror
                     </div>
                     <div class="item-card__grid">
                         <div class="form-group">
@@ -81,26 +94,30 @@
                             <input type="tel" name="itens[{{ $i }}][quantidade]"
                                 class="form-control text-right input-qtd input-quantity input-numeric"
                                 inputmode="numeric" data-decimals="3"
-                                value="{{ old('itens.'.$i.'.quantidade', number_format($item->quantidade, 3, ',', '.')) }}">
+                                value="{{ number_format((float) $item->quantidade, 3, ',', '.') }}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Preço unit.</label>
                             <input type="tel" name="itens[{{ $i }}][preco_unitario]"
                                 class="form-control text-right input-preco input-numeric" inputmode="numeric"
                                 data-decimals="2"
-                                value="{{ old('itens.'.$i.'.preco_unitario', number_format($item->preco_unitario, 2, ',', '.')) }}">
+                                value="{{ number_format((float) $item->preco_unitario, 2, ',', '.') }}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Desconto</label>
                             <input type="tel" name="itens[{{ $i }}][desconto]"
                                 class="form-control text-right input-desc-item input-numeric" inputmode="numeric"
                                 data-decimals="2"
-                                value="{{ old('itens.'.$i.'.desconto', number_format($item->desconto ?? 0, 2, ',', '.')) }}">
+                                value="{{ number_format((float) ($item->desconto ?? 0), 2, ',', '.') }}">
                         </div>
                     </div>
+                    {{-- Erros vêm com o índice enviado pelo navegador; os itens foram renumerados acima. --}}
+                    @if ($erroItem = $errors->first('itens.'.($item->chave ?? $i).'.*'))
+                        <span class="form-error">{{ $erroItem }}</span>
+                    @endif
                     <div class="item-card__footer">
                         <span class="item-card__footer-label">Total do item</span>
-                        <strong class="span-total-item">R$ {{ number_format($item->total, 2, ',', '.') }}</strong>
+                        <strong class="span-total-item">R$ {{ number_format((float) $item->total, 2, ',', '.') }}</strong>
                     </div>
                 </div>
             @endforeach
@@ -121,7 +138,7 @@
             <span class="text-muted">Desconto (R$)</span>
             <input type="tel" name="desconto" id="input-desconto"
                 class="form-control text-right totals-box__input input-numeric" data-decimals="2" inputmode="numeric"
-                value="{{ old('desconto', number_format($pedido?->desconto ?? 0, 2, ',', '.')) }}">
+                value="{{ number_format($numeroDigitado(old('desconto', $pedido?->desconto ?? 0)), 2, ',', '.') }}">
         </div>
         <div class="totals-box__row totals-box__row--total">
             <span>Total do pedido</span>
@@ -199,6 +216,9 @@
 
     function vincularLinha(row) {
         initProdutoLinhaAutocomplete(row, urlProdutos, function (item, $row) {
+            // Nome e código acompanham o id: se o formulário voltar com erro, o item reaparece com o nome.
+            $row.find('.input-produto-nome-hidden').val(item.nome || '');
+            $row.find('.input-produto-codigo-hidden').val(item.codigo || '');
             var preco = parseFloat(item.preco_custo || item.preco_venda || item.preco || 0);
             $row.find('.input-preco').val(preco.toFixed(2).replace('.', ','));
             atualizarTotais();

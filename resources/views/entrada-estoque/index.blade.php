@@ -5,7 +5,9 @@
 
 @section('page_actions')
     <a href="{{ route('entrada-estoque.create') }}" class="btn btn--primary btn--sm">+ Nova entrada</a>
-    <button type="button" class="btn btn--ghost btn--sm" id="btn-abrir-modal-xml">Importar XML</button>
+    <button type="button" class="btn btn--ghost btn--sm" data-abrir-modal="modal-importar-xml">
+        <x-icon name="upload" /> Importar XML
+    </button>
 @endsection
 
 @section('content')
@@ -98,31 +100,21 @@
                     </tbody>
     </x-tabela-card>
 
-    {{-- Modal de Importação XML --}}
-    <div class="modal-overlay" id="modal-importar-xml" hidden>
-        <div class="modal-box">
+    {{-- Modal de importação do XML. Volta aberto quando o servidor recusa o arquivo. --}}
+    <div class="modal-overlay" id="modal-importar-xml" data-modal @unless ($errors->has('xml_file')) hidden @endunless>
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-importar-xml-titulo">
             <div class="modal-box__header">
-                <span class="card__title">Importar XML de NF-e</span>
-                <button type="button" class="btn btn--ghost btn--sm" data-close-modal>&times;</button>
+                <span class="card__title" id="modal-importar-xml-titulo">Importar XML de NF-e</span>
+                <button type="button" class="btn btn--ghost btn--sm btn--icon" data-close-modal title="Fechar" aria-label="Fechar">
+                    <x-icon name="x" />
+                </button>
             </div>
             <form method="POST" action="{{ route('entrada-estoque.importar-xml') }}" enctype="multipart/form-data" id="form-importar-xml">
                 @csrf
                 <div class="modal-box__body">
-                    <div class="upload-area" id="upload-area-xml" data-ilustracao-area>
-                        <x-ilustracao nome="xml" tamanho="sm" interativa class="upload-area__icon" />
-                        <div class="upload-area__text">
-                            <span class="upload-area__title">Arraste o arquivo XML aqui</span>
-                            <span class="upload-area__subtitle">ou clique para selecionar</span>
-                        </div>
-                        <input type="file" name="xml_file" id="input-xml-file" class="upload-area__input" accept=".xml" required>
-                        <div class="upload-area__selected" id="xml-file-name" hidden>
-                            <span class="upload-area__filename"></span>
-                            <button type="button" class="upload-area__remove" title="Remover">&times;</button>
-                        </div>
-                    </div>
-                    <p class="text-muted text-center" style="font-size:0.8rem;margin-top:0.75rem;">
-                        Arquivo XML da NF-e modelo 55 (máx. 2MB)
-                    </p>
+                    <x-upload-arquivo name="xml_file" accept=".xml" ilustracao="xml" id="input-xml-file"
+                        titulo="Arraste o arquivo XML aqui"
+                        dica="XML da NF-e modelo 55 (até 2 MB). Os itens vêm para conferência antes de salvar a entrada." />
                 </div>
                 <div class="modal-box__footer">
                     <button type="button" class="btn btn--ghost" data-close-modal>Cancelar</button>
@@ -137,95 +129,3 @@
 @pushOnce('styles', 'css-entrada-estoque')
     <link rel="stylesheet" href="{{ asset('css/entrada-estoque.css') }}?v={{ filemtime(public_path('css/entrada-estoque.css')) }}">
 @endPushOnce
-
-@push('scripts')
-<script>
-(function () {
-    var btnAbrir = document.getElementById('btn-abrir-modal-xml');
-    var modal = document.getElementById('modal-importar-xml');
-    var uploadArea = document.getElementById('upload-area-xml');
-    var inputFile = document.getElementById('input-xml-file');
-    var fileNameEl = document.getElementById('xml-file-name');
-
-    if (!btnAbrir || !modal) return;
-
-    // Abrir/fechar modal
-    btnAbrir.addEventListener('click', function () {
-        modal.hidden = false;
-    });
-
-    modal.querySelectorAll('[data-close-modal]').forEach(function (el) {
-        el.addEventListener('click', function () {
-            modal.hidden = true;
-            resetUpload();
-        });
-    });
-
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal) {
-            modal.hidden = true;
-            resetUpload();
-        }
-    });
-
-    // Upload area - drag and drop
-    if (uploadArea && inputFile) {
-        ['dragenter', 'dragover'].forEach(function (evt) {
-            uploadArea.addEventListener(evt, function (e) {
-                e.preventDefault();
-                uploadArea.classList.add('upload-area--drag');
-            });
-        });
-
-        ['dragleave', 'drop'].forEach(function (evt) {
-            uploadArea.addEventListener(evt, function (e) {
-                e.preventDefault();
-                uploadArea.classList.remove('upload-area--drag');
-            });
-        });
-
-        uploadArea.addEventListener('drop', function (e) {
-            var files = e.dataTransfer.files;
-            if (files.length > 0) {
-                inputFile.files = files;
-                showFileName(files[0].name);
-            }
-        });
-
-        inputFile.addEventListener('change', function () {
-            if (inputFile.files.length > 0) {
-                showFileName(inputFile.files[0].name);
-            } else {
-                resetUpload();
-            }
-        });
-
-        if (fileNameEl) {
-            var removeBtn = fileNameEl.querySelector('.upload-area__remove');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    inputFile.value = '';
-                    resetUpload();
-                });
-            }
-        }
-    }
-
-    function showFileName(name) {
-        if (!fileNameEl) return;
-        fileNameEl.hidden = false;
-        fileNameEl.querySelector('.upload-area__filename').textContent = name;
-        uploadArea.classList.add('upload-area--has-file');
-    }
-
-    function resetUpload() {
-        if (!fileNameEl) return;
-        fileNameEl.hidden = true;
-        uploadArea.classList.remove('upload-area--has-file');
-        if (inputFile) inputFile.value = '';
-    }
-})();
-</script>
-@endpush

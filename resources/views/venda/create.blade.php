@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dropdownBusca) return;
         dropdownBusca = document.createElement('div');
         dropdownBusca.className = 'autocomplete-dropdown';
-        dropdownBusca.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:100;background:#fff;border:1px solid var(--color-border);border-top:none;border-radius:0 0 8px 8px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(28,37,48,0.15);';
+        dropdownBusca.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:100;background:var(--color-surface);border:1px solid var(--color-border);border-top:none;border-radius:0 0 8px 8px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(28,37,48,0.15);';
         buscaInput.parentElement.style.position = 'relative';
         buscaInput.parentElement.appendChild(dropdownBusca);
     }

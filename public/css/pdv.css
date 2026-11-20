@@ -18,6 +18,10 @@
     --pdv-danger-soft: #FEF3F2;
     --pdv-orange-ink: #C2410C;
     --pdv-orange-soft: #FFF7ED;
+    /* Azul usado como texto, título e contorno de foco: o tema escuro clareia só estes. */
+    --pdv-link: #1F4F7A;
+    --pdv-link-hover: #163A5F;
+    --pdv-title: #163A5F;
     --pdv-shadow-1: 0 1px 2px rgba(21, 34, 50, .06);
     --pdv-shadow-2: 0 16px 40px -12px rgba(21, 34, 50, .22);
 }
@@ -45,21 +49,21 @@ body.pdv-page .page-title {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-back {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
 }
 
 .pdv-back:hover {
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
     text-decoration: underline;
 }
 
@@ -172,7 +176,7 @@ body.pdv-page .page-title {
 .pdv-qtd-busca:focus-within,
 .pdv-qtd-busca.is-ativa {
     background: var(--pdv-surface);
-    border-color: var(--pdv-blue);
+    border-color: var(--pdv-link);
     box-shadow: 0 0 0 4px rgba(31, 79, 122, .16);
 }
 
@@ -240,7 +244,7 @@ body.pdv-page .page-title {
 
 .pdv-input-busca:focus {
     background: var(--pdv-surface);
-    border-color: var(--pdv-blue);
+    border-color: var(--pdv-link);
     box-shadow: 0 0 0 4px rgba(31, 79, 122, .16);
 }
 
@@ -272,7 +276,7 @@ body.pdv-page .page-title {
     border: 1px solid var(--pdv-line);
     border-radius: 12px;
     background: var(--pdv-surface);
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
     font: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -306,7 +310,7 @@ body.pdv-page .page-title {
 
 .pdv-info:hover,
 .pdv-info:focus-visible {
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     border-color: var(--pdv-soft-line);
     background: var(--pdv-soft);
     outline: none;
@@ -344,7 +348,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-comando--link {
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     font-weight: 600;
     cursor: pointer;
 }
@@ -361,7 +365,7 @@ body.pdv-page .page-title {
     min-width: 22px;
     height: 20px;
     padding: 0 6px;
-    border: 1px solid #D3DCE7;
+    border: 1px solid var(--pdv-soft-line);
     border-bottom-width: 2px;
     border-radius: 999px;
     background: var(--pdv-surface);
@@ -585,9 +589,9 @@ body.pdv-page .page-title {
 .pdv-item-preco {
     padding: 0;
     border: 0;
-    border-bottom: 1px dashed var(--pdv-blue);
+    border-bottom: 1px dashed var(--pdv-link);
     background: none;
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     font: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -595,7 +599,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-item-preco:hover {
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-item-alerta {
@@ -639,8 +643,8 @@ body.pdv-page .page-title {
 
 .pdv-btn-qtd:hover,
 .pdv-tabela__qtd-btn:hover {
-    border-color: var(--pdv-blue);
-    color: var(--pdv-blue);
+    border-color: var(--pdv-link);
+    color: var(--pdv-link);
 }
 
 .pdv-qtd-valor {
@@ -656,7 +660,7 @@ body.pdv-page .page-title {
     height: 32px;
     min-height: 0;
     padding: 0 6px;
-    border: 1px solid var(--pdv-blue);
+    border: 1px solid var(--pdv-link);
     border-radius: 8px;
     background: var(--pdv-surface);
     text-align: center;
@@ -697,9 +701,9 @@ body.pdv-page .page-title {
     gap: 8px;
     padding: 32px;
     text-align: center;
-    border: 1.5px dashed #C4D1E0;
+    border: 1.5px dashed var(--pdv-soft-line);
     border-radius: 18px;
-    background: rgba(255, 255, 255, .6);
+    background: color-mix(in srgb, var(--pdv-surface) 60%, transparent);
 }
 
 .pdv-empty__ilustracao {
@@ -721,10 +725,10 @@ body.pdv-page .page-title {
 
 .pdv-total-card {
     padding: 18px;
-    background: #F3F4F6;
-    color: #1F2933;
+    background: var(--pdv-field);
+    color: var(--pdv-ink);
     border-radius: 16px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--pdv-line);
 }
 
 .pdv-totais__linha {
@@ -733,25 +737,25 @@ body.pdv-page .page-title {
     justify-content: space-between;
     min-height: 32px;
     font-size: 14px;
-    color: #5E6B7A;
+    color: var(--pdv-muted);
     font-variant-numeric: tabular-nums;
 }
 
 .pdv-totais__linha strong {
     font-size: 15px;
     font-weight: 600;
-    color: #1F2933;
+    color: var(--pdv-ink);
 }
 
 .pdv-totais__linha + .pdv-totais__linha {
-    border-top: 1px dashed #D1D5DB;
+    border-top: 1px dashed var(--pdv-line);
 }
 
 .pdv-totais__linha--ajuste > span:first-child {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #1F2933;
+    color: var(--pdv-ink);
 }
 
 .pdv-totais__linha--ajuste > span:first-child::before {
@@ -763,7 +767,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-totais__linha--ajuste strong {
-    color: #1F2933;
+    color: var(--pdv-ink);
     font-weight: 700;
 }
 
@@ -775,14 +779,14 @@ body.pdv-page .page-title {
     padding: 14px 16px;
     border-radius: 12px;
     background: var(--pdv-surface);
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--pdv-line);
 }
 
 .pdv-totais__total-label {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0;
-    color: #5E6B7A;
+    color: var(--pdv-muted);
     text-transform: none;
 }
 
@@ -792,7 +796,7 @@ body.pdv-page .page-title {
     line-height: 1;
     letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums;
-    color: #1F2933;
+    color: var(--pdv-ink);
 }
 
 .pdv-field-label {
@@ -833,7 +837,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-input-soft:focus {
-    border-color: var(--pdv-blue);
+    border-color: var(--pdv-link);
     box-shadow: 0 0 0 4px rgba(31, 79, 122, .14);
 }
 
@@ -863,7 +867,7 @@ body.pdv-page .page-title {
 }
 
 .pdv-resumo-forma:hover {
-    border-color: var(--pdv-blue);
+    border-color: var(--pdv-link);
 }
 
 .pdv-resumo-forma__rotulo {
@@ -880,7 +884,7 @@ body.pdv-page .page-title {
     font-size: 14px;
     font-weight: 600;
     line-height: 1.25;
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     text-align: right;
 }
 
@@ -956,7 +960,7 @@ body.pdv-page .page-title {
     padding: 4px;
     font-size: 13px;
     font-weight: 600;
-    color: var(--pdv-blue);
+    color: var(--pdv-link);
     cursor: pointer;
 }
 
@@ -1016,7 +1020,7 @@ body.pdv-dialogo-aberto .layout {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-tabela__sub,
@@ -1213,7 +1217,7 @@ body.pdv-dialogo-aberto .layout {
     font-size: 2.1rem;
     font-weight: 700;
     line-height: 1;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1549,7 +1553,7 @@ body.pdv-dialogo-aberto .layout {
 .pdv-sucesso__titulo {
     margin: 12px 0 4px;
     font-size: 26px;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-sucesso__valor {
@@ -1591,7 +1595,7 @@ body.pdv-dialogo-aberto .layout {
     margin: 6px 0 0;
     font-size: 13px;
     font-weight: 600;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-sucesso__nfce-dica[hidden] {
@@ -1617,7 +1621,7 @@ body.pdv-dialogo-aberto .layout {
     justify-content: center;
     border-radius: 12px;
     background: var(--pdv-field);
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
     font-weight: 600;
     text-decoration: none;
 }
@@ -1698,7 +1702,7 @@ body.pdv-dialogo-aberto .layout {
 .pdv-tela-pequena__titulo {
     margin: 16px 0 8px;
     font-size: 18px;
-    color: var(--pdv-navy);
+    color: var(--pdv-title);
 }
 
 .pdv-tela-pequena__texto,

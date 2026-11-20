@@ -114,8 +114,10 @@
         </div>
     @endif
 
+    @php($canaisCobranca = ['telefone' => 'Telefone', 'whatsapp' => 'WhatsApp', 'email' => 'E-mail', 'presencial' => 'Presencial', 'outro' => 'Outro'])
+
     @if (!in_array($conta->situacao, ['paga', 'cancelada'], true))
-        <div class="card" style="margin-top:1rem;">
+        <div class="card mt-2" id="registrar-cobranca">
             <div class="card__header">
                 <span class="card__title">Registrar contato de cobrança</span>
             </div>
@@ -127,7 +129,7 @@
                             <label class="form-label form-label--required" for="canal">Canal</label>
                             <select id="canal" name="canal" class="form-control" required>
                                 <option value="">Selecione</option>
-                                @foreach (['telefone' => 'Telefone', 'whatsapp' => 'WhatsApp', 'email' => 'E-mail', 'presencial' => 'Presencial', 'outro' => 'Outro'] as $valor => $rotulo)
+                                @foreach ($canaisCobranca as $valor => $rotulo)
                                     <option value="{{ $valor }}" @selected(old('canal') === $valor)>{{ $rotulo }}</option>
                                 @endforeach
                             </select>
@@ -160,25 +162,27 @@
     @endif
 
     @if ($conta->cobrancas->isNotEmpty())
-        <div class="card" style="margin-top:1rem;">
+        <div class="card mt-2">
             <div class="card__header"><span class="card__title">Histórico de cobranças</span></div>
             <div class="card__body card__body--flush">
-                <table class="table">
-                    <thead>
-                        <tr><th>Data</th><th>Canal</th><th>Resultado</th><th>Próximo contato</th><th>Registrado por</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($conta->cobrancas->sortByDesc('contatado_em') as $cobranca)
-                            <tr>
-                                <td>{{ $cobranca->contatado_em->format('d/m/Y') }}</td>
-                                <td>{{ ucfirst($cobranca->canal) }}</td>
-                                <td>{{ $cobranca->resultado }}</td>
-                                <td>{{ $cobranca->proxima_cobranca_em?->format('d/m/Y') ?? '—' }}</td>
-                                <td>{{ $cobranca->usuario->name ?? '—' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                <div class="table-wrap">
+                    <table class="table table--cards">
+                        <thead>
+                            <tr><th>Data</th><th>Canal</th><th class="col-titulo">Resultado</th><th>Próximo contato</th><th>Registrado por</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($conta->cobrancas->sortByDesc(fn ($c) => [$c->contatado_em?->toDateString(), $c->id]) as $cobranca)
+                                <tr>
+                                    <td data-label="Data">{{ $cobranca->contatado_em->format('d/m/Y') }}</td>
+                                    <td data-label="Canal">{{ $canaisCobranca[$cobranca->canal] ?? ucfirst($cobranca->canal) }}</td>
+                                    <td data-label="Resultado" class="col-titulo">{{ $cobranca->resultado }}</td>
+                                    <td data-label="Próximo contato">{{ $cobranca->proxima_cobranca_em?->format('d/m/Y') ?? '—' }}</td>
+                                    <td data-label="Registrado por">{{ $cobranca->usuario->name ?? '—' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     @endif

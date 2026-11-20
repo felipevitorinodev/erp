@@ -23,10 +23,13 @@ use App\Repositories\Orcamentos\OrcamentoRepository;
 use App\Repositories\OrdensServico\OrdemServicoRepository;
 use App\Repositories\Produtos\ProdutoRepository;
 use App\Repositories\Vendas\VendaRepository;
+use App\Services\Vendas\VendaService;
 use App\Support\Auditoria;
+use App\Support\MensagemPublica;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +38,10 @@ final class GerenciarRegistro extends Rotina
 {
     private const PREFIXO_EDICAO = '__edicao_registro__:';
 
-    private const ENTIDADE = '/^(?<entidade>contas?\s+a\s+receber|contas?\s+receber|contas?\s+a\s+pagar|contas?\s+pagar|ordens?\s+de\s+servi[cç]os?|ordens?\s+servi[cç]os?|os|orcamentos?|vendas?|clientes?|fornecedores?|produtos?|servi[cç]os?)\b\s*(?<alvo>.*)$/u';
+    private const ENTIDADE = '/^(?<entidade>contas?\s+a\s+receber|contas?\s+receber|contas?\s+a\s+pagar|contas?\s+pagar|(?:ordem|ordens)\s+(?:de\s+)?servi[cç]os?|o\.?s\.?|orcamentos?|vendas?|clientes?|fornecedor(?:es)?|produtos?|servi[cç]os?)(?![\p{L}\p{N}])\s*(?<alvo>.*)$/u';
+
+    /** Artigo antes do tipo ("editar o cliente"). "os 15" é a ordem de serviço 15, não o artigo. */
+    private const ARTIGO = '(?:(?:o|a|as|um|uma|os(?!\s+(?:#|n[º°o]?\s*)?\d+\s*$))\s+)?';
 
     public function __construct(
         private readonly ClienteRepository $clientes,
@@ -46,6 +52,7 @@ final class GerenciarRegistro extends Rotina
         private readonly OrdemServicoRepository $ordens,
         private readonly ContaReceberRepository $contasReceber,
         private readonly ContaPagarRepository $contasPagar,
+        private readonly VendaService $vendaService,
     ) {}
 
     public function chave(): string
@@ -98,6 +105,12 @@ final class GerenciarRegistro extends Rotina
         return null;
     }
 
+    /** O nome do campo e o novo valor são texto livre: "preço de venda" não é uma consulta de produto. */
+    public function respostaLivre(string $campo): bool
+    {
+        return in_array($campo, ['campo_edicao', 'valor_edicao'], true);
+    }
+
     public function preparar(string $argumento): Resposta
     {
         if (str_starts_with($argumento, self::PREFIXO_EDICAO)) {
@@ -109,11 +122,11 @@ final class GerenciarRegistro extends Rotina
         }
 
         $pedido = Leitor::grupos(
-            '/^(?<acao>consult\w*|ver|mostr\w*|busc\w*|procur\w*|pesquis\w*|list\w*|detalh\w*|visualiz\w*|edit\w*|alter\w*|atualiz\w*|modific\w*|mud\w*|exclu\w*|apag\w*|delet\w*|remov\w*)\s+(?:(?:o|a|os|as|um|uma)\s+)?(?<resto>.+)$/u',
+            '/^(?<acao>consult\w*|ver|mostr\w*|busc\w*|procur\w*|pesquis\w*|list\w*|detalh\w*|visualiz\w*|edit\w*|alter\w*|atualiz\w*|modific\w*|mud\w*|exclu\w*|apag\w*|delet\w*|remov\w*)\s+'.self::ARTIGO.'(?<resto>.+)$/u',
             $argumento,
         );
         if ($pedido === null || ($entidade = Leitor::grupos(self::ENTIDADE, $pedido['resto'])) === null) {
-            return Resposta::erro('Diga qual registro deseja consultar, editar ou excluir.');
+            return Resposta::erro('Diga o tipo e o registro, por exemplo: “editar produto Coca lata” ou “excluir cliente Maria”.');
         }
 
         $acao = self::acao($pedido['acao']);
@@ -147,6 +160,11 @@ final class GerenciarRegistro extends Rotina
         }
 
         $registro = $registros->first();
+
+        // A mesma trava da tela vale antes da prévia: não se pede confirmação do que não pode ser feito.
+        if ($acao === 'excluir' && ($erro = $this->erroAoExcluir($tipo, $registro)) !== null) {
+            return Resposta::info($erro, link: $this->link($tipo, $registro, false));
+        }
 
         return match ($acao) {
             'consultar' => Resposta::info($this->resumo($tipo, $registro), link: $this->link($tipo, $registro, false)),
@@ -188,23 +206,34 @@ final class GerenciarRegistro extends Rotina
             return Resposta::info($erro, link: ['rotulo' => 'Abrir registro', 'url' => $this->urlDetalhe($tipo, $registro)]);
         }
 
-        match ($tipo) {
-            'cliente' => $this->clientes->destroy($id),
-            'fornecedor' => $this->fornecedores->destroy($id),
-            'produto', 'servico' => $this->produtos->destroy($id),
-            'venda' => $this->vendas->destroy($id),
-            'orcamento' => $this->orcamentos->destroy($id),
-            'ordem_servico' => $this->ordens->destroy($id),
-            'conta_receber' => $this->contasReceber->destroy($id),
-            'conta_pagar' => $this->contasPagar->destroy($id),
-        };
+        $origensVenda = $tipo === 'venda' ? $this->vendaService->origensDaVenda($registro) : null;
+
+        try {
+            match ($tipo) {
+                'cliente' => $this->clientes->destroy($id),
+                'fornecedor' => $this->fornecedores->destroy($id),
+                'produto', 'servico' => $this->produtos->destroy($id),
+                'venda' => $this->vendas->destroy($id),
+                'orcamento' => $this->orcamentos->destroy($id),
+                'ordem_servico' => $this->ordens->destroy($id),
+                'conta_receber' => $this->contasReceber->destroy($id),
+                'conta_pagar' => $this->contasPagar->destroy($id),
+            };
+        } catch (\Exception $excecao) {
+            // Os repositórios recusam com exceção (venda confirmada, orçamento aprovado...), como nas telas.
+            return Resposta::erro(MensagemPublica::de($excecao));
+        }
 
         if ($tipo === 'produto' || $tipo === 'servico') {
             Auditoria::registrar('produto.excluido', 'produto', $id, [
                 'codigo' => $registro->codigo,
                 'estoque_atual' => (float) $registro->estoque_atual,
             ]);
-        } elseif ($tipo === 'venda') {
+        }
+
+        $avisoVenda = $origensVenda !== null ? $this->vendaService->avisoOrigensReabertas($origensVenda, $registro) : '';
+
+        if ($tipo === 'venda') {
             Auditoria::registrar('venda.excluida', 'venda', $id, [
                 'numero' => $registro->numero,
                 'situacao' => $registro->situacao,
@@ -223,7 +252,7 @@ final class GerenciarRegistro extends Rotina
         }
 
         return Resposta::sucesso(
-            ucfirst($this->nomeEntidade($tipo)).' excluído.',
+            ucfirst($this->nomeEntidade($tipo)).($this->feminino($tipo) ? ' excluída.' : ' excluído.').$avisoVenda,
             registro: ['entidade' => $tipo, 'id' => $id],
         );
     }
@@ -232,7 +261,7 @@ final class GerenciarRegistro extends Rotina
     {
         if ($campo === 'campo_edicao') {
             $pedido = Leitor::grupos(
-                '/^(?<acao>edit\w*|alter\w*|atualiz\w*|modific\w*|mud\w*)\s+(?:(?:o|a|os|as|um|uma)\s+)?(?<resto>.+)$/u',
+                '/^(?<acao>edit\w*|alter\w*|atualiz\w*|modific\w*|mud\w*)\s+'.self::ARTIGO.'(?<resto>.+)$/u',
                 $argumento,
             );
             $entidade = $pedido === null ? null : Leitor::grupos(self::ENTIDADE, $pedido['resto']);
@@ -241,6 +270,14 @@ final class GerenciarRegistro extends Rotina
             $registro = $registros->count() === 1 ? $registros->first() : null;
             $campoSelecionado = $registro === null ? null : $this->resolverCampo($tipo, $registro, $resposta);
 
+            if ($registro !== null && $campoSelecionado === null && self::campoDeOutraRotina($tipo, $resposta) !== null) {
+                return $this->codificarEdicao([
+                    'fase' => 'outra_rotina',
+                    'entidade' => $tipo,
+                    'id' => (int) $registro->getKey(),
+                    'campo' => Leitor::normalizar($resposta),
+                ]);
+            }
             if ($registro === null || $campoSelecionado === null) {
                 return $argumento;
             }
@@ -443,6 +480,11 @@ final class GerenciarRegistro extends Rotina
         $campo = $aliases[$chave] ?? $chave;
         $campos = $this->camposEditaveis($tipo, $registro);
 
+        // O apelido já devolve a chave do campo ("preco_venda"), que não passa pela comparação sem sublinhado abaixo.
+        if (isset($campos[$campo])) {
+            return $campo;
+        }
+
         foreach ($campos as $nome => $spec) {
             $nomeNormal = preg_replace('/[^\p{L}\p{N}]+/u', '', Leitor::normalizar($nome)) ?? '';
             $rotulo = preg_replace('/[^\p{L}\p{N}]+/u', '', Leitor::normalizar($spec['rotulo'])) ?? '';
@@ -452,6 +494,22 @@ final class GerenciarRegistro extends Rotina
         }
 
         return null;
+    }
+
+    /**
+     * Campos que a tela também não deixa digitar: mudam por outra rotina, que grava o histórico.
+     * Devolve a explicação, ou null quando a resposta não fala de um deles.
+     */
+    private static function campoDeOutraRotina(string $tipo, string $resposta): ?string
+    {
+        $chave = preg_replace('/[^\p{L}\p{N}]+/u', '', Leitor::normalizar($resposta)) ?? '';
+
+        return match (true) {
+            in_array($tipo, ['produto', 'servico'], true) && in_array($chave, ['estoque', 'estoqueatual', 'saldo', 'saldodeestoque', 'quantidade', 'quantidadeemestoque'], true) => 'O estoque atual não é digitado: ele muda pela entrada de estoque, pelas vendas e pelo ajuste de estoque, que guardam o histórico.',
+            in_array($tipo, ['venda', 'orcamento', 'ordem_servico'], true) && in_array($chave, ['itens', 'item', 'produtos', 'produto', 'servicos', 'total', 'valor', 'valortotal', 'subtotal', 'desconto', 'acrescimo'], true) => 'Itens, descontos e total são alterados na tela, onde o valor é recalculado. Abra o registro para mudar.',
+            in_array($tipo, ['conta_receber', 'conta_pagar'], true) && in_array($chave, ['valorpago', 'valorrecebido', 'pagamento', 'recebimento', 'baixa'], true) => 'Pagamentos e recebimentos são lançados pela baixa da conta, na tela. Abra o registro para baixar.',
+            default => null,
+        };
     }
 
     private function prepararEdicao(array $estado): Resposta
@@ -469,6 +527,14 @@ final class GerenciarRegistro extends Rotina
         $registro = $this->localizarPorId($tipo, $id);
         if ($registro === null || ! $this->edicaoDisponivel($tipo, $registro)) {
             return Resposta::erro('Este registro não existe mais ou não pode ser editado na situação atual.');
+        }
+
+        if (($estado['fase'] ?? null) === 'outra_rotina') {
+            return Resposta::info(
+                self::campoDeOutraRotina($tipo, $campo) ?? 'Esse campo não pode ser alterado pelo assistente.',
+                // A baixa da conta fica na tela de detalhes; o resto, na edição.
+                link: $this->link($tipo, $registro, ! in_array($tipo, ['conta_receber', 'conta_pagar'], true)),
+            );
         }
 
         $campos = $this->camposEditaveis($tipo, $registro);
@@ -532,6 +598,12 @@ final class GerenciarRegistro extends Rotina
         }
         $normalEntrada = is_string($entrada) ? Leitor::normalizar($entrada) : '';
         if (is_null($entrada) || in_array($normalEntrada, ['limpar', 'sem', 'nenhum', 'nenhuma', 'sem cliente', 'sem fornecedor'], true)) {
+            // Na tela, fornecedor pessoa física exige CPF e jurídica exige CNPJ: o único documento não pode ser apagado.
+            if ($tipo === 'fornecedor' && in_array($spec['tipo'], ['cpf', 'cnpj'], true)
+                && filled($registro->{$campo}) && blank($spec['tipo'] === 'cpf' ? $registro->cnpj : $registro->cpf)) {
+                return [null, 'O fornecedor precisa ficar com CPF ou CNPJ. Informe o novo número em vez de limpar.'];
+            }
+
             return $spec['nullable']
                 ? [null, null]
                 : [null, 'Esse campo é obrigatório e não pode ser limpo.'];
@@ -541,10 +613,10 @@ final class GerenciarRegistro extends Rotina
         if ($spec['tipo'] === 'booleano') {
             $normal = Leitor::normalizar((string) $entrada);
             $valor = is_bool($entrada) ? $entrada : match ($normal) {
-                    'ativo', 'ativa', 'sim', 'true', '1' => true,
-                    'inativo', 'inativa', 'nao', 'false', '0' => false,
-                    default => null,
-                };
+                'ativo', 'ativa', 'sim', 'true', '1' => true,
+                'inativo', 'inativa', 'nao', 'false', '0' => false,
+                default => null,
+            };
             if ($valor === null) {
                 return [null, 'Responda ativo ou inativo.'];
             }
@@ -562,6 +634,8 @@ final class GerenciarRegistro extends Rotina
                 }
                 $valor = $data?->toDateString() ?? $entrada;
             }
+        } elseif ($spec['tipo'] === 'uf' && is_string($entrada)) {
+            $valor = mb_strtoupper($entrada);
         } elseif (in_array($spec['tipo'], ['numero', 'dinheiro'], true) && is_string($entrada)) {
             $valor = self::normalizarNumero($entrada);
         } elseif (in_array($spec['tipo'], ['cliente', 'fornecedor', 'tecnico'], true)) {
@@ -600,17 +674,11 @@ final class GerenciarRegistro extends Rotina
                 ->ignore($registro->getKey());
         }
 
-        $validacao = Validator::make([$campo => $valor], [$campo => $regras]);
+        $validacao = Validator::make([$campo => $valor], [$campo => $regras], [], [$campo => mb_strtolower($spec['rotulo'])]);
         if ($validacao->fails()) {
             return [null, $validacao->errors()->first()];
         }
 
-        if ($spec['tipo'] === 'cnpj' && $valor === null && $registro->tipo_pessoa === 'PJ') {
-            return [null, 'O CNPJ é obrigatório para este cadastro.'];
-        }
-        if ($spec['tipo'] === 'cpf' && $valor === null && $tipo === 'fornecedor' && $registro->tipo_pessoa === 'PF') {
-            return [null, 'O CPF é obrigatório para este fornecedor.'];
-        }
         if ($campo === 'preco_minimo') {
             $precoVenda = $tipo === 'produto' || $tipo === 'servico'
                 ? (float) $registro->preco_venda
@@ -625,7 +693,7 @@ final class GerenciarRegistro extends Rotina
         if ($campo === 'valor' && (float) $valor < (float) ($registro->valor_pago ?? 0)) {
             return [null, 'O valor da conta não pode ser menor que o valor já pago ou recebido.'];
         }
-        if ($campo === 'data_venda' && $registro->data_saida && CarbonImmutable::parse($registro->data_saida)->gt(CarbonImmutable::parse($valor))) {
+        if ($campo === 'data_venda' && $registro->data_saida && CarbonImmutable::parse($valor)->gt(CarbonImmutable::parse($registro->data_saida))) {
             return [null, 'A data da venda não pode ficar depois da data de saída já informada.'];
         }
         if ($campo === 'data_saida' && $valor !== null && CarbonImmutable::parse($valor)->lt(CarbonImmutable::parse($registro->data_venda))) {
@@ -682,16 +750,27 @@ final class GerenciarRegistro extends Rotina
             return Resposta::erro($erro);
         }
 
+        $precos = ['preco_custo', 'preco_venda', 'preco_minimo'];
+        $precosAntes = in_array($campo, $precos, true) ? array_map('floatval', $registro->only($precos)) : null;
+
         try {
             $this->atualizarCampo($tipo, $registro, $campo, $valor);
-        } catch (\RuntimeException $excecao) {
-            return Resposta::erro($excecao->getMessage());
+        } catch (\Exception $excecao) {
+            return Resposta::erro(MensagemPublica::de($excecao));
         }
 
         $registro->refresh();
 
+        // Mesma trilha da tela de produto: mudança de preço fica registrada com antes e depois.
+        if ($precosAntes !== null) {
+            Auditoria::registrar('produto.preco_alterado', 'produto', (int) $registro->getKey(), [
+                'antes' => $precosAntes,
+                'depois' => array_map('floatval', $registro->only($precos)),
+            ]);
+        }
+
         return Resposta::sucesso(
-            ucfirst($this->nomeEntidade($tipo)).' atualizado: '.$this->rotulo($tipo, $registro).'.',
+            ucfirst($this->nomeEntidade($tipo)).($this->feminino($tipo) ? ' atualizada: ' : ' atualizado: ').$this->rotulo($tipo, $registro).'.',
             link: $this->link($tipo, $registro, false),
             registro: ['entidade' => $tipo, 'id' => (int) $registro->getKey()],
         );
@@ -791,7 +870,7 @@ final class GerenciarRegistro extends Rotina
 
     private static function normalizarNumero(string $valor): string
     {
-        $valor = trim(str_replace(' ', '', $valor));
+        $valor = trim(str_replace(' ', '', (string) preg_replace('/^R\$/iu', '', trim($valor))));
         if (str_contains($valor, ',') && str_contains($valor, '.')) {
             return str_replace(',', '.', str_replace('.', '', $valor));
         }
@@ -839,12 +918,12 @@ final class GerenciarRegistro extends Rotina
 
         return match (true) {
             preg_match('/^clientes?$/u', $entidade) === 1 => 'cliente',
-            preg_match('/^fornecedores?$/u', $entidade) === 1 => 'fornecedor',
+            preg_match('/^fornecedor(?:es)?$/u', $entidade) === 1 => 'fornecedor',
             preg_match('/^produtos?$/u', $entidade) === 1 => 'produto',
             preg_match('/^servicos?$/u', $entidade) === 1 => 'servico',
             preg_match('/^vendas?$/u', $entidade) === 1 => 'venda',
             preg_match('/^orcamentos?$/u', $entidade) === 1 => 'orcamento',
-            preg_match('/^(?:os|ordens?(?:\s+de)?\s+servicos?)$/u', $entidade) === 1 => 'ordem_servico',
+            preg_match('/^(?:o\.?s\.?|(?:ordem|ordens)(?:\s+de)?\s+servicos?)$/u', $entidade) === 1 => 'ordem_servico',
             preg_match('/^contas?(?:\s+a)?\s+receber$/u', $entidade) === 1 => 'conta_receber',
             preg_match('/^contas?(?:\s+a)?\s+pagar$/u', $entidade) === 1 => 'conta_pagar',
             default => null,
@@ -864,19 +943,22 @@ final class GerenciarRegistro extends Rotina
         };
     }
 
-    /** @return \Illuminate\Support\Collection<int, Model> */
-    private function localizar(string $tipo, string $alvo): \Illuminate\Support\Collection
+    /** @return Collection<int, Model> */
+    private function localizar(string $tipo, string $alvo): Collection
     {
         $consulta = $this->consulta($tipo);
         $numero = self::numeroDoAlvo($alvo);
 
         if ($numero !== null) {
-            $consulta->where(function (Builder $q) use ($numero, $tipo) {
-                $q->whereKey($numero);
-                if (in_array($tipo, ['venda', 'orcamento', 'ordem_servico'], true)) {
-                    $q->orWhere('numero', $numero);
+            // "venda 77" e "os 000012" são o número do documento (numero_seq, indexado e igual no MySQL e no SQLite);
+            // "#15", usado nas opções de escolha, é sempre o id. Sem documento com esse número, vale o id.
+            if (in_array($tipo, ['venda', 'orcamento', 'ordem_servico'], true) && ! str_starts_with(trim($alvo), '#')) {
+                $porNumero = (clone $consulta)->where('numero_seq', $numero)->orderByDesc('id')->limit(6)->get();
+                if ($porNumero->isNotEmpty()) {
+                    return $porNumero;
                 }
-            });
+            }
+            $consulta->whereKey($numero);
         } elseif (in_array($tipo, ['conta_receber', 'conta_pagar'], true)) {
             $consulta->where('descricao', 'like', '%'.addcslashes($alvo, '%_\\').'%');
         } else {
@@ -948,6 +1030,28 @@ final class GerenciarRegistro extends Rotina
         };
     }
 
+    private function feminino(string $tipo): bool
+    {
+        return in_array($tipo, ['venda', 'ordem_servico', 'conta_receber', 'conta_pagar'], true);
+    }
+
+    /** Situação como a tela mostra ("Em andamento"), não o valor gravado ("em_andamento"). */
+    private function situacao(string $tipo, Model $registro): string
+    {
+        if ($registro instanceof OrdemServico) {
+            return $registro->situacaoLabel();
+        }
+
+        $rotulos = match ($tipo) {
+            'venda' => ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada'],
+            'orcamento' => ['pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'recusado' => 'Recusado', 'cancelado' => 'Cancelado'],
+            default => ['aberta' => 'Aberta', 'parcial' => 'Parcial', 'paga' => 'Paga', 'cancelada' => 'Cancelada'],
+        };
+        $valor = (string) $registro->situacao;
+
+        return $rotulos[$valor] ?? ucfirst(str_replace('_', ' ', $valor));
+    }
+
     private function resumo(string $tipo, Model $registro): string
     {
         return match ($tipo) {
@@ -972,19 +1076,19 @@ final class GerenciarRegistro extends Rotina
             ])),
             'venda', 'orcamento' => implode(' · ', [
                 ucfirst($this->nomeEntidade($tipo)).' nº '.$registro->numero,
-                'Situação: '.$registro->situacao,
+                'Situação: '.$this->situacao($tipo, $registro),
                 self::moeda((float) $registro->total),
             ]),
             'ordem_servico' => implode(' · ', [
                 'Ordem de serviço nº '.$registro->numero,
                 $registro->equipamento,
-                'Situação: '.$registro->situacao,
+                'Situação: '.$this->situacao($tipo, $registro),
                 self::moeda((float) $registro->total),
             ]),
             'conta_receber', 'conta_pagar' => implode(' · ', [
                 ucfirst($this->nomeEntidade($tipo)).': '.$registro->descricao,
                 'Vencimento: '.$registro->data_vencimento->format('d/m/Y'),
-                'Situação: '.$registro->situacao,
+                'Situação: '.$this->situacao($tipo, $registro),
                 self::moeda((float) $registro->valor),
             ]),
         };
@@ -994,11 +1098,11 @@ final class GerenciarRegistro extends Rotina
     {
         return match ($tipo) {
             'venda', 'orcamento', 'ordem_servico' => [
-                'Situação: '.$registro->situacao,
+                'Situação: '.$this->situacao($tipo, $registro),
                 self::moeda((float) $registro->total),
             ],
             'conta_receber', 'conta_pagar' => [
-                'Situação: '.$registro->situacao,
+                'Situação: '.$this->situacao($tipo, $registro),
                 self::moeda((float) $registro->valor),
             ],
             'produto', 'servico' => [
@@ -1012,9 +1116,12 @@ final class GerenciarRegistro extends Rotina
     private function erroAoExcluir(string $tipo, Model $registro): ?string
     {
         return match ($tipo) {
-            'venda' => $registro->situacao === 'confirmada'
-                ? 'Venda confirmada não pode ser excluída. Cancele-a pela tela da venda.'
-                : null,
+            'venda' => match (true) {
+                $registro->situacao === 'confirmada' => 'Venda confirmada não pode ser excluída. Cancele-a pela tela da venda.',
+                // Mesma regra da tela: sem permissão de cancelar vendas, só a venda em andamento pode ser apagada.
+                $registro->situacao !== 'em_andamento' && ! $this->usuario()->pode('vendas.cancelar') => 'Venda fechada só pode ser consultada.',
+                default => null,
+            },
             'orcamento' => $registro->situacao === 'aprovado'
                 ? 'Orçamento aprovado não pode ser excluído.'
                 : null,
@@ -1072,5 +1179,4 @@ final class GerenciarRegistro extends Rotina
     {
         return $this->link($tipo, $registro, false)['url'];
     }
-
 }

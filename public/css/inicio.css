@@ -42,7 +42,7 @@
     padding: 0.6rem 0.75rem;
     border: 1px solid var(--color-border-mid);
     border-radius: var(--radius-md);
-    background: #fff;
+    background: var(--color-surface-raised);
     color: var(--color-text);
     font-family: var(--font-main);
     text-align: left;
@@ -59,7 +59,7 @@
 
 .home-comando:hover,
 .home-comando:focus-visible {
-    border-color: var(--color-primary);
+    border-color: var(--color-primary-ink);
     box-shadow: 0 0 0 3px var(--color-primary-soft);
     outline: none;
 }
@@ -74,7 +74,7 @@
 .home-comando__titulo {
     font-size: 14px;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .home-comando__exemplo {
@@ -164,7 +164,7 @@
     padding: 0.7rem 0.8rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: #fff;
+    background: var(--color-surface-raised);
 }
 
 .home-passo__marca {
@@ -175,7 +175,7 @@
     height: 30px;
     border-radius: 50%;
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-size: 13px;
     font-weight: 700;
 }
@@ -303,8 +303,8 @@
 
 .home-acao:hover,
 .home-acao:focus-visible {
-    background: #fff;
-    border-color: var(--color-primary);
+    background: var(--color-surface-raised);
+    border-color: var(--color-primary-ink);
     box-shadow: var(--shadow-sm);
 }
 
@@ -325,7 +325,7 @@
 
 .home-acao__icone--venda {
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .home-acao__icone--estoque {
@@ -437,19 +437,19 @@
 .home-consulta:hover,
 .home-consulta:focus-visible {
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .home-consulta:hover svg,
 .home-consulta:focus-visible svg {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .home-acao:focus-visible,
 .home-numero:focus-visible,
 .home-pendencia:focus-visible,
 .home-consulta:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-primary-ink);
     outline-offset: 2px;
 }
 

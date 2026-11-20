@@ -140,6 +140,28 @@ class RelatoriosHubTest extends TestCase
             ]);
     }
 
+    public function test_catalogo_mostra_icone_descricao_e_cor_de_cada_modulo(): void
+    {
+        foreach (CatalogoRelatorios::categorias() as $slug => $categoria) {
+            $this->assertNotEmpty($categoria['descricao'] ?? '', "O módulo {$slug} precisa de descrição.");
+        }
+
+        $total = count(CatalogoRelatorios::relatorios());
+        $html = $this->actingAs($this->usuario('admin'))
+            ->get(route('relatorios.index'))
+            ->assertOk()
+            ->assertSee('Recebimentos e pagamentos por vencimento, atrasos e clientes em débito.')
+            ->assertSee('class="rp-mod rp-cor--produtos-estoque"', false)
+            ->assertSee('data-filtro-modulo="financeiro" aria-pressed="false"', false)
+            ->assertSee('id="relatorios-recentes" data-usuario="', false)
+            ->assertSee('data-limpar-busca', false)
+            ->getContent();
+
+        $this->assertSame($total, substr_count($html, '<span class="rp-rep__icone">'));
+        // A busca também acha o relatório pelo nome do módulo.
+        $this->assertMatchesRegularExpression('/data-slug="estoque"\\s+data-busca="[^"]*produtos e estoque"/', $html);
+    }
+
     public function test_item_do_menu_fica_ativo_no_hub_e_em_qualquer_relatorio(): void
     {
         $admin = $this->usuario('admin');

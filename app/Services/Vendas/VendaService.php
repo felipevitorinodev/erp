@@ -726,11 +726,11 @@ class VendaService
 
     /**
      * Só para a mensagem e a auditoria: quem reabre a OS, travada, é o repositório.
-     */
-    /**
+     * Público porque o assistente também exclui vendas (GerenciarRegistro).
+     *
      * @return array{os: ?OrdemServico, orcamento: ?Orcamento}
      */
-    private function origensDaVenda(Venda $venda): array
+    public function origensDaVenda(Venda $venda): array
     {
         return [
             'os' => OrdemServico::where('empresa_id', $venda->empresa_id)
@@ -747,7 +747,7 @@ class VendaService
     /**
      * @param  array{os: ?OrdemServico, orcamento: ?Orcamento}  $origens
      */
-    private function avisoOrigensReabertas(array $origens, Venda $venda): string
+    public function avisoOrigensReabertas(array $origens, Venda $venda): string
     {
         $aviso = '';
         $dadosVenda = ['venda_id' => $venda->id, 'venda_numero' => $venda->numero];

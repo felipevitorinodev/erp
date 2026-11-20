@@ -57,10 +57,34 @@
                     <td data-label="Total" class="col-num">R$ {{ number_format($pedido->total, 2, ',', '.') }}</td>
                     <td data-label="Situação"><x-badge-situacao tipo="pedido-compra" :valor="$pedido->situacao" /></td>
                     <td class="col-actions" data-label="Ações">
-                        <a href="{{ route('pedido-compra.show', $pedido) }}" class="btn btn--ghost btn--sm btn--icon js-ver"
-                            data-no-loader title="Ver" aria-label="Ver">
-                            <x-icon name="eye" />
-                        </a>
+                        <x-acoes>
+                            <x-slot:editar>
+                                @if($pedido->situacao === 'rascunho')
+                                    <a href="{{ route('pedido-compra.edit', $pedido) }}" class="btn btn--ghost btn--sm btn--icon" title="Editar" aria-label="Editar">
+                                        <x-icon name="edit" />
+                                    </a>
+                                @endif
+                            </x-slot:editar>
+                            <x-slot:ver>
+                                <a href="{{ route('pedido-compra.show', $pedido) }}" class="btn btn--ghost btn--sm btn--icon js-ver"
+                                    data-no-loader title="Ver" aria-label="Ver">
+                                    <x-icon name="eye" />
+                                </a>
+                            </x-slot:ver>
+                            <x-slot:excluir>
+                                @if(in_array($pedido->situacao, ['rascunho', 'cancelado'], true))
+                                    <form method="POST" action="{{ route('pedido-compra.destroy', $pedido) }}" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn--danger btn--sm btn--icon" title="Excluir" aria-label="Excluir"
+                                            data-confirm="Excluir o pedido {{ $pedido->numero }}?" data-confirm-title="Excluir pedido"
+                                            data-confirm-ok="Excluir" data-confirm-variant="danger">
+                                            <x-icon name="trash" />
+                                        </button>
+                                    </form>
+                                @endif
+                            </x-slot:excluir>
+                        </x-acoes>
                     </td>
                 </tr>
             @empty

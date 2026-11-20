@@ -179,10 +179,10 @@
 <style>
 .modal-cadastro-rapido__erro {
     padding: 0.75rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 4px;
-    color: #dc2626;
+    background: var(--color-error-bg);
+    border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
+    border-radius: var(--radius-sm);
+    color: var(--color-error);
     font-size: 0.85rem;
     margin-bottom: 1rem;
 }

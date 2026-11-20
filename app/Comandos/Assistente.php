@@ -84,12 +84,10 @@ final class Assistente
             return $this->ajuda($usuario);
         }
 
-        if ($temPrevia && $this->interpretador->reconhecer($texto) !== null) {
-            return Resposta::info('Confirme ou cancele a prévia atual antes de iniciar outra tarefa.');
-        }
-
         if ($pergunta !== null) {
-            $novoPedido = $this->interpretador->reconhecer($texto, tolerante: false);
+            $novoPedido = $this->registro->buscar($pergunta['comando'])?->respostaLivre($pergunta['campo'])
+                ? null
+                : $this->interpretador->reconhecer($texto, tolerante: false);
             if ($novoPedido === null) {
                 return $this->responderPergunta($pergunta, $texto, $usuario);
             }

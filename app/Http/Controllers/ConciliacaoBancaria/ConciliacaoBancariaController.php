@@ -22,9 +22,9 @@ class ConciliacaoBancariaController extends Controller
         return $this->service->importar($request);
     }
 
-    public function show(ExtratoBancario $extratoBancario)
+    public function show(Request $request, ExtratoBancario $extratoBancario)
     {
-        return $this->service->show($extratoBancario);
+        return $this->service->show($request, $extratoBancario);
     }
 
     public function buscarContas(Request $request)

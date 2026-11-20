@@ -9,15 +9,17 @@
     $versao = fn (string $arquivo) => asset($arquivo).'?v='.@filemtime(public_path($arquivo));
 @endphp
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
+    <script src="{{ $versao('js/tema.js') }}"></script>
     <title>{{ $pagina['titulo'] }} — Visys</title>
     <link rel="icon" href="{{ asset('icone.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ $versao('css/app.css') }}">
     <link rel="stylesheet" href="{{ $versao('css/ilustracoes.css') }}">
+    <link rel="stylesheet" href="{{ $versao('css/tema.css') }}">
 </head>
 <body class="erro-body" data-ilustracao-area>
     <main class="erro">

@@ -17,6 +17,10 @@ class OfxParser
     public function parse(string $conteudo): array
     {
         $conteudo = preg_replace('/^\xEF\xBB\xBF/', '', $conteudo) ?? $conteudo;
+        // Bancos brasileiros costumam gerar o OFX em Windows-1252 (CHARSET:1252); o banco só aceita UTF-8.
+        if (! mb_check_encoding($conteudo, 'UTF-8')) {
+            $conteudo = mb_convert_encoding($conteudo, 'UTF-8', 'Windows-1252');
+        }
         preg_match_all('/<STMTTRN\b[^>]*>(.*?)<\/STMTTRN>/is', $conteudo, $blocos);
 
         if ($blocos[1] === []) {
@@ -32,15 +36,16 @@ class OfxParser
         $transacoes = [];
         foreach ($blocos[1] as $indice => $bloco) {
             $data = $this->data($this->campo($bloco, 'DTPOSTED'), $indice + 1);
-            $valorTexto = $this->campo($bloco, 'TRNAMT');
+            $valorTexto = str_replace(' ', '', (string) $this->campo($bloco, 'TRNAMT'));
 
-            if ($valorTexto === null || ! preg_match('/^-?\d+(?:\.\d+)?$/', $valorTexto)) {
+            // O padrão OFX aceita ponto ou vírgula como separador decimal ("-35.00" ou "-35,00").
+            if (! preg_match('/^[+-]?\d+(?:[.,]\d+)?$/', $valorTexto)) {
                 throw ValidationException::withMessages([
                     'arquivo' => 'O arquivo OFX contém uma transação com valor inválido.',
                 ]);
             }
 
-            $valor = (float) $valorTexto;
+            $valor = round((float) str_replace(',', '.', $valorTexto), 2);
             $fitid = $this->campo($bloco, 'FITID');
             $tipo = $this->campo($bloco, 'TRNTYPE');
             $descricao = $this->campo($bloco, 'NAME') ?? '';
@@ -77,7 +82,9 @@ class OfxParser
     private function campo(string $conteudo, string $nome): ?string
     {
         $nome = preg_quote($nome, '/');
-        if (! preg_match('/<'.$nome.'(?:\s[^>]*)?>(.*?)(?:<\/'.$nome.'>|(?=<))/is', $conteudo, $match)) {
+        // No OFX 1.x (SGML) a tag de valor não fecha: o valor vai até a próxima tag ou até o fim do bloco
+        // (o MEMO costuma ser o último campo da transação).
+        if (! preg_match('/<'.$nome.'(?:\s[^>]*)?>(.*?)(?:<\/'.$nome.'>|(?=<)|$)/is', $conteudo, $match)) {
             return null;
         }
 

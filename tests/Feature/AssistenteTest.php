@@ -266,6 +266,48 @@ class AssistenteTest extends TestCase
         $this->assertSame(90.0, (float) $conta->fresh()->valor);
     }
 
+    public function test_assistente_segue_as_travas_da_tela_ao_excluir_e_editar(): void
+    {
+        $venda = Venda::create([
+            'empresa_id' => $this->empresa->id,
+            'usuario_id' => $this->admin->id,
+            'numero' => '000010',
+            'data_venda' => '2026-11-06',
+            'subtotal' => 10,
+            'total' => 10,
+            'situacao' => 'cancelada',
+        ]);
+        $vendedor = $this->usuarioCom(['comandos', 'vendas']);
+
+        // Sem "cancelar vendas", a venda fechada só pode ser consultada (VendaService::destroy).
+        $this->diz('excluir venda #'.$venda->id, $vendedor)
+            ->assertJsonPath('tipo', 'info')
+            ->assertJsonPath('texto', 'Venda fechada só pode ser consultada.');
+        $this->assertDatabaseHas('vendas', ['id' => $venda->id, 'deleted_at' => null]);
+
+        // Apelidos de campo ("vencimento", "preço de custo") e valor escrito com "R$".
+        $conta = ContaPagar::create([
+            'empresa_id' => $this->empresa->id,
+            'descricao' => 'Aluguel',
+            'valor' => 900,
+            'valor_pago' => 0,
+            'data_vencimento' => '2026-11-10',
+            'situacao' => 'aberta',
+        ]);
+        $this->diz('editar conta a pagar Aluguel')->assertJsonPath('tipo', 'pergunta');
+        $this->diz('vencimento')->assertJsonPath('tipo', 'pergunta');
+        $previa = $this->diz('15/11/2026')->assertJsonPath('tipo', 'confirmacao');
+        $this->confirmar($previa->json('token'))->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame('2026-11-15', $conta->fresh()->data_vencimento->toDateString());
+
+        $produto = $this->produto('Coca lata', 6.5);
+        $this->diz('editar produto Coca lata');
+        $this->diz('preço de custo');
+        $this->confirmar($this->diz('R$ 3,20')->assertJsonPath('tipo', 'confirmacao')->json('token'))
+            ->assertJsonPath('tipo', 'sucesso');
+        $this->assertSame(3.2, (float) $produto->fresh()->preco_custo);
+    }
+
     public function test_responder_sim_salva_e_nao_descarta(): void
     {
         $this->diz('sim')->assertJsonPath('texto', 'Certo! É só me dizer o que precisa.');
@@ -337,13 +379,15 @@ class AssistenteTest extends TestCase
             ->assertJsonPath('avisos', ['Já existe um cliente com esse nome.']);
     }
 
-    public function test_cadastra_fornecedor_e_pede_cnpj_no_lugar_do_cpf(): void
+    public function test_cadastra_fornecedor_e_corrige_documento_invalido(): void
     {
-        $this->diz('cadastre fornecedor Atacado Sul cpf 529.982.247-25')
+        $this->diz('cadastre fornecedor Atacado Sul cnpj 11.222.333/0001')
             ->assertJsonPath('tipo', 'pergunta')
-            ->assertJsonPath('texto', 'Fornecedor é cadastrado com CNPJ, e esse número tem formato de CPF. Qual é o CNPJ?');
+            ->assertJsonPath('texto', 'O CPF/CNPJ informado tem 12 dígitos. CPF tem 11 e CNPJ tem 14. Qual é o número certo?');
 
-        $previa = $this->diz('11.222.333/0001-81')->assertJsonPath('texto', 'Cadastrar o fornecedor Atacado Sul?');
+        $previa = $this->diz('11.222.333/0001-81')
+            ->assertJsonPath('texto', 'Cadastrar o fornecedor Atacado Sul?')
+            ->assertJsonPath('detalhes', ['CNPJ 11.222.333/0001-81']);
         $this->confirmar($previa->json('token'))->assertJsonPath('tipo', 'sucesso');
 
         $this->assertDatabaseHas('fornecedores', ['empresa_id' => $this->empresa->id, 'nome' => 'Atacado Sul', 'cnpj' => '11.222.333/0001-81']);

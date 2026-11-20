@@ -119,6 +119,18 @@
     --color-warning: #7A5200;
     --color-warning-bg: #FFF3CD;
 
+    /* Papéis de uso das cores acima. No claro repetem os valores; o tema escuro (tema.css) troca só
+       estes, para texto azul, faixas e botões cheios continuarem legíveis sem regra por tela. */
+    --color-primary-ink: #163A5F;
+    --color-primary-ink-hover: #1F4F7A;
+    --color-surface-alt: #F3F6FA;
+    --color-surface-raised: #FFFFFF;
+    --color-danger-text: #B42318;
+    --color-success-solid: #1F6F3B;
+    --color-success-solid-hover: #175A30;
+    --color-error-solid: #8B1A1A;
+    --color-error-solid-hover: #6B1313;
+
     /* Estrutura */
     --sidebar-w: 248px;
     --header-h: 64px;
@@ -188,13 +200,13 @@ img {
 }
 
 a {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     text-decoration: none;
 }
 
 a:hover {
     text-decoration: underline;
-    color: var(--color-primary-lt);
+    color: var(--color-primary-ink-hover);
 }
 
 /* Foco visível só para teclado, igual em todo o sistema. */
@@ -487,7 +499,7 @@ a:hover {
 
 .busca-rapida__item.is-ativo a {
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .busca-rapida__nome {
@@ -673,7 +685,7 @@ a:hover {
 .sidebar__link:hover,
 .sidebar__group-toggle:hover {
     background: rgba(255, 255, 255, 0.55);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .sidebar__icon-svg {
@@ -696,7 +708,7 @@ a:hover {
 
 /* Grupo da tela atual: título em azul e ícone em laranja, mesmo recolhido. */
 .sidebar__group:has(.sidebar__link--active) > .sidebar__group-toggle {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .sidebar__group:has(.sidebar__link--active) > .sidebar__group-toggle .sidebar__icon-svg,
@@ -720,7 +732,7 @@ a:hover {
 
 .sidebar__link--active {
     background: var(--color-surface);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm);
 }
 
@@ -808,7 +820,7 @@ a:hover {
 .page-title {
     font-size: 1.35rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     line-height: 1.2;
     letter-spacing: -0.02em;
     overflow-wrap: anywhere;
@@ -828,7 +840,7 @@ a:hover {
 }
 
 .breadcrumb a:hover {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .page-bar__actions,
@@ -1031,7 +1043,7 @@ a:hover {
     justify-content: space-between;
     padding: 0.85rem 1.05rem;
     border-bottom: 1px solid var(--color-border);
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
     gap: 0.5rem;
 }
 
@@ -1040,7 +1052,7 @@ a:hover {
     font-weight: 700;
     text-transform: none;
     letter-spacing: 0;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .card__body {
@@ -1050,7 +1062,7 @@ a:hover {
 .card__footer {
     padding: 0.75rem 1.05rem;
     border-top: 1px solid var(--color-border);
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
@@ -1088,7 +1100,7 @@ a:hover {
     gap: 0.75rem 1.25rem;
     margin: -1rem -1.05rem 1rem;
     padding: 0.9rem 1.05rem;
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -1115,7 +1127,7 @@ a:hover {
 
 .ficha__resumo > div:first-child strong {
     font-size: 1.35rem;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .ficha__grid {
@@ -1185,7 +1197,7 @@ a:hover {
     justify-content: flex-end;
     padding: 0.85rem 1.05rem 1rem;
     border-top: 1px solid var(--color-border);
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
 }
 
 .venda-doc__totais .totals-box__row {
@@ -1200,7 +1212,7 @@ a:hover {
 }
 
 .venda-doc__totais .totals-box__row--total span:last-child {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 @media (max-width: 900px) {
@@ -1493,7 +1505,7 @@ a:hover {
 
 .pagination__btn:hover {
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     border-color: var(--color-primary);
     text-decoration: none;
 }
@@ -1887,7 +1899,7 @@ a:hover {
     padding: 0 0.45rem;
     border-radius: 999px;
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-size: 12px;
     font-weight: 700;
     vertical-align: 1px;
@@ -1950,7 +1962,7 @@ a:hover {
 
 .abas-filtro__item:hover {
     border-color: var(--color-border-mid);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     text-decoration: none;
 }
 
@@ -2170,7 +2182,7 @@ select.form-control {
 
 .btn--outline {
     background: transparent;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     border-color: var(--color-primary);
 }
 
@@ -2193,14 +2205,14 @@ select.form-control {
 }
 
 .btn--danger {
-    background: var(--color-error);
+    background: var(--color-error-solid);
     color: #FFF;
-    border-color: var(--color-error);
+    border-color: var(--color-error-solid);
 }
 
 .btn--danger:hover {
-    background: #6B1313;
-    border-color: #6B1313;
+    background: var(--color-error-solid-hover);
+    border-color: var(--color-error-solid-hover);
     color: #FFF;
     text-decoration: none;
 }
@@ -2215,8 +2227,8 @@ select.form-control {
 
 .btn--danger.btn--icon:hover,
 .btn--danger.btn--icon:focus-visible {
-    background: var(--color-error);
-    border-color: var(--color-error);
+    background: var(--color-error-solid);
+    border-color: var(--color-error-solid);
     color: #FFF;
 }
 
@@ -2320,7 +2332,7 @@ select.form-control {
 .export-dropdown__item:hover,
 .export-dropdown__item:focus {
     background: var(--color-primary-soft);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     text-decoration: none;
 }
 
@@ -2496,7 +2508,7 @@ select.form-control {
 
 .autocomplete-list__item:hover {
     background: var(--color-bg);
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .autocomplete-list__empty {
@@ -2518,7 +2530,7 @@ select.form-control {
 .autocomplete-dropdown .autocomplete-item {
     padding: 0.65rem 0.85rem;
     cursor: pointer;
-    border-bottom: 1px solid #f0f2f5;
+    border-bottom: 1px solid var(--color-border);
     transition: background 0.1s;
 }
 .autocomplete-dropdown .autocomplete-item:last-child {
@@ -2526,7 +2538,7 @@ select.form-control {
 }
 .autocomplete-dropdown .autocomplete-item:hover,
 .autocomplete-dropdown .autocomplete-item.active {
-    background: #f0f7ff;
+    background: var(--color-primary-soft);
 }
 .autocomplete-dropdown .autocomplete-empty {
     padding: 1rem;
@@ -2555,7 +2567,7 @@ select.form-control {
 .ac-item-preco {
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     white-space: nowrap;
 }
 .ac-item-meta {
@@ -2629,7 +2641,7 @@ select.form-control {
     justify-content: space-between;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--color-border);
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
 }
 
 .modal-box__footer {
@@ -2637,7 +2649,7 @@ select.form-control {
     border-top: 1px solid var(--color-border);
     justify-content: flex-end;
     gap: 0.5rem;
-    background: #F3F6FA;
+    background: var(--color-surface-alt);
 }
 
 .modal-box__body {
@@ -2787,14 +2799,14 @@ body.modal-ver-aberto {
    EXTRAS
    ========================================= */
 .btn--success {
-    background: var(--color-success);
+    background: var(--color-success-solid);
     color: #FFF;
-    border-color: var(--color-success);
+    border-color: var(--color-success-solid);
 }
 
 .btn--success:hover {
-    background: #175a30;
-    border-color: #175a30;
+    background: var(--color-success-solid-hover);
+    border-color: var(--color-success-solid-hover);
     color: #FFF;
     text-decoration: none;
 }
@@ -2828,7 +2840,7 @@ body.modal-ver-aberto {
 
 .text--danger,
 .table td.text--danger {
-    color: #B42318;
+    color: var(--color-danger-text);
     font-weight: 600;
 }
 
@@ -2837,7 +2849,7 @@ body.modal-ver-aberto {
     display: block;
     font-size: 12px;
     font-weight: 500;
-    color: #B42318;
+    color: var(--color-danger-text);
 }
 
 @media (max-width: 768px) {
@@ -2906,7 +2918,7 @@ body.modal-ver-aberto {
     padding-top: 0.65rem;
     border-top: 2px solid var(--color-border);
     font-size: 15px;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .totals-box--sale .totals-box__row--total #label-total {
@@ -2965,7 +2977,7 @@ body.modal-ver-aberto {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     background: #EBF0F7;
     padding: 0.2rem 0.55rem;
 }
@@ -3004,7 +3016,7 @@ body.modal-ver-aberto {
 .item-card__footer .span-total-item {
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 @media (min-width: 900px) {
@@ -3179,7 +3191,7 @@ body.modal-ver-aberto {
     .filtros--aberto .filtros__alternar {
         background: var(--color-primary-soft);
         border-color: var(--color-primary-soft);
-        color: var(--color-primary);
+        color: var(--color-primary-ink);
     }
 }
 
@@ -3655,7 +3667,7 @@ body.modal-ver-aberto {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.55rem 0.85rem;
         align-items: start;
-        background: #FFFFFF;
+        background: var(--color-surface-raised);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         padding: 0.75rem 0.85rem;
@@ -3665,7 +3677,7 @@ body.modal-ver-aberto {
 
     .table--cards tbody tr:nth-child(even),
     .table--cards tbody tr:hover {
-        background: #FFFFFF;
+        background: var(--color-surface-raised);
     }
 
     .table--cards td,
@@ -4029,7 +4041,7 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
 
 .sk-nota {
     margin: 0 0 0.75rem;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -4072,7 +4084,7 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
     justify-content: space-between;
     gap: 0.75rem;
     margin: 0.55rem 0 0;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -4194,7 +4206,7 @@ html.is-nav-esqueleto .nav-skeleton:not([hidden]) {
     padding: 0;
     border: 0;
     background: none;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font: inherit;
     font-weight: 600;
     text-decoration: underline;
@@ -4565,7 +4577,7 @@ body.auth-body {
     font-size: 1.65rem;
     font-weight: 600;
     letter-spacing: -0.025em;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     line-height: 1.15;
 }
 
@@ -4599,7 +4611,7 @@ body.auth-body {
 .auth-row input {
     width: 16px;
     height: 16px;
-    accent-color: var(--color-primary);
+    accent-color: var(--color-primary-ink);
 }
 
 .auth-row a {
@@ -4607,12 +4619,12 @@ body.auth-body {
     margin-left: auto;
     font-size: 13px;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     text-decoration: none;
 }
 
 .auth-row a:hover {
-    color: var(--color-primary-lt);
+    color: var(--color-primary-ink-hover);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
@@ -4728,14 +4740,14 @@ body.auth-body {
     font-size: 13px;
     font-weight: 600;
     line-height: 1.2;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
 .auth-ver-senha:hover {
-    color: var(--color-primary-lt);
+    color: var(--color-primary-ink-hover);
 }
 
 .auth-ver-senha:focus-visible,
@@ -5027,7 +5039,7 @@ body.auth-body {
 }
 .venda-item__preco-total {
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 .venda-item__actions {
     display: flex;
@@ -5158,7 +5170,7 @@ body.auth-body {
     font-weight: 700;
 }
 .venda-resumo__row--total span:last-child {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 .venda-resumo__actions {
     padding: 1rem;
@@ -5183,7 +5195,7 @@ body.auth-body {
     margin-bottom: 0.25rem;
 }
 .modal-qtd-produto__preco {
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
     font-weight: 500;
 }
 .modal-qtd-total {
@@ -5352,11 +5364,11 @@ body.auth-body {
 }
 
 .nfe-pendencias-fab__btn.is-ok {
-    background: var(--color-success);
+    background: var(--color-success-solid);
 }
 
 .nfe-pendencias-fab__btn.is-erro {
-    background: var(--color-error);
+    background: var(--color-error-solid);
 }
 
 .nfe-pendencias-fab__count {
@@ -5365,7 +5377,7 @@ body.auth-body {
     padding: 0 0.3rem;
     border-radius: 999px;
     background: #fff;
-    color: var(--color-error);
+    color: var(--color-error-solid);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5545,7 +5557,7 @@ body.auth-body {
 
 .nfe-step.is-done .nfe-step__num,
 .nfe-steps__item.is-done .nfe-steps__num {
-    background: var(--color-success, #16a34a);
+    background: var(--color-success-solid);
     color: #fff;
 }
 
@@ -5554,7 +5566,7 @@ body.auth-body {
 }
 
 .nfe-steps__item.has-pendencia .nfe-steps__num {
-    background: var(--color-error);
+    background: var(--color-error-solid);
     color: #fff;
 }
 
@@ -5865,7 +5877,7 @@ body.auth-body {
 
 .nfe-item-valores__total strong {
     font-size: 1.2rem;
-    color: var(--color-primary);
+    color: var(--color-primary-ink);
 }
 
 .nfe-item-fiscal {
@@ -6312,7 +6324,7 @@ body.auth-body {
 
     .nfe-emitir-fixed__total strong {
         font-size: 1.15rem;
-        color: var(--color-primary);
+        color: var(--color-primary-ink);
     }
 
     .nfe-emitir-fixed .btn {
@@ -6367,8 +6379,8 @@ body.auth-body {
     top: -3.5rem;
     z-index: 3000;
     padding: 0.55rem 0.8rem;
-    background: #fff;
-    color: var(--color-primary);
+    background: var(--color-surface-raised);
+    color: var(--color-primary-ink);
     border-radius: var(--radius-md);
     font-weight: 600;
     box-shadow: var(--shadow-md);
@@ -6394,7 +6406,7 @@ body.auth-body {
     width: 16px;
     height: 16px;
     margin: 0;
-    accent-color: var(--color-primary);
+    accent-color: var(--color-primary-ink);
     flex-shrink: 0;
 }
 
@@ -6413,14 +6425,36 @@ body.auth-body {
 }
 
 /* =========================================
-   HUB DE RELATORIOS
+   HUB DE RELATORIOS (catálogo)
+   Cada módulo tem a sua cor em --rp-cor/--rp-cor-suave (classe rp-cor--{slug}).
    ========================================= */
+.rp-mod {
+    --rp-cor: var(--color-primary-ink);
+    --rp-cor-suave: var(--color-primary-soft);
+}
+
+.rp-cor--vendas {
+    --rp-cor: var(--color-primary-ink);
+    --rp-cor-suave: var(--color-primary-soft);
+}
+
+.rp-cor--produtos-estoque {
+    --rp-cor: var(--color-warning);
+    --rp-cor-suave: var(--color-warning-bg);
+}
+
+.rp-cor--financeiro {
+    --rp-cor: var(--color-success);
+    --rp-cor-suave: var(--color-success-bg);
+}
+
+/* Busca e filtro por módulo. */
 .rp-toolbar {
     display: flex;
     align-items: center;
-    gap: 14px;
     flex-wrap: wrap;
-    margin: 16px 0 18px;
+    gap: 12px 14px;
+    margin: 16px 0 20px;
 }
 
 .rp-search {
@@ -6437,7 +6471,7 @@ body.auth-body {
     height: 18px;
     transform: translateY(-50%);
     fill: none;
-    stroke: #5E7084;
+    stroke: var(--color-text-muted);
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -6446,223 +6480,331 @@ body.auth-body {
 
 .rp-search input {
     width: 100%;
-    height: 46px;
+    height: 42px;
     padding: 0 14px 0 42px;
-    border: 1px solid #E3E9F1;
-    border-radius: 12px;
-    background: #fff;
-    color: #152232;
-    font: 400 14px/1 'IBM Plex Sans', sans-serif;
-    box-shadow: 0 1px 2px rgba(21, 34, 50, .06);
+    border: 1px solid var(--color-border-mid);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 14px;
 }
 
 .rp-search input::placeholder {
-    color: #8A97A8;
+    color: var(--color-text-muted);
 }
 
 .rp-search input:focus {
     outline: none;
-    border-color: #1F4F7A;
-    box-shadow: 0 0 0 4px rgba(31, 79, 122, .16);
+    border-color: var(--color-primary-ink);
+    box-shadow: var(--focus-ring);
 }
 
 .rp-chips {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    min-width: 0;
+    margin: -2px;
+    padding: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-/* Celular: módulos numa linha só, rolando de lado (como as abas das listagens). */
-@media (max-width: 640px) {
-    .rp-chips {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        scrollbar-width: none;
-        margin: 0 -0.75rem;
-        padding: 0 0.75rem;
-    }
-
-    .rp-chips::-webkit-scrollbar {
-        display: none;
-    }
-
-    .rp-chip {
-        flex: 0 0 auto;
-        height: 36px;
-        white-space: nowrap;
-    }
+.rp-chips::-webkit-scrollbar {
+    display: none;
 }
 
 .rp-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     height: 34px;
-    padding: 0 14px;
+    padding: 0 8px 0 14px;
+    border: 1px solid var(--color-border-mid);
     border-radius: 999px;
-    border: 1px solid #E3E9F1;
-    background: #fff;
-    font: 600 13px/32px 'IBM Plex Sans', sans-serif;
-    color: #5E7084;
+    background: var(--color-surface-raised);
+    color: var(--color-text-mid);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.rp-chip__qtd {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
 .rp-chip:hover {
-    border-color: #BCD0E4;
-    color: #163A5F;
+    background: var(--color-surface-alt);
+    color: var(--color-text);
 }
 
 .rp-chip.is-on {
-    background: #163A5F;
-    border-color: #163A5F;
-    color: #fff;
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: #FFFFFF;
+}
+
+.rp-chip.is-on .rp-chip__qtd {
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .rp-chip:focus-visible {
-    outline: 2px solid #1F4F7A;
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 
-.rp-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-    align-items: start;
+/* Últimos abertos neste aparelho (montado pelo relatorios-hub.js). */
+.rp-recentes {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: -6px 0 22px;
+    font-size: 13px;
 }
 
-.rp-mod {
-    background: #fff;
-    border: 1px solid #E3E9F1;
-    border-radius: 18px;
-    box-shadow: 0 1px 2px rgba(21, 34, 50, .06);
-    overflow: hidden;
+.rp-recentes[hidden] {
+    display: none;
+}
+
+.rp-recentes__titulo {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.rp-recentes__lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.rp-recentes__item {
+    color: var(--color-primary-ink);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.rp-recentes__item:hover {
+    color: var(--color-primary-ink-hover);
+}
+
+/* Módulos: título com ícone na cor do módulo e a grade de relatórios. */
+.rp-modulos {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
 }
 
 .rp-mod__head {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 18px 14px;
+    gap: 10px;
+    margin: 0 0 12px;
 }
 
 .rp-mod__icone {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border-radius: 12px;
-    background: #EAF2FA;
-    color: #163A5F;
+    flex: 0 0 auto;
     display: grid;
     place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--rp-cor-suave);
+    color: var(--rp-cor);
+}
+
+.rp-mod__icone .icon {
+    width: 18px;
+    height: 18px;
+}
+
+.rp-mod__titulos {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
 }
 
 .rp-mod__nome {
+    margin: 0;
+    color: var(--color-text);
     font-size: 15px;
     font-weight: 700;
-    color: #152232;
+    line-height: 1.3;
+}
+
+.rp-mod__desc {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .rp-mod__count {
-    margin-left: auto;
-    min-width: 28px;
-    height: 24px;
-    padding: 0 9px;
-    border-radius: 999px;
-    background: #F2F5F9;
-    color: #5E7084;
-    font-size: 12px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    flex: 0 0 auto;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
-.rp-rep {
-    display: flex;
-    align-items: center;
+.rp-mod__grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 12px;
-    padding: 13px 18px;
-    border-top: 1px solid #E3E9F1;
-    text-decoration: none;
-    color: inherit;
 }
 
-.rp-rep:hover {
-    background: #F6F9FD;
+/* Cartão do relatório: no mouse, ganha sombra, o ícone se preenche e a seta anda. */
+.rp-rep {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 12px 14px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.rp-rep__icone {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--rp-cor-suave);
+    color: var(--rp-cor);
+    transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 .rp-rep__body {
+    flex: 1 1 auto;
     min-width: 0;
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .rp-rep__nome {
-    display: block;
+    color: var(--color-text);
     font-size: 14px;
-    font-weight: 600;
-    color: #152232;
+    font-weight: 700;
+    line-height: 1.3;
 }
 
 .rp-rep__desc {
-    display: block;
-    margin-top: 2px;
-    font-size: 12px;
-    line-height: 1.4;
-    color: #5E7084;
+    color: var(--color-text-muted);
+    font-size: 12.5px;
+    line-height: 1.45;
 }
 
-.rp-rep__go {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
-    border-radius: 50%;
-    border: 1px solid #E3E9F1;
-    background: #fff;
-    color: #163A5F;
-    display: grid;
-    place-items: center;
+.rp-rep__seta {
+    flex: 0 0 auto;
+    align-self: center;
+    color: var(--color-border-mid);
+    transition: color 0.18s ease, transform 0.18s ease;
 }
 
-.rp-rep__go svg {
-    width: 14px;
-    height: 14px;
+/* Sem o sublinhado que o sistema põe nos links ao passar o mouse. */
+.rp-rep:hover,
+.rp-rep:focus,
+.rp-recentes__item:hover {
+    text-decoration: none;
 }
 
-.rp-rep:hover .rp-rep__go {
-    background: #163A5F;
-    border-color: #163A5F;
-    color: #fff;
+.rp-rep:hover {
+    background: var(--color-surface-raised);
+    box-shadow: 0 6px 18px rgba(22, 58, 95, 0.1);
+}
+
+.rp-rep:hover .rp-rep__icone {
+    background: var(--rp-cor);
+    color: var(--color-surface);
+}
+
+.rp-rep:hover .rp-rep__seta {
+    color: var(--rp-cor);
+    transform: translateX(3px);
 }
 
 .rp-rep:focus-visible {
-    outline: 2px solid #1F4F7A;
-    outline-offset: -2px;
+    outline: 2px solid var(--color-primary-ink);
+    outline-offset: 2px;
 }
 
-.rp-rep--oculto,
-.rp-mod--oculto,
-.rp-vazio--oculto {
-    display: none;
-}
-
+/* Busca sem resultado. */
 .rp-vazio {
-    margin: 18px 0 0;
-    padding: 16px 18px;
-    border: 1px dashed #E3E9F1;
-    border-radius: 18px;
-    background: #fff;
-    color: #5E7084;
-    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 28px 16px;
+    border: 1px dashed var(--color-border-mid);
+    border-radius: var(--radius-lg);
+    text-align: center;
 }
 
-@media (min-width: 860px) {
-    .rp-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+.rp-vazio__titulo {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.rp-vazio__texto {
+    margin: 0 0 10px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .rp-toolbar {
+        margin-top: 8px;
+    }
+
+    .rp-search {
+        flex-basis: 100%;
+    }
+
+    .rp-mod__desc {
+        display: none;
+    }
+
+    .rp-mod__grade {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 }
 
-@media (min-width: 1240px) {
-    .rp-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (prefers-reduced-motion: reduce) {
+    .rp-rep,
+    .rp-rep__icone,
+    .rp-rep__seta {
+        transition: none;
     }
+
+    .rp-rep:hover .rp-rep__seta {
+        transform: none;
+    }
+}
+
+/* Escondidos pela busca/filtro. */
+.rp-rep.rp-rep--oculto,
+.rp-mod.rp-mod--oculto,
+.rp-vazio.rp-vazio--oculto {
+    display: none;
 }
 
 /* =========================================
@@ -6730,7 +6872,7 @@ body.auth-body {
     padding: 0.4rem 0.85rem;
     border: 1px solid var(--color-border-mid);
     border-radius: 999px;
-    background: #fff;
+    background: var(--color-surface-raised);
     color: var(--color-text);
     font-size: 13px;
     font-weight: 600;
@@ -6843,5 +6985,222 @@ body.auth-body {
 
     .table--cards tfoot td:empty {
         display: none;
+    }
+}
+
+/* =========================================
+   CONCILIAÇÃO BANCÁRIA (revisar extrato OFX)
+   Busca + conta + Conciliar numa linha; Ignorar com motivo na linha de baixo.
+   ========================================= */
+.conciliacao-memo {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.conciliacao-acoes {
+    display: grid;
+    gap: 0.5rem;
+    min-width: min(100%, 420px);
+}
+
+.conciliacao-acoes__linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.conciliacao-acoes__linha .form-control {
+    flex: 1 1 160px;
+    min-width: 0;
+    height: 36px;
+    min-height: 36px;
+}
+
+.conciliacao-acoes__linha .form-hint {
+    flex-basis: 100%;
+}
+
+.conciliacao-acoes__linha .form-hint:empty {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .table--cards .conciliacao-memo {
+        display: inline;
+        margin-left: 0.35rem;
+    }
+
+    .conciliacao-acoes {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .conciliacao-acoes__linha .form-control {
+        flex-basis: 100%;
+        height: var(--touch-min);
+        min-height: var(--touch-min);
+    }
+}
+
+/* =========================================
+   ENVIO DE ARQUIVO (x-upload-arquivo)
+   Clique ou arraste; comportamento em app.js ([data-upload-area]).
+   ========================================= */
+.upload-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1.75rem 1rem;
+    border: 2px dashed var(--color-border-mid);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition), background-color var(--transition);
+}
+
+.upload-area:hover,
+.upload-area--drag {
+    border-color: var(--color-primary-ink);
+    background: color-mix(in srgb, var(--color-primary-ink) 6%, var(--color-bg));
+}
+
+/* O input cobre a área inteira (invisível): o foco do teclado aparece no contorno da área. */
+.upload-area:focus-within {
+    border-color: var(--color-primary-ink);
+    box-shadow: var(--focus-ring);
+}
+
+.upload-area--erro,
+.upload-area--erro:focus-within {
+    border-color: var(--color-error);
+}
+
+.upload-area__icon {
+    margin-bottom: 0.5rem;
+}
+
+.upload-area__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.upload-area__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.upload-area__subtitle {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.upload-area__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Fica acima do input invisível para o "remover" receber o clique. */
+.upload-area__selected {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0.45rem 0.4rem 0.45rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+    border-radius: var(--radius-sm);
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    font-size: 0.875rem;
+    cursor: default;
+}
+
+.upload-area__selected[hidden],
+.upload-area__aviso[hidden] {
+    display: none;
+}
+
+.upload-area__file-icon {
+    flex: none;
+}
+
+.upload-area__filename {
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+.upload-area__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.upload-area__remove:hover,
+.upload-area__remove:focus-visible {
+    background: var(--color-error-bg);
+    color: var(--color-danger-text);
+}
+
+.upload-area--has-file .upload-area__icon,
+.upload-area--has-file .upload-area__text {
+    display: none;
+}
+
+.upload-area__aviso {
+    position: relative;
+    z-index: 1;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-danger-text);
+}
+
+.upload-area__dica {
+    margin: 0.6rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.upload-area + .form-error,
+.upload-area__dica + .form-error {
+    display: block;
+    margin-top: 0.4rem;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .upload-area {
+        padding: 1.4rem 0.85rem;
+    }
+
+    .upload-area__title {
+        font-size: 0.9rem;
     }
 }

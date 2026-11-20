@@ -9,6 +9,7 @@ use App\Models\ContasReceber\ContaReceber;
 use App\Repositories\ContasPagar\ContaPagarRepository;
 use App\Repositories\ContasReceber\ContaReceberRepository;
 use App\Support\Auditoria;
+use App\Support\MensagemPublica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -51,7 +52,8 @@ class ConciliacaoBancariaService
         $empresaId = (int) auth()->user()->empresa_id;
         $hash = hash('sha256', $conteudo);
 
-        $extrato = DB::transaction(function () use ($dados, $arquivo, $empresaId, $hash) {
+        $repetidas = 0;
+        $extrato = DB::transaction(function () use ($dados, $arquivo, $empresaId, $hash, &$repetidas) {
             if (ExtratoBancario::where('empresa_id', $empresaId)->where('arquivo_hash', $hash)->exists()) {
                 throw ValidationException::withMessages([
                     'arquivo' => 'Este mesmo arquivo OFX já foi importado.',
@@ -68,8 +70,11 @@ class ConciliacaoBancariaService
             ]);
 
             foreach ($dados['transacoes'] as $transacao) {
+                // A mesma transação pode vir em dois extratos com períodos que se sobrepõem.
                 if (TransacaoBancaria::where('empresa_id', $empresaId)
                     ->where('fingerprint', $transacao['fingerprint'])->exists()) {
+                    $repetidas++;
+
                     continue;
                 }
 
@@ -79,27 +84,51 @@ class ConciliacaoBancariaService
                 ]));
             }
 
+            if ($repetidas === count($dados['transacoes'])) {
+                throw ValidationException::withMessages([
+                    'arquivo' => 'Todas as transações deste arquivo já foram importadas em outro extrato.',
+                ]);
+            }
+
             return $extrato;
         });
 
+        $novas = count($dados['transacoes']) - $repetidas;
         Auditoria::registrar('conciliacao_bancaria.extrato_importado', 'extrato_bancario', $extrato->id, [
-            'transacoes' => $extrato->transacoes()->count(),
+            'transacoes' => $novas,
+            'repetidas' => $repetidas,
         ]);
 
+        $mensagem = 'Extrato importado com '.$novas.' '.($novas === 1 ? 'transação' : 'transações').'.';
+        if ($repetidas > 0) {
+            $mensagem .= ' '.$repetidas.' já '.($repetidas === 1 ? 'tinha sido importada' : 'tinham sido importadas').' antes e '
+                .($repetidas === 1 ? 'ficou' : 'ficaram').' de fora.';
+        }
+
         return redirect()->route('conciliacao-bancaria.show', $extrato)
-            ->with('success', 'Extrato importado. Revise as transações antes de conciliá-las.');
+            ->with('success', $mensagem.' Revise as transações antes de conciliá-las.');
     }
 
-    public function show(ExtratoBancario $extrato)
+    public function show(Request $request, ExtratoBancario $extrato)
     {
         $this->garantirEmpresa($extrato);
+        $situacao = in_array($request->query('situacao'), ['pendente', 'conciliada', 'ignorada'], true)
+            ? $request->query('situacao')
+            : null;
+
         $transacoes = $extrato->transacoes()
             ->with(['contaReceber', 'contaPagar'])
+            ->when($situacao, fn ($query) => $query->where('situacao', $situacao))
             ->orderBy('data_transacao')
             ->orderBy('id')
             ->paginate(50);
 
-        return view('conciliacao-bancaria.show', compact('extrato', 'transacoes'));
+        $resumo = $extrato->transacoes()
+            ->selectRaw('situacao, count(*) as quantidade')
+            ->groupBy('situacao')
+            ->pluck('quantidade', 'situacao');
+
+        return view('conciliacao-bancaria.show', compact('extrato', 'transacoes', 'resumo'));
     }
 
     public function buscarContas(Request $request)
@@ -185,7 +214,7 @@ class ConciliacaoBancariaService
                 $transacao->update(['situacao' => 'conciliada', 'conciliado_em' => now()]);
             });
         } catch (RuntimeException $exception) {
-            return back()->with('error', $exception->getMessage());
+            return back()->with('error', MensagemPublica::de($exception));
         }
 
         Auditoria::registrar('conciliacao_bancaria.transacao_conciliada', 'transacao_bancaria', $transacao->id, [

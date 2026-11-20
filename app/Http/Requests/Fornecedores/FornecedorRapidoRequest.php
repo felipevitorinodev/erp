@@ -18,6 +18,7 @@ class FornecedorRapidoRequest extends FormRequest
     {
         return [
             'nome' => 'required|string|max:200',
+            'cpf' => 'nullable|string|max:14|cpf',
             'cnpj' => 'nullable|string|max:18|cnpj',
             'telefone' => 'nullable|string|max:20',
         ];
@@ -28,6 +29,7 @@ class FornecedorRapidoRequest extends FormRequest
         return [
             'nome.required' => 'O nome do fornecedor é obrigatório.',
             'nome.max' => 'O nome do fornecedor pode ter no máximo :max caracteres.',
+            'cpf.cpf' => 'CPF inválido.',
             'cnpj.cnpj' => 'CNPJ inválido.',
             'telefone.max' => 'Telefone com dígitos demais.',
         ];

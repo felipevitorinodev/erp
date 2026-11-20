@@ -39,7 +39,8 @@ return new class extends Migration
             $table->string('motivo_ignorado', 500)->nullable();
             $table->timestamps();
             $table->unique(['empresa_id', 'fingerprint']);
-            $table->index(['extrato_bancario_id', 'situacao', 'data_transacao']);
+            // Nome explícito: o gerado automaticamente passa do limite de 64 caracteres do MySQL.
+            $table->index(['extrato_bancario_id', 'situacao', 'data_transacao'], 'transacoes_bancarias_extrato_situacao_data_index');
         });
     }
 

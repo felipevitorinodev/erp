@@ -40,4 +40,10 @@ interface Comando
 
     /** Encaixa a resposta de uma pergunta na frase original, para preparar de novo. */
     public function completar(string $argumento, string $campo, string $resposta, ?string $termo): string;
+
+    /**
+     * A pergunta deste campo aceita qualquer texto ("preço de venda", "venda balcão" nas observações):
+     * a resposta nunca é lida como um pedido novo. Para sair, a pessoa cancela ("não").
+     */
+    public function respostaLivre(string $campo): bool;
 }

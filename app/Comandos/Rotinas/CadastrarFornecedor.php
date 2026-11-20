@@ -12,7 +12,7 @@ use App\Models\Fornecedores\Fornecedor;
 use App\Repositories\Fornecedores\FornecedorRepository;
 use Illuminate\Validation\ValidationException;
 
-/** "cadastre fornecedor Distribuidora Sul cnpj 11.222.333/0001-81 telefone (11) 3333-4444" */
+/** "cadastre fornecedor Distribuidora Sul cnpj 11.222.333/0001-81 telefone (11) 3333-4444"; pessoa física com CPF. */
 final class CadastrarFornecedor extends Rotina
 {
     public function __construct(private readonly FornecedorRepository $fornecedores) {}
@@ -68,7 +68,7 @@ final class CadastrarFornecedor extends Rotina
         try {
             $dados = $this->ler($argumento);
         } catch (EntradaInvalida $e) {
-            return $this->corrigirEntrada($e, 'Qual é o CNPJ?', [Resposta::opcao('Sem CNPJ', 'sem cnpj')]);
+            return $this->corrigirEntrada($e, 'Qual é o número certo?', [Resposta::opcao('Sem documento', 'sem documento')]);
         }
 
         if ($dados['nome'] === '') {
@@ -94,6 +94,7 @@ final class CadastrarFornecedor extends Rotina
             'Cadastrar o fornecedor '.$dados['nome'].'?',
             $dados,
             array_values(array_filter([implode(' · ', array_filter([
+                $dados['cpf'] ? 'CPF '.$dados['cpf'] : null,
                 $dados['cnpj'] ? 'CNPJ '.$dados['cnpj'] : null,
                 $dados['telefone'],
             ]))])),
@@ -119,7 +120,9 @@ final class CadastrarFornecedor extends Rotina
     }
 
     /**
-     * @return array{nome: string, cnpj: ?string, telefone: ?string}
+     * Fornecedor pessoa física vem com CPF, como no cadastro completo da tela.
+     *
+     * @return array{nome: string, cpf: ?string, cnpj: ?string, telefone: ?string}
      *
      * @throws EntradaInvalida
      */
@@ -129,13 +132,10 @@ final class CadastrarFornecedor extends Rotina
         $contatos = $leitor->contatos();
         $documento = $contatos['documento'];
 
-        if ($documento !== null && $documento['tipo'] !== 'cnpj') {
-            throw new EntradaInvalida('Fornecedor é cadastrado com CNPJ, e esse número tem formato de CPF.', $contatos['documento_digitado']);
-        }
-
         return [
             'nome' => mb_substr($leitor->resto(), 0, 200),
-            'cnpj' => $documento['numero'] ?? null,
+            'cpf' => ($documento['tipo'] ?? null) === 'cpf' ? $documento['numero'] : null,
+            'cnpj' => ($documento['tipo'] ?? null) === 'cnpj' ? $documento['numero'] : null,
             'telefone' => $contatos['telefone'],
         ];
     }

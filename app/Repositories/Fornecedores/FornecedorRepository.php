@@ -37,6 +37,7 @@ class FornecedorRepository
         return Fornecedor::create([
             'empresa_id' => auth()->user()->empresa_id,
             'nome' => trim($dados['nome']),
+            'cpf' => $dados['cpf'] ?? null,
             'cnpj' => $dados['cnpj'] ?? null,
             'telefone' => $dados['telefone'] ?? null,
             'ativo' => true,

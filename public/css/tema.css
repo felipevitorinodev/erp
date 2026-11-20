@@ -20,6 +20,16 @@ html[data-theme="dark"] {
     --color-warning: #E8C36A;
     --color-warning-bg: #3B3320;
 
+    --color-primary-ink: #8DB7DF;
+    --color-primary-ink-hover: #B1D0ED;
+    --color-surface-alt: #202D3A;
+    --color-surface-raised: #223242;
+    --color-danger-text: #F08B8B;
+    --color-success-solid: #2B7A47;
+    --color-success-solid-hover: #236A3C;
+    --color-error-solid: #B4373A;
+    --color-error-solid-hover: #9A2C2F;
+
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.38);
@@ -36,6 +46,12 @@ html[data-theme="dark"] {
     --pdv-ok-soft: #203A2B;
     --pdv-danger-soft: #40272A;
     --pdv-orange-soft: #3B2A22;
+    --pdv-link: #8DB7DF;
+    --pdv-link-hover: #B1D0ED;
+    --pdv-title: #E5EBF2;
+    --pdv-ok: #3FA77A;
+    --pdv-danger: #F08B8B;
+    --pdv-orange-ink: #F0A066;
 }
 
 html[data-theme="dark"] body {
@@ -75,8 +91,7 @@ html[data-theme="dark"] .sidebar,
 html[data-theme="dark"] .card,
 html[data-theme="dark"] .modal-box,
 html[data-theme="dark"] .busca-rapida__caixa,
-html[data-theme="dark"] .auth-card,
-html[data-theme="dark"] .rp-mod {
+html[data-theme="dark"] .auth-card {
     background-color: var(--color-surface);
     color: var(--color-text);
 }
@@ -104,9 +119,7 @@ html[data-theme="dark"] .sidebar__link,
 html[data-theme="dark"] .sidebar__group-toggle,
 html[data-theme="dark"] .card__title,
 html[data-theme="dark"] .page-title,
-html[data-theme="dark"] .breadcrumb,
-html[data-theme="dark"] .rp-mod__nome,
-html[data-theme="dark"] .rp-rep__nome {
+html[data-theme="dark"] .breadcrumb {
     color: var(--color-text);
 }
 
@@ -173,10 +186,8 @@ html[data-theme="dark"] .modal-box__footer {
 
 html[data-theme="dark"] .form-control,
 html[data-theme="dark"] .auth-card .form-control,
-html[data-theme="dark"] .rp-search input,
-html[data-theme="dark"] .rp-chip,
-html[data-theme="dark"] .rp-rep__go,
-html[data-theme="dark"] .rp-vazio {
+html[data-theme="dark"] .comandos__campo,
+html[data-theme="dark"] .rp-search input {
     background-color: #16212C;
     border-color: var(--color-border-mid);
     color: var(--color-text);
@@ -200,10 +211,7 @@ html[data-theme="dark"] .auth-card {
 }
 
 html[data-theme="dark"] .badge--info,
-html[data-theme="dark"] .badge--neutral,
-html[data-theme="dark"] .rp-mod__count,
-html[data-theme="dark"] .rp-mod__icone,
-html[data-theme="dark"] .rp-rep:hover {
+html[data-theme="dark"] .badge--neutral {
     background-color: var(--color-primary-soft);
     color: #B1D0ED;
 }
@@ -213,9 +221,7 @@ html[data-theme="dark"] .auth-page {
     background-color: var(--color-bg);
 }
 
-html[data-theme="dark"] .rp-search > svg,
-html[data-theme="dark"] .rp-rep__desc,
-html[data-theme="dark"] .rp-chip {
+html[data-theme="dark"] .rp-search > svg {
     color: var(--color-text-muted);
 }
 
@@ -387,4 +393,40 @@ html[data-theme="dark"] .home-pendencia--pagar {
 html[data-theme="dark"] .home-acao__icone--receber {
     background-color: var(--color-primary-soft);
     color: #B1D0ED;
+}
+
+/* Ilustrações: o traço azul-marinho some no fundo escuro; o painel do login já tem variante própria. */
+html[data-theme="dark"] .ilustracao:not(.ilustracao--sobre-escuro) .il-cheio {
+    fill: #3A6A98;
+}
+
+html[data-theme="dark"] .ilustracao:not(.ilustracao--sobre-escuro) .il-lente {
+    fill: rgba(141, 183, 223, 0.14);
+}
+
+html[data-theme="dark"] .ilustracao:not(.ilustracao--sobre-escuro) .il-sombra {
+    fill: rgba(0, 0, 0, 0.28);
+}
+
+/* Celular: a tabela vira cards; a linha par não ganha a faixa da tabela larga. */
+@media (max-width: 768px) {
+    html[data-theme="dark"] .table--cards tbody tr:nth-child(even),
+    html[data-theme="dark"] .table--cards tbody tr:hover {
+        background-color: var(--color-surface);
+    }
+}
+
+/* Fundo atrás dos modais: o véu claro do tema claro quase não escurece a tela escura. */
+html[data-theme="dark"] .modal-overlay {
+    background: rgba(5, 10, 16, 0.68);
+}
+
+/* Catálogo de relatórios: chip ativo e sombra do cartão no escuro. */
+html[data-theme="dark"] .rp-chip.is-on {
+    border-color: #1F4F7A;
+    background-color: #1F4F7A;
+}
+
+html[data-theme="dark"] .rp-rep:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }

@@ -169,7 +169,8 @@
 <script>
 (function ($) {
     var urlProdutos = '{{ route('api.produtos.busca') }}?apenas_controlados=1';
-    var indice = {{ $entrada ? $entrada->itens->count() : 0 }};
+    // Continua depois dos itens já desenhados (da entrada ou do pedido de compra), sem repetir índice.
+    var indice = {{ $itensExistentes->count() }};
     var decimaisQuantidade = {{ $decimaisQuantidade }};
 
     initAutocomplete('#input-fornecedor', '#hidden-fornecedor-id', '{{ route('api.fornecedores.busca') }}', function (item) {

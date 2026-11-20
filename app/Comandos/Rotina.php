@@ -28,6 +28,11 @@ abstract class Rotina implements Comando
         return null;
     }
 
+    public function respostaLivre(string $campo): bool
+    {
+        return false;
+    }
+
     /**
      * Com termo, a resposta troca aquele trecho da frase (o nome ambíguo, a data errada);
      * "sem ..." tira o trecho. Sem termo, a resposta entra no fim com o conector do campo ("vence amanhã").

@@ -1505,3 +1505,185 @@ document.addEventListener('DOMContentLoaded', function () {
         fechar();
     });
 })();
+
+/* Envio de arquivo (x-upload-arquivo) e modal simples.
+   - [data-upload-area]: arrastar e soltar, nome escolhido, remover e conferência da extensão do "accept"
+     (o seletor do sistema deixa escolher "Todos os arquivos").
+   - .modal-overlay[data-modal]: [data-abrir-modal="id"] abre; [data-close-modal], clique fora e Esc fecham.
+     Modais sem data-modal seguem com o controle próprio de cada tela. */
+(function () {
+    function areaDe(el) {
+        return el && el.closest ? el.closest('[data-upload-area]') : null;
+    }
+
+    function extensoes(input) {
+        return (input.getAttribute('accept') || '').split(',')
+            .map(function (item) { return item.trim().toLowerCase(); })
+            .filter(function (item) { return item.charAt(0) === '.'; });
+    }
+
+    function aceita(input, arquivo) {
+        var lista = extensoes(input);
+        if (!lista.length) return true;
+        var nome = arquivo.name.toLowerCase();
+        return lista.some(function (ext) { return nome.slice(-ext.length) === ext; });
+    }
+
+    function avisar(area, texto) {
+        var aviso = area.querySelector('.upload-area__aviso');
+        if (!aviso) return;
+        aviso.textContent = texto || '';
+        aviso.hidden = !texto;
+    }
+
+    function recusar(area, input) {
+        limpar(area, true);
+        avisar(area, 'Escolha um arquivo ' + extensoes(input).join(' ou ') + '.');
+    }
+
+    function mostrar(area) {
+        var input = area.querySelector('.upload-area__input');
+        var escolhido = area.querySelector('.upload-area__selected');
+        var arquivo = input && input.files && input.files[0];
+        if (!escolhido) return;
+        if (!arquivo) {
+            limpar(area, true);
+            return;
+        }
+        escolhido.querySelector('.upload-area__filename').textContent = arquivo.name;
+        escolhido.hidden = false;
+        area.classList.add('upload-area--has-file');
+        area.classList.remove('upload-area--erro');
+        avisar(area, '');
+    }
+
+    function limpar(area, manterAviso) {
+        var input = area.querySelector('.upload-area__input');
+        var escolhido = area.querySelector('.upload-area__selected');
+        if (input) input.value = '';
+        if (escolhido) escolhido.hidden = true;
+        area.classList.remove('upload-area--has-file', 'upload-area--drag');
+        if (!manterAviso) avisar(area, '');
+    }
+
+    document.addEventListener('change', function (e) {
+        var input = e.target;
+        var area = areaDe(input);
+        if (!area || !input.classList.contains('upload-area__input')) return;
+        var arquivo = input.files && input.files[0];
+        if (arquivo && !aceita(input, arquivo)) {
+            recusar(area, input);
+            return;
+        }
+        mostrar(area);
+    });
+
+    ['dragenter', 'dragover'].forEach(function (tipo) {
+        document.addEventListener(tipo, function (e) {
+            var area = areaDe(e.target);
+            if (!area) return;
+            e.preventDefault();
+            area.classList.add('upload-area--drag');
+        });
+    });
+
+    document.addEventListener('dragleave', function (e) {
+        var area = areaDe(e.target);
+        if (!area || (e.relatedTarget && area.contains(e.relatedTarget))) return;
+        area.classList.remove('upload-area--drag');
+    });
+
+    document.addEventListener('drop', function (e) {
+        var area = areaDe(e.target);
+        if (!area) return;
+        e.preventDefault();
+        area.classList.remove('upload-area--drag');
+        var input = area.querySelector('.upload-area__input');
+        var arquivos = e.dataTransfer && e.dataTransfer.files;
+        if (!input || !arquivos || !arquivos.length) return;
+        if (!aceita(input, arquivos[0])) {
+            recusar(area, input);
+            return;
+        }
+        // Só o primeiro arquivo: o campo aceita um por vez.
+        try {
+            var transferencia = new DataTransfer();
+            transferencia.items.add(arquivos[0]);
+            input.files = transferencia.files;
+        } catch (erro) {
+            input.files = arquivos;
+        }
+        mostrar(area);
+    });
+
+    document.addEventListener('click', function (e) {
+        var remover = e.target.closest ? e.target.closest('.upload-area__remove') : null;
+        if (!remover) return;
+        var area = areaDe(remover);
+        if (!area) return;
+        e.preventDefault();
+        e.stopPropagation();
+        limpar(area);
+        var input = area.querySelector('.upload-area__input');
+        if (input) input.focus();
+    });
+
+    var origem = null;
+
+    function focarPrimeiroCampo(modal) {
+        var campo = modal.querySelector('[data-modal-foco], .upload-area__input, input:not([type="hidden"]), select, textarea');
+        if (campo) campo.focus();
+    }
+
+    function abrirModal(modal, botao) {
+        origem = botao || null;
+        modal.hidden = false;
+        focarPrimeiroCampo(modal);
+    }
+
+    function fecharModal(modal) {
+        modal.hidden = true;
+        modal.querySelectorAll('form').forEach(function (form) { form.reset(); });
+        modal.querySelectorAll('[data-upload-area]').forEach(function (area) {
+            limpar(area);
+            area.classList.remove('upload-area--erro');
+        });
+        modal.querySelectorAll('[data-modal-erro]').forEach(function (el) { el.remove(); });
+        if (origem && document.body.contains(origem)) origem.focus();
+        origem = null;
+    }
+
+    document.addEventListener('click', function (e) {
+        var botao = e.target.closest ? e.target.closest('[data-abrir-modal]') : null;
+        if (botao) {
+            var alvo = document.getElementById(botao.getAttribute('data-abrir-modal'));
+            if (alvo && alvo.matches('[data-modal]')) {
+                e.preventDefault();
+                abrirModal(alvo, botao);
+            }
+            return;
+        }
+
+        var modal = e.target.closest ? e.target.closest('.modal-overlay[data-modal]') : null;
+        if (!modal) return;
+        if (e.target === modal || (e.target.closest && e.target.closest('[data-close-modal]'))) {
+            fecharModal(modal);
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var confirmacao = document.getElementById('modal-confirm');
+        if (confirmacao && !confirmacao.hidden) return;
+        var abertos = document.querySelectorAll('.modal-overlay[data-modal]:not([hidden])');
+        if (abertos.length) fecharModal(abertos[abertos.length - 1]);
+    });
+
+    // Volta com erro de validação: o modal já vem aberto pelo servidor.
+    function focarAberto() {
+        var aberto = document.querySelector('.modal-overlay[data-modal]:not([hidden])');
+        if (aberto) focarPrimeiroCampo(aberto);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', focarAberto);
+    else focarAberto();
+})();

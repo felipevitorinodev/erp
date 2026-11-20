@@ -14,23 +14,26 @@ class CatalogoRelatorios
     public const PERIODO_MAXIMO_DIAS = 366;
 
     /**
-     * @return array<string, array{titulo: string, icone: string, ordem: int}>
+     * @return array<string, array{titulo: string, descricao: string, icone: string, ordem: int}>
      */
     public static function categorias(): array
     {
         return [
             'vendas' => [
                 'titulo' => 'Vendas',
+                'descricao' => 'Faturamento, produtos, vendedores e clientes que mais compram.',
                 'icone' => 'cart',
                 'ordem' => 1,
             ],
             'produtos-estoque' => [
                 'titulo' => 'Produtos e estoque',
+                'descricao' => 'Saldo, itens abaixo do mínimo e valor parado em estoque.',
                 'icone' => 'package',
                 'ordem' => 2,
             ],
             'financeiro' => [
                 'titulo' => 'Financeiro',
+                'descricao' => 'Recebimentos e pagamentos por vencimento, atrasos e clientes em débito.',
                 'icone' => 'dollar',
                 'ordem' => 3,
             ],
@@ -80,7 +83,7 @@ class CatalogoRelatorios
                 'titulo' => 'Vendas por vendedor',
                 'descricao' => 'Faturamento das vendas confirmadas agrupado por vendedor.',
                 'categoria' => 'vendas',
-                'icone' => 'trending-up',
+                'icone' => 'users',
                 'rota' => 'relatorio.vendas-por-vendedor',
                 'permissoes' => ['relatorios'],
                 'exportacoes' => ['pdf', 'csv'],
@@ -102,7 +105,7 @@ class CatalogoRelatorios
                 'titulo' => 'Ranking de clientes',
                 'descricao' => 'Curva ABC dos clientes pelo faturamento das vendas confirmadas.',
                 'categoria' => 'vendas',
-                'icone' => 'bar-chart',
+                'icone' => 'layers',
                 'rota' => 'relatorio.ranking-clientes',
                 'permissoes' => ['relatorios'],
                 'exportacoes' => ['pdf', 'csv'],
@@ -168,7 +171,7 @@ class CatalogoRelatorios
                 'titulo' => 'Clientes com débito',
                 'descricao' => 'Saldo em aberto de cada cliente, com a parte já vencida.',
                 'categoria' => 'financeiro',
-                'icone' => 'dollar',
+                'icone' => 'users',
                 'rota' => 'relatorio.clientes-com-debito',
                 'permissoes' => ['relatorios', 'financeiro'],
                 'exportacoes' => ['pdf', 'csv'],
@@ -217,7 +220,7 @@ class CatalogoRelatorios
     }
 
     /**
-     * @return list<array{slug: string, titulo: string, icone: string, ordem: int, relatorios: list<array<string, mixed>>}>
+     * @return list<array{slug: string, titulo: string, descricao: string, icone: string, ordem: int, relatorios: list<array<string, mixed>>}>
      */
     public static function agrupados(User $usuario): array
     {
@@ -244,6 +247,7 @@ class CatalogoRelatorios
             $grupos[] = [
                 'slug' => $slug,
                 'titulo' => $categoria['titulo'],
+                'descricao' => $categoria['descricao'],
                 'icone' => $categoria['icone'],
                 'ordem' => $categoria['ordem'],
                 'relatorios' => $porCategoria[$slug],

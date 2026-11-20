@@ -71,7 +71,7 @@
         @endif
     </x-ficha>
 
-    <div class="card" style="margin-top:1rem;">
+    <div class="card mt-2">
         <div class="card__header"><span class="card__title">Itens do pedido</span></div>
         <div class="card__body card__body--flush">
             <div class="table-wrap">
@@ -108,7 +108,7 @@
     </div>
 
     @if($pedido->entradasEstoque->isNotEmpty())
-        <div class="card" style="margin-top:1rem;">
+        <div class="card mt-2">
             <div class="card__header"><span class="card__title">Entradas vinculadas</span></div>
             <div class="card__body card__body--flush">
                 <div class="table-wrap">
