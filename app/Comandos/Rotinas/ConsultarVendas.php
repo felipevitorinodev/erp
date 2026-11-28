@@ -125,7 +125,6 @@ final class ConsultarVendas extends Rotina
         return $consulta;
     }
 
-    /** @return PeriodoFalado|Resposta */
     private function periodo(string $texto): PeriodoFalado|Resposta
     {
         if ($texto === '') {

@@ -9,6 +9,7 @@ use App\Models\Empresas\Empresa;
 use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Nfes\Nfe;
+use App\Models\Nfses\Nfse;
 use App\Models\OrdensServico\OrdemServico;
 use App\Models\Usuarios\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -119,5 +120,10 @@ class Venda extends Model
     public function nfes()
     {
         return $this->hasMany(Nfe::class);
+    }
+
+    public function nfses()
+    {
+        return $this->hasMany(Nfse::class);
     }
 }

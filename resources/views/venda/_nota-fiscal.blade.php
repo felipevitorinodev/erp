@@ -7,6 +7,8 @@
 @php
     $usuario = auth()->user();
     $podeNfe = $usuario->pode('nfe');
+    // Venda só de serviços não tem NF-e: os serviços vão na NFS-e (quadro "Nota de serviço").
+    $podeEmitirNfe = $podeNfe && ! \App\Services\Vendas\DivisaoFiscalVenda::somenteServicos($venda);
     $podeCancelarNota = $usuario->pode('vendas.cancelar');
     $confirmada = $venda->situacao === 'confirmada';
     $ativas = ['autorizada', 'pendente', 'denegada'];
@@ -21,7 +23,7 @@
     $nota = $modo === 'nfce' ? $nfce : ($modo === 'nfe' ? $nfeDaVenda : null);
     $outra = $modo === 'nfce' ? $nfeDaVenda : ($modo === 'nfe' ? $nfce : null);
     $podeEmitirNfce = $confirmada && $nfceDisponivel;
-    $mostrar = $modo !== 'emitir' || $podeEmitirNfce || ($podeNfe && ($confirmada || $venda->isRascunhoNfe()));
+    $mostrar = $modo !== 'emitir' || $podeEmitirNfce || ($podeEmitirNfe && ($confirmada || $venda->isRascunhoNfe()));
     $exigeDocumento = strtoupper((string) $empresa->uf) === 'PB' && (float) $venda->total >= 500;
     $temDocumentoCliente = filled($venda->cliente?->cpf) || filled($venda->cliente?->cnpj);
 @endphp
@@ -141,7 +143,7 @@
                 @if ($podeEmitirNfce)
                     @include('venda._nota-fiscal-emitir', ['rotulo' => $nota->situacao === 'cancelada' ? 'Emitir nova NFC-e' : 'Emitir de novo'])
                 @endif
-                @if ($podeNfe && $confirmada && ! $nfeDaVenda)
+                @if ($podeEmitirNfe && $confirmada && ! $nfeDaVenda)
                     <form method="POST" action="{{ route('nfe.emitir', $venda) }}" class="nota-fiscal__outra">
                         @csrf
                         Precisa de NF-e (para empresa ou entrega)?
@@ -202,7 +204,7 @@
                         @include('venda._nota-fiscal-emitir', ['rotulo' => 'Emitir NFC-e'])
                     </div>
                 @endif
-                @if ($podeNfe)
+                @if ($podeEmitirNfe)
                     <div class="nota-fiscal__opcao">
                         <p class="nota-fiscal__opcao-titulo">NF-e</p>
                         <p class="nota-fiscal__texto">Nota para empresa, entrega ou venda fora do balcão.</p>

@@ -8,6 +8,7 @@ use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Repositories\Nfes\NfeRepository;
 use App\Services\Nfces\NfceBuilderService;
+use App\Services\Vendas\DivisaoFiscalVenda;
 use NFePHP\Common\Certificate;
 use NFePHP\Common\Keys;
 use NFePHP\Common\TimeZoneByUF;
@@ -70,10 +71,14 @@ class NfeBuilderService
         $this->antesDeMontar();
 
         app(NfeRepository::class)->carregarParaMontagem($venda);
+        $temItens = $venda->itens->isNotEmpty();
+        $venda = $this->vendaDaNota($venda);
         $this->vinculo = NfeVinculoFiscal::daEmpresa($this->empresa)->usarVenda($venda);
 
         if ($venda->itens->isEmpty()) {
-            throw new RuntimeException('A venda não tem itens para emitir a nota fiscal.');
+            throw new RuntimeException($temItens
+                ? 'A venda só tem serviços. Emita a NFS-e pela venda.'
+                : 'A venda não tem itens para emitir a nota fiscal.');
         }
 
         $numero = $this->numeroNfe($venda);
@@ -96,6 +101,15 @@ class NfeBuilderService
         }
 
         return $this->tools->signNFe($xml);
+    }
+
+    /**
+     * NF-e leva só os produtos: os serviços da venda saem na NFS-e, com o desconto e o acréscimo rateados
+     * (DivisaoFiscalVenda). Venda sem serviço segue inteira, como antes.
+     */
+    protected function vendaDaNota(Venda $venda): Venda
+    {
+        return DivisaoFiscalVenda::somenteProdutos($venda);
     }
 
     protected function iniciarTools(): void

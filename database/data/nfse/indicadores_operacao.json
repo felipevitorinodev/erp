@@ -1,0 +1,142 @@
+[
+{
+"codigo":"010101",
+"descricao":"Bem Móvel Material — Presencial, com retirada no estabelecimento do fornecedor",
+"local":"Estabelecimento do Prestador/Fornecedor"
+},
+{
+"codigo":"010102",
+"descricao":"Bem Móvel Material — Presencial, com retirada fora do estabelecimento do fornecedor",
+"local":"Local da Prestação"
+},
+{
+"codigo":"010103",
+"descricao":"Bem Móvel Material — Não presencial, com entrega ou disponibilização em endereço fornecido",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"010106",
+"descricao":"Bem Móvel Material — Locação de bem móvel material em aquisições realizadas de forma centralizada por contribuinte sujeito ao regime regular do IBS e da CBS que possui mais de um estabelecimento e que não estejam sujeitas a vedação à apropriação de créditos",
+"local":"Endereço do Tomador/Adquirente"
+},
+{
+"codigo":"020101",
+"descricao":"Operação com bem imóvel, bem móvel imaterial, inclusive direito, relacionada a bem imóvel — Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"020102",
+"descricao":"Operação com bem imóvel, bem móvel imaterial, inclusive direito, relacionada a Bem Imóvel de Características Especiais (BICE) — Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel de Características Especiais (BICE)",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"020201",
+"descricao":"Serviço prestado fisicamente sobre bem imóvel — Execução de serviços diversos prestados fisicamente sobre bem imóvel",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"020202",
+"descricao":"Serviço prestado fisicamente sobre bem imóvel — Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"020301",
+"descricao":"Serviço de administração e intermediação de bem imóvel — Execução dos serviços de administração e intermediação de bens imóveis",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"020401",
+"descricao":"Serviços de locação, sublocação, arrendamento, direito de passagem ou permissão de uso, compartilhado ou não, de ferrovia, rodovia, postes, cabos, dutos e condutos de qualquer natureza (quando caracterize operação tributável pelo ISSQN) — Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)",
+"local":"Localidade do Imóvel"
+},
+{
+"codigo":"030101",
+"descricao":"Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física — Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física",
+"local":"Estabelecimento do Prestador/Fornecedor"
+},
+{
+"codigo":"030102",
+"descricao":"Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física — Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física",
+"local":"Local da Prestação"
+},
+{
+"codigo":"040101",
+"descricao":"Serviço de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres — Execução de serviços de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres",
+"local":"Local do Evento"
+},
+{
+"codigo":"050101",
+"descricao":"Serviço prestado fisicamente sobre bem móvel material — Execução de serviços diversos prestados fisicamente sobre bem móvel material",
+"local":"Estabelecimento do Prestador/Fornecedor"
+},
+{
+"codigo":"050102",
+"descricao":"Serviço prestado fisicamente sobre bem móvel material — Execução de serviços diversos prestados fisicamente sobre bem móvel material",
+"local":"Local da Prestação"
+},
+{
+"codigo":"050201",
+"descricao":"Serviços portuários — Execução de serviços portuários",
+"local":"Local da Prestação"
+},
+{
+"codigo":"060101",
+"descricao":"Serviço de transporte de passageiros — Execução de serviços de transporte de passageiros",
+"local":"Local da Prestação (Início do Transporte)"
+},
+{
+"codigo":"070101",
+"descricao":"Serviço de transporte de carga — Execução de serviço de transporte de carga",
+"local":"Local da Prestação"
+},
+{
+"codigo":"070102",
+"descricao":"Serviço de transporte de carga — Execução de serviço de transporte de carga",
+"local":"Local da Prestação (Local da Retirada)"
+},
+{
+"codigo":"100101",
+"descricao":"Cessão de espaço para prestação de serviços publicitários, em operações onerosas — Realização de operações de cessão de espaço para prestação de serviços publicitários",
+"local":"Endereço do Tomador/Adquirente"
+},
+{
+"codigo":"100102",
+"descricao":"Cessão de espaço para prestação de serviços publicitários, em operações onerosas — Realização de operações de cessão de espaço para prestação de serviços publicitários",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"100201",
+"descricao":"Cessão de espaço para prestação de serviços publicitários, em operações não onerosas — Realização de operações de cessão de espaço para prestação de serviços publicitários",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"100301",
+"descricao":"Demais serviços, em operações onerosas — Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância",
+"local":"Endereço do Tomador/Adquirente"
+},
+{
+"codigo":"100302",
+"descricao":"Demais serviços, em operações onerosas — Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"100401",
+"descricao":"Demais serviços, em operações não onerosas — Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que tratam o inc. III, estes sejam, ainda que parcialmente, prestados à distância",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"100501",
+"descricao":"Demais bens, em operações onerosas — Realização de demais operações com bens não especificadas em outros indicadores",
+"local":"Endereço do Tomador/Adquirente"
+},
+{
+"codigo":"100502",
+"descricao":"Demais bens, em operações onerosas — Realização de demais operações com bens não especificadas em outros indicadores",
+"local":"Endereço do Destinatário"
+},
+{
+"codigo":"100601",
+"descricao":"Demais bens, em operações não onerosas — Realização de demais operações com bens não especificadas em outros indicadores",
+"local":"Endereço do Destinatário"
+}
+]

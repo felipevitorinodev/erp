@@ -79,6 +79,7 @@ class EmpresaService
             $dados['certificado_pfx'],
             $dados['certificado_senha'],
             $dados['confirmar_ambiente'],
+            $dados['confirmar_ambiente_nfse'],
             $dados['nfce_csc_homologacao'],
             $dados['nfce_id_csc_homologacao'],
             $dados['nfce_csc_producao'],
@@ -96,6 +97,21 @@ class EmpresaService
             return back()
                 ->withInput($request->except(Empresa::segredosForaDaSessao()))
                 ->withErrors(['confirmar_ambiente' => 'Marque a confirmação para alterar o ambiente da NF-e.']);
+        }
+
+        if (isset($dados['nfse_ambiente'])
+            && (int) $dados['nfse_ambiente'] !== (int) ($empresa->nfse_ambiente ?: 2)
+            && ! $request->boolean('confirmar_ambiente_nfse')) {
+            return back()
+                ->withInput($request->except(Empresa::segredosForaDaSessao()))
+                ->withErrors(['confirmar_ambiente_nfse' => 'Marque a confirmação para alterar o ambiente da NFS-e.']);
+        }
+
+        // Convênio consultado vale para o município e o ambiente daquela consulta.
+        if ((array_key_exists('cod_ibge', $dados) && (string) $dados['cod_ibge'] !== (string) $empresa->cod_ibge)
+            || (isset($dados['nfse_ambiente']) && (int) $dados['nfse_ambiente'] !== (int) ($empresa->nfse_ambiente ?: 2))) {
+            $dados['nfse_convenio_situacao'] = null;
+            $dados['nfse_convenio_consultado_em'] = null;
         }
 
         try {

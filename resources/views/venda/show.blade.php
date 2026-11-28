@@ -188,4 +188,8 @@
 
     @include('venda._nota-fiscal')
 
+    @if (! empty($nfseResumo) && ($nfseResumo['temServico'] || $nfseResumo['nota']))
+        @include('venda._nota-servico')
+    @endif
+
 @endsection

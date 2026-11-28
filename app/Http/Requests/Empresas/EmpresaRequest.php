@@ -54,6 +54,23 @@ class EmpresaRequest extends FormRequest
             $merge['cnpj'] = null;
         }
 
+        // NFS-e: códigos só com dígitos (o autocompletar manda "14.01.01") e percentuais com vírgula.
+        foreach (['nfse_c_trib_nac', 'nfse_c_trib_mun', 'nfse_nbs', 'nfse_class_trib', 'nfse_ind_op', 'nfse_serie'] as $campo) {
+            if ($this->exists($campo)) {
+                $digitos = preg_replace('/\D/', '', (string) $this->input($campo)) ?? '';
+                $merge[$campo] = $digitos === '' ? null : ($campo === 'nfse_serie' ? (ltrim($digitos, '0') ?: '0') : $digitos);
+            }
+        }
+        foreach (['nfse_aliquota_iss', 'nfse_ptot_trib_sn', 'nfse_ptot_trib_fed', 'nfse_ptot_trib_est', 'nfse_ptot_trib_mun'] as $campo) {
+            if ($this->exists($campo)) {
+                $valor = trim(str_replace(['%', ' '], '', (string) $this->input($campo)));
+                if (str_contains($valor, ',')) {
+                    $valor = str_replace(['.', ','], ['', '.'], $valor);
+                }
+                $merge[$campo] = $valor === '' ? null : $valor;
+            }
+        }
+
         if ($merge !== []) {
             $this->merge($merge);
         }
@@ -107,6 +124,21 @@ class EmpresaRequest extends FormRequest
             'nfe_csosn_padrao' => 'sometimes|required|digits:3',
             'nfe_cst_pis_padrao' => 'sometimes|required|digits:2',
             'nfe_cst_cofins_padrao' => 'sometimes|required|digits:2',
+            'nfse_ambiente' => 'sometimes|required|integer|in:1,2',
+            'confirmar_ambiente_nfse' => 'nullable|boolean',
+            'nfse_serie' => 'nullable|integer|between:1,49999',
+            'nfse_regime_apuracao_sn' => 'nullable|integer|in:1,2,3',
+            'nfse_regime_especial' => 'sometimes|required|integer|in:0,1,2,3,4,5,6,9',
+            'nfse_aliquota_iss' => 'nullable|numeric|between:0,5',
+            'nfse_ptot_trib_sn' => 'nullable|numeric|between:0,100',
+            'nfse_ptot_trib_fed' => 'nullable|numeric|between:0,100',
+            'nfse_ptot_trib_est' => 'nullable|numeric|between:0,100',
+            'nfse_ptot_trib_mun' => 'nullable|numeric|between:0,100',
+            'nfse_c_trib_nac' => 'nullable|digits:6|exists:nfse_servicos,codigo',
+            'nfse_c_trib_mun' => 'nullable|digits:3',
+            'nfse_nbs' => 'nullable|digits:9|exists:nfse_nbs,codigo',
+            'nfse_class_trib' => 'nullable|digits:6|exists:nfse_classificacoes,codigo',
+            'nfse_ind_op' => 'nullable|digits:6|exists:nfse_indicadores_operacao,codigo',
         ];
     }
 
@@ -167,6 +199,17 @@ class EmpresaRequest extends FormRequest
             'nfe_csosn_padrao.digits' => 'O CSOSN padrão deve ter 3 dígitos.',
             'nfe_cst_pis_padrao.digits' => 'O CST de PIS deve ter 2 dígitos.',
             'nfe_cst_cofins_padrao.digits' => 'O CST de COFINS deve ter 2 dígitos.',
+            'nfse_ambiente.in' => 'O ambiente da NFS-e deve ser Produção restrita ou Produção.',
+            'nfse_serie.between' => 'A série da DPS vai de 1 a 49999 (as séries acima são reservadas).',
+            'nfse_serie.integer' => 'A série da DPS deve ter só números.',
+            'nfse_aliquota_iss.between' => 'A alíquota do ISSQN vai de 0% a 5%.',
+            'nfse_c_trib_nac.exists' => 'Código de tributação nacional não encontrado na tabela oficial.',
+            'nfse_c_trib_nac.digits' => 'O código de tributação nacional tem 6 dígitos (ex.: 14.01.01).',
+            'nfse_c_trib_mun.digits' => 'O código municipal tem 3 dígitos.',
+            'nfse_nbs.exists' => 'NBS não encontrado na tabela oficial.',
+            'nfse_nbs.digits' => 'O NBS tem 9 dígitos.',
+            'nfse_class_trib.exists' => 'Classificação tributária não encontrada na tabela oficial.',
+            'nfse_ind_op.exists' => 'Indicador da operação não encontrado na tabela oficial.',
         ];
     }
 

@@ -7,10 +7,38 @@ use App\Models\Nfes\Nfe;
 use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Models\Vendas\VendaItem;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class NfceRepository
 {
+    /**
+     * Lista de NFC-e da empresa (modelo 65), da mais nova para a mais antiga.
+     *
+     * @param  array{situacao?: string}  $filtros
+     */
+    public function paginar(int $empresaId, array $filtros = []): LengthAwarePaginator
+    {
+        $situacao = (string) ($filtros['situacao'] ?? '');
+
+        return Nfe::query()
+            ->where('empresa_id', $empresaId)
+            ->where('modelo', Nfe::MODELO_NFCE)
+            ->when($situacao !== '', fn ($query) => $query->where('situacao', $situacao))
+            ->with(['venda:id,numero,cliente_id,total', 'venda.cliente:id,nome'])
+            ->orderByDesc('id')
+            ->paginate(30, [
+                'id',
+                'numero',
+                'serie',
+                'venda_id',
+                'data_autorizacao',
+                'created_at',
+                'situacao',
+                'ambiente',
+            ]);
+    }
+
     public function daVenda(int $empresaId, int $vendaId): Collection
     {
         return Nfe::query()

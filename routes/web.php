@@ -19,6 +19,7 @@ use App\Http\Controllers\Funcionarios\FuncionarioController;
 use App\Http\Controllers\Grupos\GrupoController;
 use App\Http\Controllers\Nfces\NfceController;
 use App\Http\Controllers\Nfes\NfeController;
+use App\Http\Controllers\Nfses\NfseController;
 use App\Http\Controllers\Orcamentos\OrcamentoController;
 use App\Http\Controllers\OrdensServico\OrdemServicoController;
 use App\Http\Controllers\PerfisFiscais\PerfilFiscalController;
@@ -51,6 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::put('{empresa}/editar/salvar', [EmpresaController::class, 'update'])->name('empresa.update');
         Route::delete('{empresa}/excluir', [EmpresaController::class, 'destroy'])->name('empresa.destroy');
         Route::post('{empresa}/nfce/verificar', [NfceController::class, 'verificar'])->middleware('throttle:10,1')->name('empresa.nfce.verificar');
+        Route::post('{empresa}/nfse/verificar', [NfseController::class, 'verificar'])->middleware('throttle:10,1')->name('empresa.nfse.verificar');
     });
 
     Route::prefix('usuario')->middleware('permissao:configuracoes')->group(function () {
@@ -157,6 +159,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('{venda}/excluir', [VendaController::class, 'destroy'])->name('venda.destroy');
     });
 
+    // NFC-e: lista e "Nova NFC-e" (grava a venda e emite). Mesma permissão das vendas.
+    Route::prefix('nfce')->middleware('permissao:vendas')->group(function () {
+        Route::get('/', [NfceController::class, 'index'])->name('nfce.index');
+        Route::get('nova', [NfceController::class, 'create'])->name('nfce.create');
+        Route::post('nova', [NfceController::class, 'store'])->middleware('throttle:30,1')->name('nfce.store');
+    });
+
     // NFC-e da venda: consultar a pendente, cancelar e baixar o XML. A NF-e tem as rotas dela, com a permissão "nfe".
     Route::prefix('nfce')->middleware(['permissao:vendas', 'throttle:30,1'])->group(function () {
         Route::post('{nfe}/consultar', [NfceController::class, 'consultar'])->name('nfce.consultar');
@@ -171,6 +180,21 @@ Route::middleware('auth')->group(function () {
         Route::get('{perfilFiscal}/editar', [PerfilFiscalController::class, 'edit'])->name('perfilFiscal.edit');
         Route::put('{perfilFiscal}/editar/salvar', [PerfilFiscalController::class, 'update'])->name('perfilFiscal.update');
         Route::delete('{perfilFiscal}/excluir', [PerfilFiscalController::class, 'destroy'])->name('perfilFiscal.destroy');
+    });
+
+    // NFS-e Nacional: emitida a partir da venda (ou da tela "Nova NFS-e"), só com os itens de serviço.
+    Route::prefix('nfse')->middleware('permissao:nfse')->group(function () {
+        Route::get('/', [NfseController::class, 'index'])->name('nfse.index');
+        // Nova NFS-e grava uma venda: exige também a permissão de vendas.
+        Route::get('nova', [NfseController::class, 'nova'])->middleware('permissao:vendas')->name('nfse.nova');
+        Route::post('nova', [NfseController::class, 'salvarNova'])->middleware(['permissao:vendas', 'throttle:30,1'])->name('nfse.salvar');
+        Route::get('venda/{venda}/emitir', [NfseController::class, 'create'])->name('nfse.create');
+        Route::post('venda/{venda}/emitir', [NfseController::class, 'store'])->middleware('throttle:30,1')->name('nfse.store');
+        Route::get('{nfse}/ver', [NfseController::class, 'show'])->name('nfse.show');
+        Route::post('{nfse}/consultar', [NfseController::class, 'consultar'])->middleware('throttle:30,1')->name('nfse.consultar');
+        Route::post('{nfse}/cancelar', [NfseController::class, 'cancelar'])->middleware('throttle:30,1')->name('nfse.cancelar');
+        Route::get('{nfse}/xml', [NfseController::class, 'xml'])->name('nfse.xml');
+        Route::get('{nfse}/danfse', [NfseController::class, 'danfse'])->name('nfse.danfse');
     });
 
     Route::prefix('nfe')->middleware('permissao:nfe')->group(function () {

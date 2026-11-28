@@ -19,6 +19,8 @@
         ]],
         ['rotulo' => 'Nota fiscal', 'icone' => 'file-text', 'links' => [
             ['rotulo' => 'NF-e', 'rota' => 'nfe.index', 'ativo' => ['nfe.*'], 'ver' => $pode('nfe')],
+            ['rotulo' => 'NFC-e', 'rota' => 'nfce.index', 'ativo' => ['nfce.*'], 'ver' => $pode('vendas')],
+            ['rotulo' => 'NFS-e', 'rota' => 'nfse.index', 'ativo' => ['nfse.*'], 'ver' => $pode('nfse')],
             ['rotulo' => 'Perfis fiscais', 'rota' => 'perfilFiscal.index', 'ativo' => ['perfilFiscal.*'], 'ver' => $pode('nfe')],
         ]],
         ['rotulo' => 'Produtos', 'icone' => 'tag', 'links' => [

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Nfces;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Nfces\NfceNovaRequest;
 use App\Models\Empresas\Empresa;
 use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
@@ -10,12 +11,30 @@ use App\Services\Nfces\NfceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-/** NFC-e pela tela da venda: emitir depois, consultar a pendente, cancelar, imprimir e baixar o XML. */
+/**
+ * NFC-e: lista, tela "Nova NFC-e" (venda + emissão numa tela só) e, pela tela da venda,
+ * emitir depois, consultar a pendente, cancelar, imprimir e baixar o XML.
+ */
 class NfceController extends Controller
 {
     public function __construct(
         protected NfceService $nfceService
     ) {}
+
+    public function index(Request $request)
+    {
+        return $this->nfceService->index($request);
+    }
+
+    public function create()
+    {
+        return $this->nfceService->create();
+    }
+
+    public function store(NfceNovaRequest $request): RedirectResponse
+    {
+        return $this->nfceService->store($request);
+    }
 
     public function danfe(Venda $venda)
     {

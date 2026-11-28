@@ -17,6 +17,7 @@ use App\Models\Produtos\Produto;
 use App\Models\Vendas\Venda;
 use App\Repositories\Vendas\VendaRepository;
 use App\Services\Nfces\NfceService;
+use App\Services\Nfses\NfseService;
 use App\Support\Auditoria;
 use App\Support\MensagemPublica;
 use App\Support\PrecoMinimo;
@@ -484,6 +485,7 @@ class VendaService
             'formaPagamento',
             'contasReceber' => fn ($q) => $q->orderBy('data_vencimento')->orderBy('id'),
             'nfes' => fn ($q) => $q->orderByDesc('id'),
+            'nfses' => fn ($q) => $q->orderByDesc('id'),
         ]);
         $empresa = Empresa::atual() ?? Empresa::query()->findOrFail($venda->empresa_id);
 
@@ -494,6 +496,7 @@ class VendaService
             'nfce' => $venda->nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFCE),
             'nfeDaVenda' => $venda->nfes->first(fn (Nfe $nota) => (int) $nota->modelo === Nfe::MODELO_NFE),
             'nfceDisponivel' => app(NfceService::class)->configurada($empresa),
+            'nfseResumo' => auth()->user()->pode('nfse') ? app(NfseService::class)->resumoDaVenda($venda) : null,
         ]);
     }
 
@@ -928,7 +931,8 @@ class VendaService
         return $funcionario?->id;
     }
 
-    private function formasAtivas()
+    /** Formas de pagamento ativas da empresa (modal de pagamento das telas de venda e de nota). */
+    public function formasAtivas()
     {
         return FormaPagamento::query()
             ->where('empresa_id', auth()->user()->empresa_id)

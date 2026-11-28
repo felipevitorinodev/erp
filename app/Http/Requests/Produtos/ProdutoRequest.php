@@ -67,6 +67,13 @@ class ProdutoRequest extends FormRequest
             'aliquota_pis' => 'nullable|numeric',
             'aliquota_cofins' => 'nullable|numeric',
 
+            // NFS-e: códigos do serviço, sugeridos na emissão e gravados por ela.
+            'nfse_c_trib_nac' => 'nullable|digits:6|exists:nfse_servicos,codigo',
+            'nfse_c_trib_mun' => 'nullable|digits:3',
+            'nfse_nbs' => 'nullable|digits:9|exists:nfse_nbs,codigo',
+            'nfse_class_trib' => 'nullable|digits:6|exists:nfse_classificacoes,codigo',
+            'nfse_ind_op' => 'nullable|digits:6|exists:nfse_indicadores_operacao,codigo',
+
             'controla_estoque' => 'nullable|boolean',
             'ativo' => 'nullable|boolean',
         ];
@@ -81,6 +88,13 @@ class ProdutoRequest extends FormRequest
             'min' => 'O campo :attribute deve ter no mínimo :min.',
             'max' => 'O campo :attribute precisa ter no máximo :max caracteres.',
             'codigo.unique' => 'Já existe um produto com este código, ativo ou excluído.',
+            'nfse_c_trib_nac.digits' => 'O código de tributação nacional tem 6 dígitos (ex.: 14.01.01).',
+            'nfse_c_trib_nac.exists' => 'Código de tributação nacional não encontrado na tabela oficial.',
+            'nfse_c_trib_mun.digits' => 'O código municipal tem 3 dígitos.',
+            'nfse_nbs.digits' => 'O NBS tem 9 dígitos.',
+            'nfse_nbs.exists' => 'NBS não encontrado na tabela oficial.',
+            'nfse_class_trib.exists' => 'Classificação tributária não encontrada na tabela oficial.',
+            'nfse_ind_op.exists' => 'Indicador da operação não encontrado na tabela oficial.',
         ];
     }
 
@@ -102,6 +116,13 @@ class ProdutoRequest extends FormRequest
 
         if ($this->input('perfil_fiscal_id') === '') {
             $this->merge(['perfil_fiscal_id' => null]);
+        }
+
+        foreach (['nfse_c_trib_nac', 'nfse_c_trib_mun', 'nfse_nbs', 'nfse_class_trib', 'nfse_ind_op'] as $campo) {
+            if ($this->exists($campo)) {
+                $digitos = preg_replace('/\D/', '', (string) $this->input($campo)) ?? '';
+                $this->merge([$campo => $digitos === '' ? null : $digitos]);
+            }
         }
 
         foreach ($fields as $f) {

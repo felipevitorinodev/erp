@@ -40,6 +40,12 @@ class Situacoes
             'cancelada' => ['Cancelada', 'neutral'],
             'padrao' => ['Pendente', 'warning'],
         ],
+        'nfse' => [
+            'autorizada' => ['Autorizada', 'success'],
+            'rejeitada' => ['Rejeitada', 'error'],
+            'cancelada' => ['Cancelada', 'neutral'],
+            'padrao' => ['Pendente', 'warning'],
+        ],
         'nfe_ambiente' => [
             'producao' => ['Produção', 'success'],
             'padrao' => ['Homologação', 'warning'],

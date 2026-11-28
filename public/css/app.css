@@ -7204,3 +7204,20 @@ body.auth-body {
         font-size: 0.9rem;
     }
 }
+
+/* NFS-e: erros da Sefin e pendências dentro dos alertas. */
+.lista-erros {
+    margin: 0.5rem 0 0;
+    padding-left: 1.25rem;
+}
+
+.lista-erros li + li {
+    margin-top: 0.25rem;
+}
+
+/* Telas "Nova NFC-e" e "Nova NFS-e": vários cards dentro de um formulário, com o mesmo espaço da página. */
+.form-nota {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}

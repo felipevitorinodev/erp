@@ -19,6 +19,7 @@ class CatalogoPermissoes
                 'ordens_servico' => 'Ordens de serviço',
                 'comissoes' => 'Comissões',
                 'nfe' => 'NF-e',
+                'nfse' => 'NFS-e (nota de serviço)',
             ],
             'Estoque e produtos' => [
                 'produtos' => 'Produtos, grupos e unidades',
@@ -72,6 +73,7 @@ class CatalogoPermissoes
                 'orcamentos',
                 'ordens_servico',
                 'nfe',
+                'nfse',
                 'produtos',
                 'estoque',
                 'clientes',

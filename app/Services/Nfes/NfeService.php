@@ -9,6 +9,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Nfes\NfeRepository;
 use App\Services\Empresas\EmpresaService;
 use App\Services\Nfces\NfceBuilderService;
+use App\Services\Vendas\DivisaoFiscalVenda;
 use App\Services\Vendas\VendaService;
 use App\Support\MensagemPublica;
 use Carbon\Carbon;
@@ -331,6 +332,10 @@ class NfeService
             ];
             if ($pendencias !== []) {
                 return $pendencias[0];
+            }
+
+            if (DivisaoFiscalVenda::somenteServicos($venda)) {
+                return 'Esta venda só tem serviços. Emita a NFS-e pela venda.';
             }
 
             $nfes = $this->repository->notasDaVenda((int) $venda->empresa_id, (int) $venda->id);

@@ -2,6 +2,7 @@
 
 namespace App\Services\Nfces;
 
+use App\Http\Requests\Vendas\VendaRequest;
 use App\Models\Empresas\Empresa;
 use App\Models\Nfes\Nfe;
 use App\Models\Vendas\Venda;
@@ -11,8 +12,12 @@ use App\Services\Empresas\EmpresaService;
 use App\Services\Nfes\NfeBuilderService;
 use App\Services\Nfes\NfeSenderService;
 use App\Services\Nfes\NfeVinculoFiscal;
+use App\Services\Vendas\VendaService;
 use App\Support\Auditoria;
+use App\Support\ItensReenviados;
 use App\Support\MensagemPublica;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +33,76 @@ class NfceService
         protected EmpresaService $empresaService,
         protected NfceRepository $repository,
     ) {}
+
+    public function index(Request $request)
+    {
+        $empresaId = (int) auth()->user()->empresa_id;
+
+        return view('nfce.index', [
+            'nfces' => $this->repository->paginar($empresaId, $request->only('situacao')),
+            'situacao' => (string) $request->query('situacao', ''),
+        ]);
+    }
+
+    /**
+     * Tela "Nova NFC-e": monta a venda (consumidor, produtos e pagamento) e emite a NFC-e na hora, como no PDV.
+     */
+    public function create()
+    {
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
+
+        return view('nfce.create', [
+            'empresa' => $empresa,
+            'configurada' => $this->configurada($empresa),
+            'ambiente' => (int) ($empresa->nfe_ambiente ?: 2),
+            'itensIniciais' => ItensReenviados::daSessao((int) $empresa->id),
+            'formasPagamento' => app(VendaService::class)->formasAtivas(),
+        ]);
+    }
+
+    /**
+     * Grava a venda confirmada e emite a NFC-e. O que a SEFAZ recusaria com certeza (CPF/CNPJ inválido, item sem NCM,
+     * documento obrigatório) desfaz a venda; falha de envio deixa a venda gravada para emitir de novo pela tela da venda.
+     */
+    public function store(VendaRequest $request): RedirectResponse
+    {
+        $empresa = $this->repository->empresa((int) auth()->user()->empresa_id);
+        if (! $this->configurada($empresa)) {
+            return back()->withInput()->with('error', 'A NFC-e ainda não está configurada: cadastre o certificado digital e o CSC em Empresa → NFC-e.');
+        }
+
+        $documento = preg_replace('/\D/', '', (string) $request->input('nfce_documento', '')) ?: null;
+
+        $venda = DB::transaction(function () use ($request, $empresa, $documento) {
+            $venda = app(VendaService::class)->gravar($request)['venda']->load(['itens', 'cliente']);
+
+            // Lança ValidationException: a transação desfaz a venda e a tela volta com o erro.
+            $this->validarAntesDaVenda(
+                $empresa,
+                $this->itensDaVenda($venda),
+                (float) $venda->total,
+                $this->resolverDocumento($venda, $documento),
+            );
+
+            return $venda;
+        });
+
+        try {
+            $resultado = $this->emitir($venda, $documento, (float) $request->input('valor_recebido', 0));
+        } catch (Throwable $e) {
+            report($e);
+            $resultado = $this->resposta(false, null, 'A NFC-e não foi emitida.');
+        }
+
+        $mensagem = $resultado['mensagem'];
+        if (! $resultado['ok'] && ($resultado['situacao'] ?? null) !== 'pendente') {
+            $mensagem .= ' A venda #'.$venda->numero.' ficou gravada: emita a NFC-e de novo no quadro "Nota fiscal" abaixo.';
+        }
+
+        return redirect()
+            ->to(route('venda.show', $venda).'#nota-fiscal')
+            ->with($resultado['ok'] ? 'success' : 'error', $mensagem);
+    }
 
     /**
      * @param  list<array<string, mixed>>  $itens

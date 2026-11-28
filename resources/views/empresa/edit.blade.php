@@ -488,6 +488,183 @@
                     </div>
                 </div>
 
+
+                <div class="form-section" id="nfse">
+                    <div class="form-section__title">Configurações NFS-e (nota de serviço)</div>
+                    @php
+                        $ambienteNfse = (int) old('nfse_ambiente', $empresa->nfse_ambiente ?? 2);
+                        $regimeEspecialNfse = (int) old('nfse_regime_especial', $empresa->nfse_regime_especial ?? 0);
+                        $regimeApuracaoNfse = (string) old('nfse_regime_apuracao_sn', $empresa->nfse_regime_apuracao_sn ?? '');
+                        $percentual = fn (string $campo) => old($campo, $empresa->{$campo} !== null ? number_format((float) $empresa->{$campo}, 2, ',', '') : '');
+                    @endphp
+                    <p class="text-muted" style="margin-bottom: 1rem;">
+                        NFS-e do Sistema Nacional (Sefin Nacional), emitida pela venda com os itens do tipo Serviço.
+                        Usa o mesmo certificado da NF-e. O município da empresa precisa ser conveniado ao Sistema Nacional.
+                    </p>
+                    <div id="alerta-nfse-producao" class="alert alert--warning" style="margin-bottom: 1rem; {{ $ambienteNfse === 1 ? '' : 'display: none;' }}">
+                        Atenção: em produção, as NFS-e têm valor fiscal e só podem ser canceladas por evento.
+                    </div>
+                    <div class="form-grid form-grid--col-3">
+                        <div class="form-group">
+                            <label class="form-label form-label--required" for="nfse_ambiente">Ambiente</label>
+                            <select name="nfse_ambiente" id="nfse_ambiente" class="form-control @error('nfse_ambiente') is-invalid @enderror">
+                                <option value="2" @selected($ambienteNfse === 2)>Produção restrita (homologação)</option>
+                                <option value="1" @selected($ambienteNfse === 1)>Produção</option>
+                            </select>
+                            @error('nfse_ambiente')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                            <label style="display:flex; gap:.4rem; align-items:center; margin-top:.4rem; font-size:13px;">
+                                <input type="checkbox" name="confirmar_ambiente_nfse" value="1">
+                                Confirmo a alteração do ambiente
+                            </label>
+                            <small class="text-muted">Obrigatório apenas ao trocar o ambiente.</small>
+                            @error('confirmar_ambiente_nfse')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="nfse_serie">Série da DPS</label>
+                            <input type="text" name="nfse_serie" id="nfse_serie" maxlength="5" inputmode="numeric" placeholder="1"
+                                class="form-control @error('nfse_serie') is-invalid @enderror"
+                                value="{{ old('nfse_serie', $empresa->nfse_serie) }}">
+                            @error('nfse_serie')
+                                <span class="form-error">{{ $message }}</span>
+                            @else
+                                <small class="text-muted">De 1 a 49999. Em branco, usa a série 1. A numeração da DPS é própria de cada série e ambiente.</small>
+                            @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label form-label--required" for="nfse_regime_especial">Regime especial de tributação</label>
+                            <select name="nfse_regime_especial" id="nfse_regime_especial" class="form-control @error('nfse_regime_especial') is-invalid @enderror">
+                                @foreach (\App\Services\Nfses\NfseRegras::REGIMES_ESPECIAIS as $codigo => $rotulo)
+                                    <option value="{{ $codigo }}" @selected($regimeEspecialNfse === $codigo)>{{ $rotulo }}</option>
+                                @endforeach
+                            </select>
+                            @error('nfse_regime_especial')
+                                <span class="form-error">{{ $message }}</span>
+                            @else
+                                <small class="text-muted">Regime do ISSQN no município. A maioria das empresas usa "Nenhum".</small>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid--col-3" style="margin-top: 1rem;">
+                        <div class="form-group" data-nfse-crt="1,2">
+                            <label class="form-label" for="nfse_regime_apuracao_sn">Apuração no Simples Nacional</label>
+                            <select name="nfse_regime_apuracao_sn" id="nfse_regime_apuracao_sn" class="form-control @error('nfse_regime_apuracao_sn') is-invalid @enderror">
+                                <option value="" @selected($regimeApuracaoNfse === '')>Automático pelo CRT</option>
+                                @foreach (\App\Services\Nfses\NfseRegras::REGIMES_APURACAO_SN as $codigo => $rotulo)
+                                    <option value="{{ $codigo }}" @selected($regimeApuracaoNfse === (string) $codigo)>{{ $rotulo }}</option>
+                                @endforeach
+                            </select>
+                            @error('nfse_regime_apuracao_sn')
+                                <span class="form-error">{{ $message }}</span>
+                            @else
+                                <small class="text-muted">Automático: ISSQN pelo Simples; com excesso de sublimite, ISSQN fora dele.</small>
+                            @enderror
+                        </div>
+
+                        <div class="form-group" data-nfse-crt="1,2,3">
+                            <label class="form-label" for="nfse_aliquota_iss">Alíquota padrão do ISSQN (%)</label>
+                            <input type="text" name="nfse_aliquota_iss" id="nfse_aliquota_iss" inputmode="decimal" maxlength="5" placeholder="Ex.: 2,00"
+                                class="form-control @error('nfse_aliquota_iss') is-invalid @enderror" value="{{ $percentual('nfse_aliquota_iss') }}">
+                            @error('nfse_aliquota_iss')
+                                <span class="form-error">{{ $message }}</span>
+                            @else
+                                <small class="text-muted">Sugerida na emissão quando a alíquota precisa ir na nota (retenção no Simples ou município sem convênio).</small>
+                            @enderror
+                        </div>
+
+                        <div class="form-group" data-nfse-crt="1,2">
+                            <label class="form-label" for="nfse_ptot_trib_sn">Tributos aproximados — Simples (%)</label>
+                            <input type="text" name="nfse_ptot_trib_sn" id="nfse_ptot_trib_sn" inputmode="decimal" maxlength="6" placeholder="Ex.: 6,00"
+                                class="form-control @error('nfse_ptot_trib_sn') is-invalid @enderror" value="{{ $percentual('nfse_ptot_trib_sn') }}">
+                            @error('nfse_ptot_trib_sn')
+                                <span class="form-error">{{ $message }}</span>
+                            @else
+                                <small class="text-muted">Alíquota efetiva do Simples Nacional, exigida na NFS-e de ME/EPP (Lei 12.741).</small>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid--col-3" style="margin-top: 1rem;" data-nfse-crt="3">
+                        <div class="form-group">
+                            <label class="form-label" for="nfse_ptot_trib_fed">Tributos aproximados — federais (%)</label>
+                            <input type="text" name="nfse_ptot_trib_fed" id="nfse_ptot_trib_fed" inputmode="decimal" maxlength="6"
+                                class="form-control @error('nfse_ptot_trib_fed') is-invalid @enderror" value="{{ $percentual('nfse_ptot_trib_fed') }}">
+                            @error('nfse_ptot_trib_fed')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="nfse_ptot_trib_est">Tributos aproximados — estaduais (%)</label>
+                            <input type="text" name="nfse_ptot_trib_est" id="nfse_ptot_trib_est" inputmode="decimal" maxlength="6"
+                                class="form-control @error('nfse_ptot_trib_est') is-invalid @enderror" value="{{ $percentual('nfse_ptot_trib_est') }}">
+                            @error('nfse_ptot_trib_est')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="nfse_ptot_trib_mun">Tributos aproximados — municipais (%)</label>
+                            <input type="text" name="nfse_ptot_trib_mun" id="nfse_ptot_trib_mun" inputmode="decimal" maxlength="6"
+                                class="form-control @error('nfse_ptot_trib_mun') is-invalid @enderror" value="{{ $percentual('nfse_ptot_trib_mun') }}">
+                            @error('nfse_ptot_trib_mun')
+                                <span class="form-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin-top: .5rem;" data-nfse-crt="4">MEI: a NFS-e sai sem alíquota, sem retenção e sem percentual de tributos.</p>
+
+                    <p class="nfce-conferencia__titulo" style="margin-top: 1.25rem;">Códigos padrão do serviço</p>
+                    <p class="text-muted" style="margin-bottom: .75rem;">
+                        Usados quando o serviço vendido não tem códigos no cadastro do produto. Na emissão, os códigos escolhidos
+                        podem ser gravados no produto para as próximas notas.
+                    </p>
+                    <x-nfse-codigos id="empresa-nfse" prefixo="nfse_" :valores="[
+                        'c_trib_nac' => $empresa->nfse_c_trib_nac,
+                        'c_trib_mun' => $empresa->nfse_c_trib_mun,
+                        'nbs' => $empresa->nfse_nbs,
+                        'class_trib' => $empresa->nfse_class_trib,
+                        'ind_op' => $empresa->nfse_ind_op,
+                    ]" />
+
+                    {{-- Conferência sem emitir nota. O formulário fica fora deste (não dá para aninhar forms). --}}
+                    <div class="nfce-conferencia">
+                        <div class="nfce-conferencia__topo">
+                            <div>
+                                <p class="nfce-conferencia__titulo">Conferir a NFS-e</p>
+                                <p class="text-muted">
+                                    Confere certificado, dados da empresa e o convênio do município na Sefin Nacional, sem emitir nota. Salve as alterações antes.
+                                    @if ($empresa->nfse_convenio_consultado_em)
+                                        Última consulta: {{ $empresa->nfse_convenio_consultado_em->format('d/m/Y H:i') }}
+                                        ({{ $empresa->nfse_convenio_situacao === 'inativo' ? 'convênio inativo' : 'convênio ativo' }}).
+                                    @endif
+                                </p>
+                            </div>
+                            <button type="submit" form="form-verificar-nfse" class="btn btn--ghost btn--sm"
+                                data-espera="Conferindo..."
+                                data-demora="Consultando a Sefin Nacional.">Conferir agora</button>
+                        </div>
+                        @if (is_array(session('nfse_verificacao')))
+                            <ul class="nfce-conferencia__lista" aria-label="Resultado da conferência da NFS-e">
+                                @foreach (session('nfse_verificacao') as $item)
+                                    @php $tom = ! $item['ok'] ? 'erro' : (! empty($item['aviso']) ? 'aviso' : 'ok'); @endphp
+                                    <li class="nfce-conferencia__item nfce-conferencia__item--{{ $tom }}">
+                                        <x-icon :name="$tom === 'erro' ? 'x-circle' : ($tom === 'aviso' ? 'alert-triangle' : 'check')" :size="16" />
+                                        <span><strong>{{ $item['titulo'] }}:</strong> {{ $item['texto'] }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                            @php $falhasNfse = collect(session('nfse_verificacao'))->where('ok', false)->count(); @endphp
+                            <p class="nfce-conferencia__conclusao">
+                                {{ $falhasNfse === 0 ? 'Tudo certo para emitir NFS-e.' : ($falhasNfse === 1 ? 'Corrija o item marcado antes de emitir.' : 'Corrija os '.$falhasNfse.' itens marcados antes de emitir.') }}
+                            </p>
+                        @endif
+                    </div>
+                </div>
             </div>
 
             <div class="card__footer">
@@ -497,6 +674,9 @@
 
         </form>
         <form method="POST" action="{{ route('empresa.nfce.verificar', $empresa) }}" id="form-verificar-nfce" hidden>
+            @csrf
+        </form>
+        <form method="POST" action="{{ route('empresa.nfse.verificar', $empresa) }}" id="form-verificar-nfse" hidden>
             @csrf
         </form>
     </div>
@@ -523,6 +703,29 @@
                 exterior.style.display = this.value === '3' ? '' : 'none';
             }
         });
+
+        document.getElementById('nfse_ambiente')?.addEventListener('change', function () {
+            const alerta = document.getElementById('alerta-nfse-producao');
+            if (alerta) {
+                alerta.style.display = this.value === '1' ? '' : 'none';
+            }
+        });
+
+        // Campos da NFS-e que dependem do regime (CRT): MEI, ME/EPP do Simples ou não optante.
+        (function () {
+            const crt = document.getElementById('crt');
+            const campos = document.querySelectorAll('[data-nfse-crt]');
+            if (!crt || !campos.length) {
+                return;
+            }
+            function aplicar() {
+                campos.forEach(function (campo) {
+                    campo.style.display = campo.getAttribute('data-nfse-crt').split(',').indexOf(crt.value) === -1 ? 'none' : '';
+                });
+            }
+            crt.addEventListener('change', aplicar);
+            aplicar();
+        })();
 
         document.getElementById('crt')?.addEventListener('change', function () {
             const alerta = document.getElementById('alerta-crt-normal');

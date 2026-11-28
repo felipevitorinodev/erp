@@ -1,5 +1,13 @@
-{{-- Cabeçalho da Venda --}}
-@php $venda = $venda ?? null; @endphp
+{{-- Cabeçalho da Venda. Também usado pelas telas "Nova NFC-e" e "Nova NFS-e":
+     $situacaoFixa (texto) trava a venda como confirmada; $buscaProdutos troca a URL da busca de itens
+     (ex.: só serviços); $tituloItens e $rotuloItem trocam os rótulos. --}}
+@php
+    $venda = $venda ?? null;
+    $situacaoFixa = $situacaoFixa ?? null;
+    $buscaProdutos = $buscaProdutos ?? route('api.produtos.busca');
+    $tituloItens = $tituloItens ?? 'Itens da Venda';
+    $rotuloItem = $rotuloItem ?? 'Produto';
+@endphp
 <div class="form-grid form-grid--col-3">
     <div class="form-group">
         <label class="form-label">Vendedor</label>
@@ -35,7 +43,11 @@
 
     <div class="form-group">
         <label class="form-label form-label--required">Situação</label>
-        @if(($venda->situacao ?? '') === 'confirmada')
+        @if($situacaoFixa)
+            <input type="hidden" name="situacao" value="confirmada">
+            <input type="text" class="form-control" value="Confirmada" disabled>
+            <span class="form-hint" style="font-size:11px;color:var(--color-text-muted);">{{ $situacaoFixa }}</span>
+        @elseif(($venda->situacao ?? '') === 'confirmada')
             <input type="hidden" name="situacao" value="confirmada">
             <input type="text" class="form-control" value="Confirmada" disabled>
             <span class="form-hint" style="font-size:11px;color:var(--color-text-muted);">
@@ -67,7 +79,7 @@
 {{-- Itens --}}
 <div class="itens-panel">
     <div class="section-toolbar">
-        <span class="section-toolbar__title">Itens da Venda</span>
+        <span class="section-toolbar__title">{{ $tituloItens }}</span>
         <button type="button" class="btn btn--primary btn--sm" id="btn-add-item">+ Adicionar item</button>
     </div>
 
@@ -75,7 +87,8 @@
 
     <div class="itens-list" id="itens-body">
         @php
-            $itensExistentes = $venda ? $venda->itens : collect();
+            // $itensIniciais: itens reenviados depois de erro de validação nas telas de nota (a venda ainda não existe).
+            $itensExistentes = $itensIniciais ?? ($venda ? $venda->itens : collect());
         @endphp
         @foreach($itensExistentes as $i => $item)
             <div class="item-card item-row">
@@ -85,7 +98,7 @@
                 </div>
 
                 <div class="form-group item-card__produto">
-                    <label class="form-label form-label--required">Produto</label>
+                    <label class="form-label form-label--required">{{ $rotuloItem }}</label>
                     <div class="autocomplete-wrap">
                         <input type="text" class="form-control input-produto-nome"
                             value="{{ $item->produto_nome }}"
@@ -179,8 +192,9 @@
 @push('scripts')
 <script>
 (function ($) {
-    var urlProdutos = '{{ route('api.produtos.busca') }}';
-    var indice = {{ $venda ? $venda->itens->count() : 0 }};
+    var urlProdutos = @json($buscaProdutos);
+    var rotuloItem = @json($rotuloItem);
+    var indice = {{ $itensExistentes->isEmpty() ? 0 : ((int) $itensExistentes->keys()->max()) + 1 }};
 
     initAutocomplete('#input-vendedor', '#hidden-funcionario-id', '{{ route('api.funcionarios.busca') }}', function (item) {
         var pct = parseFloat(item.percentual_comissao || 0);
@@ -259,7 +273,7 @@
                 '<button type="button" class="btn btn--ghost btn--sm btn-remove-item" title="Remover item">Remover</button>' +
             '</div>' +
             '<div class="form-group item-card__produto">' +
-                '<label class="form-label form-label--required">Produto</label>' +
+                '<label class="form-label form-label--required">' + rotuloItem + '</label>' +
                 '<div class="autocomplete-wrap">' +
                     '<input type="text" class="form-control input-produto-nome" placeholder="Buscar produto..." autocomplete="off">' +
                     '<input type="hidden" name="itens[' + idx + '][produto_id]" class="input-produto-id" value="">' +
@@ -293,6 +307,8 @@
             $row.find('.input-preco').val(formatInput(preco));
             calcularLinha($row[0]);
             recalcularTotais();
+            // As telas de nota (ex.: Nova NFS-e) usam o produto escolhido para sugerir os códigos fiscais.
+            document.dispatchEvent(new CustomEvent('venda-form:produto', { detail: item }));
         });
 
         ['input-qtd', 'input-preco', 'input-desc-item'].forEach(function (cls) {

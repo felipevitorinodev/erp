@@ -78,6 +78,12 @@ class NfceBuilderService extends NfeBuilderService
         return false;
     }
 
+    /** A NFC-e continua com todos os itens da venda, como antes da NFS-e. */
+    protected function vendaDaNota(Venda $venda): Venda
+    {
+        return $venda;
+    }
+
     protected function ajustarModelo(): void
     {
         $this->tools->model(Nfe::MODELO_NFCE);

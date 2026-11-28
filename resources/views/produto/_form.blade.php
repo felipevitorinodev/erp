@@ -96,7 +96,7 @@
     <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
         <div class="form-group">
             <label class="form-label form-label--required">Tipo</label>
-            <select name="tipo" class="form-control @error('tipo') is-invalid @enderror">
+            <select name="tipo" id="produto-tipo" class="form-control @error('tipo') is-invalid @enderror">
                 <option value="1" {{ old('tipo', $produto->tipo ?? 1) == 1 ? 'selected' : '' }}>Produto</option>
                 <option value="2" {{ old('tipo', $produto->tipo ?? '') == 2 ? 'selected' : '' }}>Serviço</option>
             </select>
@@ -159,6 +159,22 @@
             @enderror
             <small class="text-muted">Usado só quando CFOP, CSOSN ou CST deste produto estiverem em branco.</small>
         </div>
+    </div>
+
+    @php $ehServico = (int) old('tipo', $produto->tipo ?? 1) === 2; @endphp
+    <div id="produto-nfse" style="margin-top:1rem; {{ $ehServico ? '' : 'display: none;' }}">
+        <p class="form-label" style="margin-bottom:.25rem;">NFS-e (nota de serviço)</p>
+        <p class="text-muted" style="margin-bottom:.75rem;">
+            Códigos usados na NFS-e Nacional quando este serviço for vendido. Em branco, a emissão sugere os padrões da empresa
+            e pode gravar aqui o que for escolhido.
+        </p>
+        <x-nfse-codigos id="produto-nfse" prefixo="nfse_" :valores="[
+            'c_trib_nac' => $produto->nfse_c_trib_nac ?? null,
+            'c_trib_mun' => $produto->nfse_c_trib_mun ?? null,
+            'nbs' => $produto->nfse_nbs ?? null,
+            'class_trib' => $produto->nfse_class_trib ?? null,
+            'ind_op' => $produto->nfse_ind_op ?? null,
+        ]" />
     </div>
 
     <div class="form-grid form-grid--col-4" style="margin-top:1rem;">
@@ -404,6 +420,11 @@
         return ncm.length === 8 ? { ncm: ncm } : {};
     }, 'codigo');
     initAutocomplete('#produto-cfop-busca', '#produto-cfop', '{{ route('api.cfops.busca') }}', rotuloFiscal, null, null, 'codigo');
+
+    document.getElementById('produto-tipo')?.addEventListener('change', function () {
+        var nfse = document.getElementById('produto-nfse');
+        if (nfse) nfse.style.display = this.value === '2' ? '' : 'none';
+    });
 
     var formProduto = document.getElementById('produto-ncm')?.form;
     if (formProduto) {

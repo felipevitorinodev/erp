@@ -12,6 +12,8 @@
         ['Novo orçamento', 'orcamento.create', 'orcamentos', 'proposta cotacao'],
         ['Nova ordem de serviço', 'ordem-servico.create', 'ordens_servico', 'os assistencia conserto'],
         ['Nova NF-e', 'nfe.create', 'nfe', 'nota fiscal emitir'],
+        ['Nova NFC-e', 'nfce.create', 'vendas', 'cupom nota fiscal consumidor emitir'],
+        ['Nova NFS-e', 'nfse.nova', ['nfse', 'vendas'], 'nota fiscal servico emitir'],
         ['Novo produto', 'produto.create', 'produtos', 'item mercadoria servico'],
         ['Nova entrada de estoque', 'entrada-estoque.create', 'estoque', 'compra xml nota fornecedor'],
         ['Novo pedido de compra', 'pedido-compra.create', 'estoque', 'compra fornecedor cotacao pedido'],
@@ -23,7 +25,8 @@
         ['Novo funcionário', 'funcionario.create', 'funcionarios', 'vendedor tecnico colaborador'],
         ['Novo usuário', 'usuario.create', 'configuracoes', 'acesso login'],
     ])
-        ->filter(fn ($a) => $u->pode($a[2]) && \Illuminate\Support\Facades\Route::has($a[1]))
+        // Permissão em lista: precisa de todas (a Nova NFS-e grava uma venda).
+        ->filter(fn ($a) => collect((array) $a[2])->every(fn ($p) => $u->pode($p)) && \Illuminate\Support\Facades\Route::has($a[1]))
         ->map(fn ($a) => ['rotulo' => $a[0], 'url' => route($a[1]), 'grupo' => 'Ação', 'termos' => $a[3]])
         ->values();
 @endphp

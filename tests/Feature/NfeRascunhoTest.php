@@ -8,6 +8,7 @@ use App\Models\Produtos\Produto;
 use App\Models\Usuarios\User;
 use App\Models\Vendas\Venda;
 use App\Services\Nfes\NfePendenciasService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -218,7 +219,7 @@ class NfeRascunhoTest extends TestCase
         $this->get(route('nfe.create'))
             ->assertOk()
             ->assertSee('Data de saída', false)
-            ->assertSee('max="'.\Carbon\Carbon::now('America/Sao_Paulo')->toDateString().'"', false)
+            ->assertSee('max="'.Carbon::now('America/Sao_Paulo')->toDateString().'"', false)
             ->assertSee('id="lista-cfop"', false)
             ->assertSee('id="lista-ncm"', false)
             ->assertSee('Venda interna no Simples Nacional', false)

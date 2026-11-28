@@ -4,6 +4,7 @@ namespace App\Services\Nfes;
 
 use App\Models\Empresas\Empresa;
 use App\Models\Vendas\Venda;
+use App\Services\Vendas\DivisaoFiscalVenda;
 
 /**
  * Confere, antes de confirmar a venda e consumir número, os dados que o NfeBuilderService recusaria.
@@ -37,6 +38,12 @@ class NfePendenciasService
         foreach ($venda->itens as $item) {
             $produto = $item->produto;
             $nome = '"'.$item->produto_nome.'"';
+
+            if (DivisaoFiscalVenda::ehServico($item)) {
+                $pendencias[] = "Item {$nome}: é um serviço e não entra na NF-e. Remova o item e emita a NFS-e para ele.";
+
+                continue;
+            }
 
             $ncm = $this->digitos($item->ncm ?: $produto?->ncm);
             if (strlen($ncm) !== 8) {

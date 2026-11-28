@@ -462,6 +462,117 @@ class NfceRotinaTest extends TestCase
             ->assertSee('cadastre o certificado digital e o CSC');
     }
 
+    public function test_lista_de_nfce_mostra_so_as_nfce_da_empresa(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $outra = $this->empresa(['cnpj' => '11444777000161']);
+        $vendaNfce = $this->venda($empresa, ['numero' => '000731']);
+        $vendaNfe = Venda::create(['empresa_id' => $empresa->id, 'numero' => '000842', 'data_venda' => now()->toDateString(), 'subtotal' => 5, 'total' => 5, 'situacao' => 'confirmada']);
+        $vendaOutra = Venda::create(['empresa_id' => $outra->id, 'numero' => '000953', 'data_venda' => now()->toDateString(), 'subtotal' => 5, 'total' => 5, 'situacao' => 'confirmada']);
+        $nota = fn (Venda $venda, int $modelo, string $situacao) => Nfe::create([
+            'empresa_id' => $venda->empresa_id, 'venda_id' => $venda->id, 'modelo' => $modelo,
+            'numero' => '000000001', 'serie' => '001', 'situacao' => $situacao, 'ambiente' => 2,
+        ]);
+        $nota($vendaNfce, Nfe::MODELO_NFCE, 'autorizada');
+        $nota($vendaNfe, Nfe::MODELO_NFE, 'autorizada');
+        $nota($vendaOutra, Nfe::MODELO_NFCE, 'autorizada');
+        $this->actingAs($this->usuario($empresa));
+
+        $this->get(route('nfce.index'))
+            ->assertOk()
+            ->assertSee('NFC-e emitidas')
+            ->assertSee('#000731')
+            ->assertDontSee('#000842')
+            ->assertDontSee('#000953')
+            ->assertSee(route('venda.nfce.danfe', $vendaNfce))
+            ->assertSee(route('nfce.create'));
+
+        $this->get(route('nfce.index', ['situacao' => 'rejeitada']))
+            ->assertOk()
+            ->assertDontSee('#000731')
+            ->assertSee('Nenhuma NFC-e emitida');
+    }
+
+    public function test_nova_nfce_grava_a_venda_confirmada_e_emite(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $produto = $this->produto($empresa);
+        FormaPagamento::create(['empresa_id' => $empresa->id, 'nome' => 'Dinheiro', 'tipo' => 'avista', 'gera_conta_receber' => false, 'ativo' => true]);
+        $this->actingAs($this->usuario($empresa));
+
+        $this->get(route('nfce.create'))
+            ->assertOk()
+            ->assertSee('Nova NFC-e')
+            ->assertSee('CPF ou CNPJ do consumidor')
+            ->assertSee('busca?tipo=produto', false);
+
+        $resposta = $this->post(route('nfce.store'), [
+            'data_venda' => now()->toDateString(),
+            'forma_pagamento' => 'Dinheiro',
+            'nfce_documento' => '529.982.247-25',
+            'itens' => [['produto_id' => $produto->id, 'quantidade' => '2,00', 'preco_unitario' => '10,00', 'desconto' => '0,00']],
+        ]);
+
+        $resposta->assertSessionHasNoErrors();
+        $venda = Venda::query()->sole();
+        $resposta->assertRedirect(route('venda.show', $venda).'#nota-fiscal')->assertSessionHas('success');
+        $this->assertSame('confirmada', $venda->situacao);
+        $this->assertSame('20.00', (string) $venda->total);
+
+        $nota = Nfe::query()->sole();
+        $this->assertSame(Nfe::MODELO_NFCE, (int) $nota->modelo);
+        $this->assertSame('autorizada', $nota->situacao);
+        $this->assertStringContainsString('<CPF>52998224725</CPF>', (string) $nota->xml_autorizado);
+    }
+
+    public function test_nova_nfce_desfaz_a_venda_quando_a_nota_seria_recusada(): void
+    {
+        $empresa = $this->empresaComCertificado();
+        $produto = $this->produto($empresa);
+        $servico = Produto::create(['empresa_id' => $empresa->id, 'nome' => 'Instalação', 'codigo' => 'S1', 'tipo' => 2, 'preco_venda' => 50, 'controla_estoque' => false, 'ativo' => true]);
+        $this->actingAs($this->usuario($empresa));
+        $payload = fn (Produto $item, array $extra = []) => array_merge([
+            'data_venda' => now()->toDateString(),
+            'itens' => [['produto_id' => $item->id, 'quantidade' => '1', 'preco_unitario' => '10,00']],
+        ], $extra);
+
+        $this->from(route('nfce.create'))->post(route('nfce.store'), $payload($servico))
+            ->assertRedirect(route('nfce.create'))
+            ->assertSessionHasErrors('itens.0.produto_id');
+
+        $this->from(route('nfce.create'))->post(route('nfce.store'), $payload($produto, ['nfce_documento' => '111.111.111-11']))
+            ->assertRedirect(route('nfce.create'))
+            ->assertSessionHasErrors('nfce_documento');
+
+        // Na Paraíba, R$ 500,00 ou mais sem CPF/CNPJ.
+        $this->from(route('nfce.create'))->post(route('nfce.store'), [
+            'data_venda' => now()->toDateString(),
+            'itens' => [['produto_id' => $produto->id, 'quantidade' => '1', 'preco_unitario' => '600,00']],
+        ])->assertSessionHasErrors('nfce_documento');
+
+        $this->get(route('nfce.create'))->assertOk()->assertSee('Produto');
+
+        $this->assertSame(0, Venda::query()->count());
+        $this->assertSame(0, Nfe::query()->count());
+        $this->assertSame([], $this->sefaz->pedidos);
+    }
+
+    public function test_nova_nfce_sem_configuracao_nao_grava_a_venda(): void
+    {
+        $empresa = $this->empresa();
+        $produto = $this->produto($empresa);
+        $this->actingAs($this->usuario($empresa));
+
+        $this->get(route('nfce.create'))->assertOk()->assertSee('A NFC-e ainda não está configurada');
+
+        $this->from(route('nfce.create'))->post(route('nfce.store'), [
+            'data_venda' => now()->toDateString(),
+            'itens' => [['produto_id' => $produto->id, 'quantidade' => '1', 'preco_unitario' => '10,00']],
+        ])->assertRedirect(route('nfce.create'))->assertSessionHas('error');
+
+        $this->assertSame(0, Venda::query()->count());
+    }
+
     private function venda(Empresa $empresa, array $dados = []): Venda
     {
         $produto = $this->produto($empresa);

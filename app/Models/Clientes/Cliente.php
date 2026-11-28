@@ -34,10 +34,12 @@ class Cliente extends Model
         'estado',
         'observacoes',
         'ativo',
+        'nfse_iss_retido',
     ];
 
     protected $casts = [
         'ativo' => 'boolean',
+        'nfse_iss_retido' => 'boolean',
     ];
 
     public function empresa()

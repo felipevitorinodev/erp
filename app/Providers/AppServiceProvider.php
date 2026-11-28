@@ -13,6 +13,7 @@ use App\Models\FormasPagamento\FormaPagamento;
 use App\Models\Fornecedores\Fornecedor;
 use App\Models\Funcionarios\Funcionario;
 use App\Models\Grupos\Grupo;
+use App\Models\Nfses\Nfse;
 use App\Models\Orcamentos\Orcamento;
 use App\Models\PerfisFiscais\PerfilFiscal;
 use App\Models\Produtos\Produto;
@@ -141,6 +142,7 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('formaPagamento', $porEmpresa(FormaPagamento::class));
         Route::bind('perfilFiscal', $porEmpresa(PerfilFiscal::class));
         Route::bind('categoriaFinanceira', $porEmpresa(CategoriaFinanceira::class));
+        Route::bind('nfse', $porEmpresa(Nfse::class));
 
         Route::bind('perfilAcesso', function ($value) {
             return Perfil::where('empresa_id', auth()->user()->empresa_id ?? 0)->findOrFail($value);

@@ -50,6 +50,22 @@ class Empresa extends Model
         'nfe_csosn_padrao',
         'nfe_cst_pis_padrao',
         'nfe_cst_cofins_padrao',
+        'nfse_ambiente',
+        'nfse_serie',
+        'nfse_regime_apuracao_sn',
+        'nfse_regime_especial',
+        'nfse_aliquota_iss',
+        'nfse_ptot_trib_sn',
+        'nfse_ptot_trib_fed',
+        'nfse_ptot_trib_est',
+        'nfse_ptot_trib_mun',
+        'nfse_c_trib_nac',
+        'nfse_c_trib_mun',
+        'nfse_nbs',
+        'nfse_class_trib',
+        'nfse_ind_op',
+        'nfse_convenio_situacao',
+        'nfse_convenio_consultado_em',
     ];
 
     protected $hidden = [
@@ -67,6 +83,15 @@ class Empresa extends Model
         'crt' => 'integer',
         'nfe_destino' => 'integer',
         'nfce_emitir_pdv' => 'boolean',
+        'nfse_ambiente' => 'integer',
+        'nfse_regime_apuracao_sn' => 'integer',
+        'nfse_regime_especial' => 'integer',
+        'nfse_aliquota_iss' => 'decimal:2',
+        'nfse_ptot_trib_sn' => 'decimal:2',
+        'nfse_ptot_trib_fed' => 'decimal:2',
+        'nfse_ptot_trib_est' => 'decimal:2',
+        'nfse_ptot_trib_mun' => 'decimal:2',
+        'nfse_convenio_consultado_em' => 'datetime',
     ];
 
     /**

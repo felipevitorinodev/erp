@@ -54,6 +54,11 @@ class Produto extends Model
         'aliquota_cofins',
         'controla_estoque',
         'ativo',
+        'nfse_c_trib_nac',
+        'nfse_c_trib_mun',
+        'nfse_nbs',
+        'nfse_class_trib',
+        'nfse_ind_op',
     ];
 
     protected $casts = [

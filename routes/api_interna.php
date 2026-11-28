@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Fiscal\CatalogoFiscalController;
+use App\Http\Controllers\Fiscal\CatalogoNfseController;
 use App\Http\Requests\Clientes\ClienteRapidoRequest;
 use App\Http\Requests\Fornecedores\FornecedorRapidoRequest;
 use App\Models\Clientes\Cliente;
@@ -16,6 +17,7 @@ use App\Models\Vendas\Venda;
 use App\Repositories\Clientes\ClienteRepository;
 use App\Repositories\Fornecedores\FornecedorRepository;
 use App\Services\Nfes\NfeVinculoFiscal;
+use App\Services\Vendas\DivisaoFiscalVenda;
 use App\Support\BuscaPorNome;
 use App\Support\NaturezasOperacao;
 use Illuminate\Support\Facades\Route;
@@ -111,6 +113,13 @@ Route::middleware('auth')->group(function () {
             $query->where('controla_estoque', true);
         }
 
+        // Telas de nota: a NFS-e só leva serviços (tipo 2) e a NFC-e só produtos.
+        if ((string) request('tipo') === 'servico') {
+            $query->where('tipo', DivisaoFiscalVenda::TIPO_SERVICO);
+        } elseif ((string) request('tipo') === 'produto') {
+            $query->where(fn ($builder) => $builder->whereNull('tipo')->orWhere('tipo', '!=', DivisaoFiscalVenda::TIPO_SERVICO));
+        }
+
         if ($q !== '') {
             $query->where(function ($builder) use ($q) {
                 $builder->where('nome', 'like', '%'.$q.'%')
@@ -187,7 +196,12 @@ Route::middleware('auth')->group(function () {
                 'codigo_barras',
                 'tipo',
                 'controla_estoque',
-                'perfil_fiscal_id'
+                'perfil_fiscal_id',
+                'nfse_c_trib_nac',
+                'nfse_c_trib_mun',
+                'nfse_nbs',
+                'nfse_class_trib',
+                'nfse_ind_op'
             )
             ->limit($limit)
             ->get()
@@ -231,6 +245,13 @@ Route::middleware('auth')->group(function () {
                     'aliquota_icms' => $produto->aliquota_icms,
                     'aliquota_pis' => $produto->aliquota_pis,
                     'aliquota_cofins' => $produto->aliquota_cofins,
+                    'nfse' => [
+                        'c_trib_nac' => $produto->nfse_c_trib_nac,
+                        'c_trib_mun' => $produto->nfse_c_trib_mun,
+                        'nbs' => $produto->nfse_nbs,
+                        'class_trib' => $produto->nfse_class_trib,
+                        'ind_op' => $produto->nfse_ind_op,
+                    ],
                 ];
             });
     })->name('api.produtos.busca');
@@ -397,6 +418,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/cfops/busca', [CatalogoFiscalController::class, 'cfops'])->name('api.cfops.busca');
     Route::get('/api/ncms/busca', [CatalogoFiscalController::class, 'ncms'])->name('api.ncms.busca');
     Route::get('/api/cests/busca', [CatalogoFiscalController::class, 'cests'])->name('api.cests.busca');
+    Route::get('/api/nfse/servicos/busca', [CatalogoNfseController::class, 'servicos'])->name('api.nfse.servicos.busca');
+    Route::get('/api/nfse/nbs/busca', [CatalogoNfseController::class, 'nbs'])->name('api.nfse.nbs.busca');
+    Route::get('/api/nfse/classificacoes/busca', [CatalogoNfseController::class, 'classificacoes'])->name('api.nfse.classificacoes.busca');
+    Route::get('/api/nfse/indicadores/busca', [CatalogoNfseController::class, 'indicadores'])->name('api.nfse.indicadores.busca');
+    Route::get('/api/municipios/busca', [CatalogoNfseController::class, 'municipios'])->name('api.municipios.busca');
 
     Route::get('/api/formas-pagamento/busca', function () {
         $q = trim((string) request('q', ''));
